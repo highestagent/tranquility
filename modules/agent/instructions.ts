@@ -12,7 +12,7 @@ function catalog() {
           `${id} (${higherIsBetter ? "higher" : "lower"} is better)`
       )
       .join(", ")
-    return `- ${assessment.id}: ${assessment.measures}. Metrics: ${metrics}. Main metric: ${assessment.primaryMetricId}.`
+    return `- ${assessment.id} (call it "${assessment.shortName}" to the user): ${assessment.measures}. Metrics: ${metrics}. Main metric: ${assessment.primaryMetricId}.`
   }).join("\n")
   return `Questions:\n${questions}\n\nAssessments:\n${assessments}`
 }

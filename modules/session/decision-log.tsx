@@ -1,7 +1,8 @@
 import { History } from "lucide-react"
 
 import { Sheet } from "@/components/sheet"
-import { STAGE_ICONS, type Stage } from "@/modules/insights/agent-pool"
+import { Button } from "@/components/ui/button"
+import { STAGES, type Stage } from "@/modules/insights/stages"
 import type { Decision } from "@/modules/memory"
 
 const ACTION_STAGES: Record<string, Stage> = {
@@ -20,17 +21,31 @@ const ACTION_STAGES: Record<string, Stage> = {
 export function DecisionLog({ decisions }: { decisions: readonly Decision[] }) {
   if (decisions.length === 0) return null
   return (
-    <Sheet label="What I did" Icon={History} title="What I did">
-      <ol className="flex flex-col gap-3 text-sm">
+    <Sheet
+      title="What I did"
+      trigger={(open) => (
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label="What I did"
+          title="What I did"
+          className="-my-2 -mr-3 text-muted-foreground"
+          onClick={open}
+        >
+          <History aria-hidden className="size-[1.0625rem]" />
+        </Button>
+      )}
+    >
+      <ol className="flex flex-col gap-4 text-sm">
         {decisions.map((decision) => {
-          const Icon =
-            STAGE_ICONS[ACTION_STAGES[decision.action] ?? "understand"]
+          const { Icon } =
+            STAGES[ACTION_STAGES[decision.action] ?? "understand"]
           return (
             <li key={decision.id} className="flex items-start gap-3">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted">
                 <Icon aria-hidden className="size-3.5" />
               </span>
-              <span className="pt-1 text-muted-foreground">
+              <span className="pt-1 text-pretty text-muted-foreground">
                 {decision.reason}
               </span>
             </li>

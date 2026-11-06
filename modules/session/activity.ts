@@ -1,7 +1,7 @@
 import type { UIMessage } from "ai"
 
-import type { Stage } from "@/modules/insights/agent-pool"
 import type { MapFocus } from "@/modules/insights/knowledge-map"
+import type { Stage } from "@/modules/insights/stages"
 import { getQuestion } from "@/modules/questionnaire"
 
 const TOOL_STAGES: Record<string, Stage> = {

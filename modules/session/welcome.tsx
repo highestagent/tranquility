@@ -2,7 +2,8 @@
 
 import { ArrowRight, Cloud, Smartphone } from "lucide-react"
 
-import { Screen } from "@/components/screen"
+import { HeroLayout } from "@/components/screen"
+import { Sheet } from "@/components/sheet"
 import { Button } from "@/components/ui/button"
 import { AiDisclosure } from "@/modules/agent/ai-consent-card"
 import { buildKnowledge } from "@/modules/insights/knowledge"
@@ -22,44 +23,62 @@ export function Welcome({
   onChoose: (useCloudAi: boolean) => void
 }) {
   return (
-    <Screen
+    <HeroLayout
       title="What shapes your mind?"
-      titleClassName="voice-display italic"
+      titleClassName="voice-display"
+      visual={
+        <div className="w-full max-w-[min(100%,42svh)] lg:max-w-[min(100%,74svh)]">
+          <KnowledgeMap knowledge={EMPTY} state="resting" />
+        </div>
+      }
+      detail={
+        <div className="flex flex-col gap-2 pt-1 text-sm text-muted-foreground">
+          <p className="flex items-center gap-2.5">
+            <Smartphone aria-hidden className="size-4 shrink-0" />
+            Your history stays on this device
+          </p>
+          <p className="flex items-center gap-2.5">
+            <Cloud aria-hidden className="size-4 shrink-0" />
+            Cloud AI sees only what it asks for
+          </p>
+        </div>
+      }
       dock={
         <>
           <Button size="cta" onClick={() => onChoose(true)}>
-            Begin with cloud AI
+            Begin
             <ArrowRight aria-hidden data-icon="inline-end" />
           </Button>
-          <Button size="cta" variant="ghost" onClick={() => onChoose(false)}>
-            Without AI
-          </Button>
+          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => onChoose(false)}
+              className="h-11 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Continue without AI
+            </button>
+            <Sheet
+              title="What gets sent"
+              trigger={(open) => (
+                <button
+                  type="button"
+                  onClick={open}
+                  className="h-11 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  What gets sent
+                </button>
+              )}
+            >
+              <div className="flex flex-col gap-3">
+                <AiDisclosure />
+                <p className="text-sm text-muted-foreground">
+                  Tranquility is not a medical tool.
+                </p>
+              </div>
+            </Sheet>
+          </div>
         </>
       }
-    >
-      <div className="my-auto">
-        <KnowledgeMap knowledge={EMPTY} state="resting" />
-      </div>
-      <div className="flex flex-col gap-3 text-sm">
-        <ul className="flex flex-col gap-2">
-          <li className="flex items-center gap-3">
-            <Smartphone aria-hidden className="size-4 shrink-0" />
-            Your history stays on this device
-          </li>
-          <li className="flex items-center gap-3">
-            <Cloud aria-hidden className="size-4 shrink-0" />
-            Cloud AI sees only what it asks for
-          </li>
-        </ul>
-        <details>
-          <summary className="cursor-pointer text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-            What gets sent · Not a medical tool
-          </summary>
-          <div className="mt-3">
-            <AiDisclosure />
-          </div>
-        </details>
-      </div>
-    </Screen>
+    />
   )
 }

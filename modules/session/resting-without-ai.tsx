@@ -3,24 +3,32 @@
 import { ClipboardList, Gamepad2, Power } from "lucide-react"
 import Link from "next/link"
 
-import { Screen } from "@/components/screen"
-import { LoadingMessage, StorageError } from "@/components/status-message"
+import { HeroLayout } from "@/components/screen"
+import { StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
 import { loadKnowledge } from "@/modules/insights/knowledge"
 import { KnowledgeMap, MapLegend } from "@/modules/insights/knowledge-map"
 
+import { HomeLoading } from "./agent-home"
+
 /** Cloud AI is off: the map and tools still work, and the agent sleeps. */
 export function RestingWithoutAi({ onWake }: { onWake: () => void }) {
   const { state, reload } = useAsync(loadKnowledge)
 
-  if (state.status === "loading") return <LoadingMessage />
+  if (state.status === "loading") return <HomeLoading />
   if (state.status === "error") {
     return <StorageError onRetry={() => void reload()} />
   }
   return (
-    <Screen
+    <HeroLayout
       title="The agent is asleep."
+      visual={
+        <div className="flex w-full max-w-[min(100%,44svh)] flex-col items-center gap-1 lg:max-w-[min(100%,74svh)]">
+          <KnowledgeMap knowledge={state.data} state="asleep" />
+          <MapLegend knowledge={state.data} />
+        </div>
+      }
       dock={
         <>
           <Button size="cta" onClick={onWake}>
@@ -49,11 +57,6 @@ export function RestingWithoutAi({ onWake }: { onWake: () => void }) {
           </div>
         </>
       }
-    >
-      <div className="my-auto flex flex-col gap-3">
-        <KnowledgeMap knowledge={state.data} state="asleep" />
-        <MapLegend knowledge={state.data} />
-      </div>
-    </Screen>
+    />
   )
 }

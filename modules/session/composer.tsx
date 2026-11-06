@@ -6,40 +6,36 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
 const SUGGESTIONS = [
-  { Icon: Coffee, label: "Caffeine", text: "Does caffeine help my focus?" },
-  { Icon: Moon, label: "Sleep", text: "Does sleep change my memory?" },
-  { Icon: Activity, label: "Stress", text: "How does stress affect me?" },
+  { Icon: Coffee, text: "Does caffeine help my focus?" },
+  { Icon: Moon, text: "Does sleep change my memory?" },
+  { Icon: Activity, text: "How does stress affect me?" },
 ]
 
-/** Asking is secondary, so suggestions appear only once you start to ask. */
+/** Asking your own question: suggestions first, then your own words. */
 export function Composer({ onAsk }: { onAsk: (text: string) => void }) {
   const [question, setQuestion] = useState("")
-  const [focused, setFocused] = useState(false)
 
   return (
-    <div className="flex flex-col gap-2">
-      {focused ? (
-        <ul className="rise-in -mx-5 flex [scrollbar-width:none] gap-2 overflow-x-auto px-5">
-          {SUGGESTIONS.map(({ Icon, label, text }) => (
-            <li key={text} className="shrink-0">
-              <button
-                type="button"
-                // Keeps focus in the field, so the chips stay until tapped.
-                onPointerDown={(event) => event.preventDefault()}
-                aria-label={text}
-                title={text}
-                onClick={() => onAsk(text)}
-                className="flex h-10 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-sm outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Icon aria-hidden className="size-4 text-muted-foreground" />
-                {label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <div className="flex flex-col gap-4">
+      <ul className="flex flex-col">
+        {SUGGESTIONS.map(({ Icon, text }) => (
+          <li key={text}>
+            <button
+              type="button"
+              onClick={() => onAsk(text)}
+              className="-mx-3 flex h-13 w-[calc(100%+1.5rem)] items-center gap-3 rounded-2xl px-3 text-left font-voice text-lg transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Icon
+                aria-hidden
+                className="size-4 shrink-0 text-muted-foreground"
+              />
+              {text}
+            </button>
+          </li>
+        ))}
+      </ul>
       <form
-        className="flex h-12 items-center gap-2 rounded-full border border-input bg-card pr-1 pl-5 focus-within:ring-2 focus-within:ring-ring"
+        className="flex h-13 items-center gap-2 rounded-full bg-muted pr-1.5 pl-5 ring-1 ring-border ring-inset focus-within:ring-2 focus-within:ring-ring"
         onSubmit={(event) => {
           event.preventDefault()
           const text = question.trim()
@@ -53,9 +49,7 @@ export function Composer({ onAsk }: { onAsk: (text: string) => void }) {
           value={question}
           maxLength={500}
           autoComplete="off"
-          placeholder="Ask about yourself…"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          placeholder="Or ask your own…"
           onChange={(event) => setQuestion(event.target.value)}
           className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />

@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react"
 
-import { LoadingMessage, StorageError } from "@/components/status-message"
+import { StorageError } from "@/components/status-message"
 import { getAiConsent, setAiConsent } from "@/modules/agent/consent"
 
-import { AgentHome } from "./agent-home"
+import { AgentHome, HomeLoading } from "./agent-home"
 import { RestingWithoutAi } from "./resting-without-ai"
 import { Welcome } from "./welcome"
 
@@ -37,7 +37,7 @@ export function SessionView() {
 
   switch (consent) {
     case "loading":
-      return <LoadingMessage />
+      return <HomeLoading />
     case "error":
       return <StorageError onRetry={load} />
     case "ask":

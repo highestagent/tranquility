@@ -2,6 +2,7 @@ import type { UIMessage } from "ai"
 import { describe, expect, it } from "vitest"
 
 import { deriveActivity } from "./activity"
+import { splitSpeech } from "./speech"
 import { REST_WINDOW_MS, shouldWake } from "./wake"
 
 function assistant(parts: unknown[]): UIMessage {
@@ -131,6 +132,30 @@ describe("deriveActivity", () => {
       domain: "stress",
       assessmentId: "visual-search",
     })
+  })
+})
+
+describe("splitSpeech", () => {
+  it("makes the first sentence the headline", () => {
+    expect(
+      splitSpeech(
+        "Not enough evidence yet. Keep answering. It takes a few days."
+      )
+    ).toEqual({
+      headline: "Not enough evidence yet.",
+      rest: "Keep answering. It takes a few days.",
+    })
+  })
+
+  it("keeps a single sentence whole", () => {
+    expect(splitSpeech("You react faster after more sleep.")).toEqual({
+      headline: "You react faster after more sleep.",
+      rest: null,
+    })
+  })
+
+  it("doesn't split on an abbreviation", () => {
+    expect(splitSpeech("Try a nap, e.g. after lunch.").rest).toBeNull()
   })
 })
 
