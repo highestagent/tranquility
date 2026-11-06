@@ -225,6 +225,39 @@ describe("tool inputs", () => {
   })
 })
 
+describe("getUserContext", () => {
+  it("shows which questions have data, as counts without values", async () => {
+    await seedPlantedRelationship(3)
+    await responses.put({
+      id: "declined",
+      sessionId: "s0",
+      questionId: "stress.level",
+      bankVersion: 1,
+      value: null,
+      answeredAt: 1,
+    })
+    const { model } = scriptedModel(() => [
+      { tool: "getUserContext", input: { reason: "Review" } },
+      "Done.",
+    ])
+
+    const result = await createInvestigationAgent(model).generate({
+      prompt: "Go.",
+    })
+
+    const output = result.steps[0]?.toolResults[0]?.output as {
+      coverage: unknown
+      answers: unknown
+    }
+    expect(output.coverage).toEqual([
+      { questionId: "sleep.hours", answered: 3, declined: 0 },
+      { questionId: "stress.level", answered: 0, declined: 1 },
+    ])
+    // Values are still only sent for questions asked about by name.
+    expect(output.answers).toEqual([])
+  })
+})
+
 describe("investigation agent", () => {
   it("runs the full cycle and pauses for the user", async () => {
     await seedPlantedRelationship()
