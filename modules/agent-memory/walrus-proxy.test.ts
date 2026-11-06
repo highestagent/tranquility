@@ -127,7 +127,11 @@ describe("proxyToWalrus", () => {
       const response = await proxyToWalrus(post(path.join("/")), path, d)
       expect(response.status).toBe(404)
     }
-    const wrongMethod = await proxyToWalrus(get("api/recall"), ["api", "recall"], d)
+    const wrongMethod = await proxyToWalrus(
+      get("api/recall"),
+      ["api", "recall"],
+      d
+    )
     expect(wrongMethod.status).toBe(404)
     expect(d.fetch).not.toHaveBeenCalled()
   })

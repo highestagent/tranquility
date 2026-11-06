@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAccount } from "@/modules/account/account-context"
 
-import { memoryApi } from "./api"
 import {
   forgetMemories,
   getMemoryState,
@@ -19,7 +18,6 @@ import {
 export function MemorySettings() {
   const account = useAccount()
   const [state, setState] = useState<MemoryState | null>(null)
-  const [configured, setConfigured] = useState<boolean | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [forgetFailed, setForgetFailed] = useState(false)
 
@@ -28,27 +26,19 @@ export function MemorySettings() {
   }, [])
 
   useEffect(refresh, [refresh])
-  useEffect(() => {
-    if (!account.authenticated) return
-    memoryApi.info().then(
-      ({ configured: value }) => setConfigured(value),
-      () => setConfigured(null)
-    )
-  }, [account.authenticated])
 
   if (!account.available || !account.authenticated || !state) return null
 
   const count = state.remembered.length
-  const status =
-    configured === false
-      ? "Not set up on this server yet"
-      : !state.enabled
-        ? "Off"
-        : state.pending.length > 0
-          ? "Saving…"
-          : count === 1
-            ? "1 memory saved"
-            : `${count} memories saved`
+  const status = !state.enabled
+    ? "Off"
+    : state.failing
+      ? "Can't connect right now. It'll keep trying"
+      : state.pending.length > 0
+        ? "Saving…"
+        : count === 1
+          ? "1 memory saved"
+          : `${count} memories saved`
 
   async function forget() {
     setForgetFailed(false)

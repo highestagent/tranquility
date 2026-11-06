@@ -3,7 +3,7 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { closeDb } from "@/modules/memory"
+import { closeDb, kv } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
 
 import type { MemoryApi } from "./api"
@@ -23,7 +23,7 @@ function fakeApi(statuses: Record<string, string> = {}) {
     })),
     recall: vi.fn(),
     forget: vi.fn(),
-    info: vi.fn(),
+    connect: vi.fn(async () => undefined),
   } satisfies MemoryApi
 }
 
@@ -110,5 +110,19 @@ describe("runMemorySync", () => {
     await setMemoryEnabled(false)
     expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
     expect(api.remember).not.toHaveBeenCalled()
+    expect(api.connect).not.toHaveBeenCalled()
+  })
+
+  it("sets up the account even with nothing to save yet", async () => {
+    const api = fakeApi()
+    await runMemorySync(api, "u1", [])
+    expect(api.connect).toHaveBeenCalledOnce()
+    expect(api.remember).not.toHaveBeenCalled()
+  })
+
+  it("stops reporting a failure once it gets through", async () => {
+    await kv.set("agentMemory", { failing: true })
+    await runMemorySync(fakeApi(), "u1", facts(1))
+    expect((await getMemoryState()).failing).toBe(false)
   })
 })

@@ -1,11 +1,7 @@
-import { MemWal } from "@mysten-incubation/memwal"
 import { PrivyClient } from "@privy-io/node"
 
 import type { RateWindows } from "@/lib/rate-limit"
-import {
-  handleMemoryRequest,
-  type MemoryClient,
-} from "@/modules/agent-memory/server"
+import { handleMemoryRequest } from "@/modules/agent-memory/server"
 
 const rateWindows: RateWindows = new Map()
 
@@ -16,23 +12,6 @@ function getPrivy() {
     appSecret: process.env.PRIVY_APP_SECRET!,
   })
   return privy
-}
-
-let memoryClient: MemoryClient | null | undefined
-function getMemoryClient() {
-  if (memoryClient === undefined) {
-    const key = process.env.MEMWAL_PRIVATE_KEY
-    const accountId = process.env.MEMWAL_ACCOUNT_ID
-    memoryClient =
-      key && accountId
-        ? (MemWal.create({
-            key,
-            accountId,
-            serverUrl: process.env.MEMWAL_SERVER_URL,
-          }) as unknown as MemoryClient)
-        : null
-  }
-  return memoryClient
 }
 
 export async function POST(
@@ -57,7 +36,6 @@ export async function POST(
           custom_metadata: { memoryEpoch: epoch },
         })
     },
-    client: getMemoryClient(),
     now: Date.now,
     rateWindows,
   })

@@ -4,8 +4,13 @@ import {
   PrivyProvider,
   useLoginWithOAuth,
   usePrivy,
+  type User,
 } from "@privy-io/react-auth"
-import { useEffect, useMemo, useState } from "react"
+import {
+  useCreateWallet,
+  useSignRawHash,
+} from "@privy-io/react-auth/extended-chains"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { setMemoryAccount } from "@/modules/agent-memory/api"
 import { syncMemory } from "@/modules/agent-memory/sync"
@@ -16,8 +21,17 @@ const APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID
 /** After this, stop waiting on Privy: the app is local-first and still works. */
 const READY_TIMEOUT_MS = 6000
 
+function findSuiWallet(user: User | null) {
+  for (const linked of user?.linkedAccounts ?? []) {
+    if (linked.type === "wallet" && linked.chainType === "sui") return linked
+  }
+  return null
+}
+
 function AccountBridge({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, logout, getAccessToken } = usePrivy()
+  const { createWallet } = useCreateWallet()
+  const { signRawHash } = useSignRawHash()
   const [signInFailed, setSignInFailed] = useState(false)
   const [timedOut, setTimedOut] = useState(false)
   // Mounted at the root so it can finish the sign-in when Google returns here.
@@ -33,9 +47,42 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
 
   const userId = authenticated ? (user?.id ?? null) : null
 
+  // Privy's latest functions, for memory to use whenever it gets to them.
+  const privy = useRef({ user, createWallet, signRawHash })
+  useEffect(() => {
+    privy.current = { user, createWallet, signRawHash }
+  }, [user, createWallet, signRawHash])
+
   // Memory starts by itself as soon as someone is signed in, on any page.
   useEffect(() => {
-    setMemoryAccount(userId ? { userId, getToken: getAccessToken } : null)
+    setMemoryAccount(
+      userId
+        ? {
+            userId,
+            getToken: getAccessToken,
+            getWallet: async () => {
+              const { user, createWallet } = privy.current
+              const wallet =
+                findSuiWallet(user) ??
+                findSuiWallet((await createWallet({ chainType: "sui" })).user)
+              if (!wallet) throw new Error("No Sui wallet")
+              const { address, publicKey } = wallet
+              return {
+                address,
+                publicKey,
+                signRawHash: async (hash) => {
+                  const { signature } = await privy.current.signRawHash({
+                    address,
+                    chainType: "sui",
+                    hash,
+                  })
+                  return signature
+                },
+              }
+            },
+          }
+        : null
+    )
     if (!userId) return
     void syncMemory()
     const onOnline = () => void syncMemory()
@@ -84,7 +131,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       appId={APP_ID}
       config={{
         loginMethods: ["google"],
-        // Accounts here are for identity. No wallets are created.
+        // The only wallet anyone gets is the Sui one memory creates when needed.
         embeddedWallets: {
           ethereum: { createOnLogin: "off" },
           solana: { createOnLogin: "off" },

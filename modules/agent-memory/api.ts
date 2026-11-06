@@ -1,45 +1,84 @@
+import type { MemWal } from "@mysten-incubation/memwal"
+
+const PROXY_PATH = "/api/walrus"
+/** Weaker matches than this are more noise than memory. */
+const MAX_DISTANCE = 0.8
+const MAX_QUERY_LENGTH = 300
+
+/** The signed-in person's wallet, as the account module gets it from Privy. */
+export interface AccountWallet {
+  address: string
+  publicKey?: string
+  signRawHash(hash: `0x${string}`): Promise<`0x${string}`>
+}
+
 /** The signed-in account, set by the account module. */
 interface MemoryAccount {
   userId: string
   getToken: () => Promise<string | null>
+  getWallet: () => Promise<AccountWallet>
+}
+
+interface MemorySession {
+  client: MemWal
+  namespace: string
 }
 
 let account: MemoryAccount | null = null
+let session: Promise<MemorySession> | null = null
 
 export function setMemoryAccount(next: MemoryAccount | null) {
   account = next
+  session = null
 }
 
 export function getMemoryUserId() {
   return account?.userId ?? null
 }
 
-/** The server has no Walrus Memory credentials, so retrying won't help. */
-export class MemoryNotConfiguredError extends Error {}
-
 /** No one is signed in. Nothing to do until someone is. */
 export class NotSignedInError extends Error {}
 
-async function call<T>(
-  action: string,
-  body: object,
-  timeoutMs = 15_000
-): Promise<T> {
+/** The forget counter is the only thing about memory this app's server keeps. */
+async function epochRequest(action: "info" | "forget") {
   const token = await account?.getToken()
   if (!token) throw new NotSignedInError()
 
   const response = await fetch(`/api/memory/${action}`, {
     method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+    headers: { authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15_000),
   })
-  if (response.status === 503) throw new MemoryNotConfiguredError()
   if (!response.ok) throw new Error(`Memory request failed: ${response.status}`)
-  return (await response.json()) as T
+  return (await response.json()) as { epoch: number }
+}
+
+/** Loaded on demand, since the Sui libraries are too heavy for every page. */
+async function openSession(current: MemoryAccount): Promise<MemorySession> {
+  const [{ MemWal }, { connectMemoryAccount }, { toSuiWallet }, { epoch }] =
+    await Promise.all([
+      import("@mysten-incubation/memwal"),
+      import("./provision"),
+      import("./wallet"),
+      epochRequest("info"),
+    ])
+  const serverUrl = `${window.location.origin}${PROXY_PATH}`
+  const wallet = toSuiWallet(await current.getWallet())
+  const { accountId, key } = await connectMemoryAccount(wallet, serverUrl)
+  return {
+    client: MemWal.create({ key, accountId, serverUrl }),
+    // Forgetting moves to a new namespace, since Walrus Memory has no delete.
+    namespace: `tranquility-${epoch}`,
+  }
+}
+
+function getSession() {
+  if (!account) return Promise.reject(new NotSignedInError())
+  session ??= openSession(account).catch((error: unknown) => {
+    session = null
+    throw error
+  })
+  return session
 }
 
 export interface RecalledMemory {
@@ -47,17 +86,56 @@ export interface RecalledMemory {
   at: string | null
 }
 
+function failAfter(ms: number) {
+  return new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Timed out")), ms)
+  })
+}
+
+async function recall(query: string, limit: number) {
+  const { client, namespace } = await getSession()
+  const { results } = await client.recall(query.slice(0, MAX_QUERY_LENGTH), {
+    limit,
+    namespace,
+    maxDistance: MAX_DISTANCE,
+  })
+  return {
+    memories: results.map(({ text, created_at }): RecalledMemory => ({
+      text,
+      at: created_at ?? null,
+    })),
+  }
+}
+
 export const memoryApi = {
-  remember: (texts: string[]) =>
-    call<{ jobIds: string[] }>("remember", {
-      items: texts.map((text) => ({ text })),
-    }),
-  status: (jobIds: string[]) =>
-    call<{ jobs: { jobId: string; status: string }[] }>("status", { jobIds }),
+  /** Creates the wallet and Walrus Memory account if they don't exist yet. */
+  connect: async () => {
+    await getSession()
+  },
+  remember: async (texts: string[]) => {
+    const { client, namespace } = await getSession()
+    const { job_ids } = await client.rememberBulkAsync(
+      texts.map((text) => ({ text, namespace }))
+    )
+    return { jobIds: job_ids }
+  },
+  status: async (jobIds: string[]) => {
+    const { client } = await getSession()
+    const { results } = await client.getRememberBulkStatus(jobIds)
+    return {
+      jobs: results.map(({ job_id, status }) => ({
+        jobId: job_id,
+        status: status as string,
+      })),
+    }
+  },
+  /** The budget covers everything, including connecting for the first time. */
   recall: (query: string, limit: number, timeoutMs: number) =>
-    call<{ memories: RecalledMemory[] }>("recall", { query, limit }, timeoutMs),
-  forget: () => call<{ ok: true }>("forget", {}),
-  info: () => call<{ configured: boolean }>("info", {}),
+    Promise.race([recall(query, limit), failAfter(timeoutMs)]),
+  forget: async () => {
+    await epochRequest("forget")
+    session = null
+  },
 }
 
 export type MemoryApi = typeof memoryApi

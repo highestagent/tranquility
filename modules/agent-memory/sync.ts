@@ -4,7 +4,6 @@ import { discoveries, hypotheses, investigations, kv } from "@/modules/memory"
 import {
   getMemoryUserId,
   memoryApi,
-  MemoryNotConfiguredError,
   NotSignedInError,
   type MemoryApi,
 } from "./api"
@@ -24,6 +23,8 @@ export interface MemoryState {
   pending: { factId: string; jobId: string }[]
   enabled: boolean
   lastSavedAt?: number
+  /** The last attempt failed, so what's shown may be out of date. */
+  failing?: boolean
 }
 
 export async function getMemoryState(): Promise<MemoryState> {
@@ -64,6 +65,8 @@ export async function runMemorySync(
 ): Promise<{ more: boolean }> {
   const state = await getMemoryState()
   if (!state.enabled) return { more: false }
+
+  await api.connect()
 
   // Another person signing in on this browser mustn't inherit these facts.
   if (state.owner && state.owner !== owner) {
@@ -107,6 +110,7 @@ export async function runMemorySync(
       if (jobId) state.pending.push({ factId: fact.id, jobId })
     })
   }
+  state.failing = false
   await saveState(state)
   return { more: state.pending.length > 0 || unsent.length > batch.length }
 }
@@ -114,7 +118,6 @@ export async function runMemorySync(
 let running: Promise<void> | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
 let failures = 0
-let notConfigured = false
 
 function scheduleAgain(delay: number) {
   if (timer) clearTimeout(timer)
@@ -123,13 +126,14 @@ function scheduleAgain(delay: number) {
 
 /**
  * The background task. Safe to call at any time and from anywhere: it never
- * throws and never blocks. It retries by itself, backing off while the service
- * is unreachable, and stays out of the way if memory can't run.
+ * throws and never blocks. Its first run creates the person's wallet and Walrus
+ * Memory account if they don't have them, and it retries by itself, backing off
+ * while anything is unreachable.
  */
 export function syncMemory(): Promise<void> {
   running ??= (async () => {
     const owner = getMemoryUserId()
-    if (!owner || notConfigured) return
+    if (!owner) return
     const consent = await getAiConsent()
     if (!consent?.granted) return
 
@@ -138,10 +142,11 @@ export function syncMemory(): Promise<void> {
       failures = 0
       if (more) scheduleAgain(CHECK_AGAIN_MS)
     } catch (error) {
-      if (error instanceof MemoryNotConfiguredError) notConfigured = true
-      else if (!(error instanceof NotSignedInError)) {
+      if (!(error instanceof NotSignedInError)) {
+        console.warn("Agent memory couldn't sync:", error)
         failures++
         scheduleAgain(Math.min(CHECK_AGAIN_MS * 2 ** failures, MAX_BACKOFF_MS))
+        await saveState({ ...(await getMemoryState()), failing: true })
       }
     }
   })()

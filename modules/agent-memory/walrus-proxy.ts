@@ -66,7 +66,12 @@ export async function proxyToWalrus(
     return new Response(null, { status: 404 })
   }
   if (
-    isOverLimit(deps.rateWindows, clientAddress(request), deps.now(), RATE_LIMIT)
+    isOverLimit(
+      deps.rateWindows,
+      clientAddress(request),
+      deps.now(),
+      RATE_LIMIT
+    )
   ) {
     return new Response(null, { status: 429 })
   }
