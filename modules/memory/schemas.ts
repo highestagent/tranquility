@@ -111,6 +111,10 @@ export const analysisSchema = z.object({
   grade: evidenceGradeSchema,
   measurementIds: z.array(id),
   notes: z.array(z.string()),
+  /** Identifies the exact data analyzed. Absent on older records. */
+  dataKey: z.string().optional(),
+  /** Whether `pValue` is corrected for testing many relationships. */
+  corrected: z.boolean().optional(),
 })
 
 export const discoverySchema = z.object({

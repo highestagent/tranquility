@@ -197,6 +197,88 @@ describe("evaluateHypothesis", () => {
     expect((await hypotheses.get(hypothesis.id))?.status).toBe("proposed")
   })
 
+  it("judges on the newest stored analysis, even if an older one is cited", async () => {
+    const { hypothesis } = await setup()
+    await analyses.put(analysis({ id: "strong-old", createdAt: 1 }))
+    await analyses.put(
+      analysis({
+        id: "weak-new",
+        createdAt: 2,
+        grade: "weak",
+        direction: "none",
+        effect: 0.05,
+        ciLow: -0.4,
+        ciHigh: 0.5,
+        pValue: 0.7,
+      })
+    )
+
+    const discovery = await evaluateHypothesis({
+      hypothesisId: hypothesis.id,
+      analysisIds: ["strong-old"],
+      ...narrative,
+    })
+
+    expect(discovery.grade).toBe("weak")
+    expect(discovery.verdict).toBe("inconclusive")
+    expect(discovery.analysisIds).toEqual(["strong-old", "weak-new"])
+    expect(discovery.evidence).toContain("0.05")
+  })
+
+  it("only counts newer analyses of the same factor and metric", async () => {
+    const { hypothesis } = await setup()
+    await analyses.put(analysis({ id: "a1", createdAt: 1 }))
+    await analyses.put(
+      analysis({
+        id: "other-metric",
+        createdAt: 2,
+        metric: { assessmentId: "go-no-go", metricId: "dPrime" },
+        grade: "weak",
+      })
+    )
+    await analyses.put(
+      analysis({
+        id: "other-factor",
+        createdAt: 3,
+        factorId: "mood.energy",
+        grade: "weak",
+      })
+    )
+
+    const discovery = await evaluateHypothesis({
+      hypothesisId: hypothesis.id,
+      analysisIds: ["a1"],
+      ...narrative,
+    })
+
+    expect(discovery.grade).toBe("strong")
+    expect(discovery.analysisIds).toEqual(["a1"])
+  })
+
+  it("refuses when the newest analysis has no data", async () => {
+    const { hypothesis } = await setup()
+    await analyses.put(analysis({ id: "a1", createdAt: 1 }))
+    await analyses.put(
+      analysis({
+        id: "empty",
+        createdAt: 2,
+        n: 0,
+        grade: "insufficient",
+        direction: "none",
+        effect: null,
+        ciLow: null,
+        ciHigh: null,
+      })
+    )
+    await expect(
+      evaluateHypothesis({
+        hypothesisId: hypothesis.id,
+        analysisIds: ["a1"],
+        ...narrative,
+      })
+    ).rejects.toThrow(/no data/)
+  })
+
   it("refuses an analysis of a different relationship", async () => {
     const { hypothesis } = await setup()
     await analyses.put(analysis({ factorId: "mood.energy" }))

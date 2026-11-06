@@ -29,6 +29,17 @@ function seedFor(factorId: string, metric: MetricRef, n: number) {
   return hash
 }
 
+/** Identifies the exact data behind an analysis: every value, in order. */
+function dataKeyFor(observations: readonly Observation[]) {
+  let hash = 0x811c9dc5
+  for (const { x, y } of observations) {
+    for (const char of `${x}:${y}|`) {
+      hash = Math.imul(hash ^ char.charCodeAt(0), 16777619)
+    }
+  }
+  return `${observations.length}-${(hash >>> 0).toString(36)}`
+}
+
 function buildAnalysis(
   factorId: string,
   metric: MetricRef,
@@ -42,6 +53,8 @@ function buildAnalysis(
     metric,
     n: observations.length,
     measurementIds: observations.flatMap((o) => o.measurementIds),
+    dataKey: dataKeyFor(observations),
+    corrected: adjustedP !== undefined,
   }
   const insufficient = (note: string): Analysis => ({
     ...base,
@@ -98,13 +111,53 @@ function buildAnalysis(
   }
 }
 
+/**
+ * The current analysis of a relationship. When two share a timestamp, the
+ * corrected one wins, as it's the stricter reading of the same data.
+ */
+export async function latestAnalysisFor(
+  factorId: string,
+  metric: MetricRef
+): Promise<Analysis | undefined> {
+  const rows = await analyses.list()
+  return rows
+    .filter(
+      (row) =>
+        row.factorId === factorId &&
+        row.metric.assessmentId === metric.assessmentId &&
+        row.metric.metricId === metric.metricId
+    )
+    .sort(
+      (a, b) =>
+        b.createdAt - a.createdAt ||
+        Number(b.corrected ?? false) - Number(a.corrected ?? false)
+    )[0]
+}
+
+/**
+ * Whether a stored analysis already answers this one. A hypothesis found by a
+ * scan was picked for looking strong, so a direct test of the same data gets
+ * the scan's stricter p-value rather than a more flattering copy.
+ */
+function canReuse(stored: Analysis, fresh: Analysis) {
+  if (!stored.dataKey || stored.dataKey !== fresh.dataKey) return false
+  if (!fresh.corrected) return true
+  return stored.corrected === true && stored.pValue === fresh.pValue
+}
+
+/** Stores an analysis unless the same data already has an equivalent one. */
+async function storeAnalysis(fresh: Analysis): Promise<Analysis> {
+  const stored = await latestAnalysisFor(fresh.factorId, fresh.metric)
+  return stored && canReuse(stored, fresh) ? stored : analyses.put(fresh)
+}
+
 /** Runs and stores one analysis. Inputs are IDs, never numbers. */
 export async function analyzeRelationship(
   factorId: string,
   metric: MetricRef
 ): Promise<Analysis> {
   const observations = await observationsFor(factorId, metric)
-  return analyses.put(buildAnalysis(factorId, metric, observations))
+  return storeAnalysis(buildAnalysis(factorId, metric, observations))
 }
 
 /**
@@ -136,8 +189,10 @@ export async function scanRelationships(
     .filter(({ direction }) => direction !== "none")
     .sort((a, b) => a.pValue! - b.pValue!)
     .slice(0, limit)
-  await Promise.all(findings.map((finding) => analyses.put(finding)))
-  return { tested: tested.length, findings }
+  return {
+    tested: tested.length,
+    findings: await Promise.all(findings.map(storeAnalysis)),
+  }
 }
 
 export interface MetricSummary {

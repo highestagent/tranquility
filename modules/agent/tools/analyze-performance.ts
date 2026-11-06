@@ -46,7 +46,8 @@ export const analyzePerformance = tool({
   description: `Run deterministic statistics on stored data. Modes:
 - "scan": test every factor against each assessment's main metric, to find relationships worth investigating.
 - "relationship": test one factor against one metric. Needs factorId, assessmentId and metricId.
-- "baseline": compare the latest result with personal baseline. Needs assessmentId and metricId.`,
+- "baseline": compare the latest result with personal baseline. Needs assessmentId and metricId.
+Each relationship keeps one analysis per state of the data, so re-running on unchanged data returns the same analysisId.`,
   inputSchema: z.object({
     reason: reasonSchema,
     mode: z.enum(["scan", "relationship", "baseline"]),

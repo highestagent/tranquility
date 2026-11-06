@@ -1,3 +1,4 @@
+import { latestAnalysisFor } from "@/modules/analytics"
 import {
   analyses,
   discoveries,
@@ -153,12 +154,16 @@ export async function evaluateHypothesis(input: {
       analysis.metric.assessmentId === hypothesis.metric.assessmentId &&
       analysis.metric.metricId === hypothesis.metric.metricId
   )
-  const latest = relevant.sort((a, b) => b.createdAt - a.createdAt)[0]
-  if (!latest) {
+  if (relevant.length === 0) {
     throw new Error(
       "None of these analyses test this hypothesis's factor and metric."
     )
   }
+  // Judged on the current analysis, so an older result can't be cherry-picked.
+  const latest = (await latestAnalysisFor(
+    hypothesis.factorId,
+    hypothesis.metric
+  ))!
 
   // "Too little data" is a fair finding. "No data at all" is not a finding yet.
   if (latest.n === 0) {
@@ -172,7 +177,7 @@ export async function evaluateHypothesis(input: {
     id: newId(),
     investigationId: hypothesis.investigationId,
     hypothesisId: hypothesis.id,
-    analysisIds: relevant.map(({ id }) => id),
+    analysisIds: [...new Set([...relevant.map(({ id }) => id), latest.id])],
     grade: latest.grade,
     verdict,
     observed: input.observed,

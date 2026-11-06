@@ -8,7 +8,7 @@ import { narrativeSchema, reasonSchema } from "./shared"
 /** The verdict and figures are computed. The agent only frames them. */
 export const evaluateEvidence = tool({
   description:
-    "Record a finding for a hypothesis from stored analyses. The system decides the verdict and adds the figures. Your text must contain no numerals and no medical claims.",
+    "Record a finding for a hypothesis, citing an analysis of its factor and metric. The system judges the newest stored analysis of that pair, decides the verdict, and adds the figures. Your text must contain no numerals and no medical claims.",
   inputSchema: z.object({
     reason: reasonSchema,
     hypothesisId: z.string(),
