@@ -12,7 +12,7 @@ export function VisualSearchPreview() {
             key={index}
             className={
               index === TARGET
-                ? "demo-found flex size-full items-center justify-center rounded-full bg-primary text-primary-foreground"
+                ? "demo-found flex size-full items-center justify-center rounded-full bg-glow text-glow-foreground"
                 : "text-muted-foreground"
             }
             style={{ rotate: `${rotation}deg` }}

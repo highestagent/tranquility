@@ -35,7 +35,7 @@ async function loadGames() {
 }
 
 const rowStyle =
-  "flex items-center gap-3 rounded-3xl border border-border bg-card p-4 transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+  "surface flex items-center gap-3 rounded-3xl p-3 pr-4 transition-colors outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring"
 
 export function GamesView() {
   const { state } = useAsync(loadGames)
@@ -48,19 +48,19 @@ export function GamesView() {
           <span className="flex size-10 items-center justify-center rounded-full bg-muted">
             <Check aria-hidden className="size-5" />
           </span>
-          <span className="font-medium">Checked in</span>
+          <span className="text-sm font-medium">Checked in</span>
         </p>
       ) : (
         <Link href="/check-in" className={rowStyle}>
-          <span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <span className="flex size-10 items-center justify-center rounded-full bg-glow text-glow-foreground">
             <ClipboardList aria-hidden className="size-5" />
           </span>
-          <span className="flex-1 font-medium">Check in</span>
+          <span className="flex-1 text-sm font-medium">Check in</span>
           <ChevronRight aria-hidden className="size-5 text-muted-foreground" />
         </Link>
       )}
 
-      <ul className="grid grid-cols-2 gap-3">
+      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {ASSESSMENTS.map(
           ({ id, shortName, Preview, primaryMetricId, metrics }) => {
             const primary = metrics.find(
@@ -71,9 +71,9 @@ export function GamesView() {
               <li key={id}>
                 <Link
                   href={`/assessments/${id}`}
-                  className="flex h-full flex-col gap-3 rounded-3xl border border-border bg-card p-3 transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-full flex-col gap-3 rounded-3xl p-3.5 surface transition-colors outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-28 items-center justify-center">
+                  <span className="flex h-28 items-center justify-center lg:h-36">
                     <Preview />
                   </span>
                   <span className="flex items-baseline justify-between gap-2 px-1">

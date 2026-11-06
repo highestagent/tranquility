@@ -97,13 +97,7 @@ export function AssessmentRunner({
     case "intro":
       return (
         <Screen
-          eyebrow={
-            eyebrow ?? (
-              <p className="text-sm text-muted-foreground">
-                {assessment.measures}
-              </p>
-            )
-          }
+          eyebrow={eyebrow ?? <p className="eyebrow">{assessment.shortName}</p>}
           title={assessment.tagline}
           dock={
             <>
@@ -158,11 +152,11 @@ export function AssessmentRunner({
       return (
         <section
           aria-label={assessment.name}
-          className="flex flex-1 flex-col pb-6"
+          className="mx-auto flex w-full max-w-lg flex-1 flex-col pb-6"
         >
           <div className="flex items-center justify-between gap-3 pb-3">
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Icon aria-hidden className="size-4" />
+            <p className="flex items-center gap-2 eyebrow">
+              <Icon aria-hidden className="size-3.5" />
               {stage.name === "practice" ? "Practice" : assessment.shortName}
             </p>
             <Button
@@ -208,9 +202,7 @@ export function AssessmentRunner({
     case "ready":
       return (
         <Screen
-          eyebrow={
-            <p className="text-sm text-muted-foreground">Practice done</p>
-          }
+          eyebrow={<p className="eyebrow">Practice done</p>}
           title="Now for real."
           dock={
             <Button size="cta" onClick={() => setStage({ name: "countdown" })}>
@@ -278,7 +270,7 @@ function Countdown({ onDone }: { onDone: () => void }) {
     <p
       key={count}
       role="status"
-      className="count-in m-auto font-voice text-8xl italic"
+      className="count-in m-auto font-voice text-[7rem] font-light"
     >
       {count}
     </p>

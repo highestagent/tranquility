@@ -18,8 +18,8 @@ export function StrengthMeter({ grade }: { grade: EvidenceGrade }) {
           <span
             key={level}
             className={cn(
-              "h-1.5 w-6 rounded-full bg-border",
-              level <= filled && "bg-primary",
+              "h-1 w-5 rounded-full bg-foreground/15",
+              level <= filled && "bg-glow",
               grade === "contradictory" && "bg-muted-foreground/40"
             )}
           />

@@ -33,12 +33,12 @@ export function AiSettings() {
   if (granted === null) return <LoadingMessage />
 
   return (
-    <section className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-4">
+    <section className="flex flex-col gap-3 rounded-3xl p-4 pl-5 surface">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-full bg-muted">
           <Cloud aria-hidden className="size-5" />
         </span>
-        <h2 id="cloud-ai" className="flex-1 font-medium">
+        <h2 id="cloud-ai" className="flex-1 text-sm font-medium">
           Cloud AI
         </h2>
         <button
@@ -49,7 +49,7 @@ export function AiSettings() {
           onClick={() => void change(!granted)}
           className={cn(
             "relative h-7 w-12 rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-            granted ? "bg-primary" : "bg-input"
+            granted ? "bg-glow" : "bg-input"
           )}
         >
           <span

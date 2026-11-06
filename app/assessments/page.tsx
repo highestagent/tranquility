@@ -3,7 +3,7 @@ import { GamesView } from "@/modules/assessments/games-view"
 
 export default function GamesPage() {
   return (
-    <Screen title="Games" titleClassName="voice-display">
+    <Screen wide title="Games" titleClassName="voice-display">
       <GamesView />
     </Screen>
   )

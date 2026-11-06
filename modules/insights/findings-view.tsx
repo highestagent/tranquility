@@ -50,32 +50,41 @@ export function FindingsView() {
     await reload()
   }
 
+  // Findings lead, and what's still being investigated sits beside them.
   return (
-    <>
-      {discoveries.map((view) => (
-        <DiscoveryCard key={view.discovery.id} view={view} />
-      ))}
-
-      {threads.length > 0 ? (
-        <Section label="Investigations">
-          <div className="flex flex-col gap-3">
-            {threads.map((thread) => (
-              <ThreadCard
-                key={thread.id}
-                investigation={thread}
-                onStatus={(status) => void setStatus(thread.id, status)}
-              />
-            ))}
-          </div>
-        </Section>
-      ) : null}
-
-      {discoveries.length > 0 ? (
-        <p className="text-xs text-pretty text-muted-foreground">
-          Patterns in your own data, not diagnoses, and they don&apos;t show
-          cause. For health concerns, see a professional.
-        </p>
-      ) : null}
-    </>
+    <div className="grid flex-1 items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-10">
+      <div className="flex flex-col gap-4">
+        {discoveries.length > 0 ? (
+          discoveries.map((view) => (
+            <DiscoveryCard key={view.discovery.id} view={view} />
+          ))
+        ) : (
+          <EmptyMessage title="No findings yet">
+            They appear once there&apos;s enough evidence.
+          </EmptyMessage>
+        )}
+      </div>
+      <div className="flex flex-col gap-8">
+        {threads.length > 0 ? (
+          <Section label="Investigations">
+            <div className="flex flex-col gap-3">
+              {threads.map((thread) => (
+                <ThreadCard
+                  key={thread.id}
+                  investigation={thread}
+                  onStatus={(status) => void setStatus(thread.id, status)}
+                />
+              ))}
+            </div>
+          </Section>
+        ) : null}
+        {discoveries.length > 0 ? (
+          <p className="text-xs leading-relaxed text-pretty text-muted-foreground">
+            Patterns in your own data, not diagnoses, and they don&apos;t show
+            cause. For health concerns, see a professional.
+          </p>
+        ) : null}
+      </div>
+    </div>
   )
 }

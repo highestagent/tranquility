@@ -58,7 +58,7 @@ export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
         className={cn(
           "stamp-in flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
           verdict.solid
-            ? "border-primary bg-primary text-primary-foreground"
+            ? "border-glow bg-glow text-glow-foreground"
             : "border-border text-muted-foreground"
         )}
       >
@@ -129,7 +129,7 @@ export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
 /** A finding as a self-contained card, for lists. */
 export function DiscoveryCard({ view }: { view: DiscoveryView }) {
   return (
-    <article className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5">
+    <article className="flex flex-col gap-4 rounded-[1.75rem] p-5 surface lg:p-6">
       <DiscoveryEyebrow view={view} />
       <h2 className="voice-title text-balance">{view.discovery.observed}</h2>
       <DiscoveryEvidence view={view} />

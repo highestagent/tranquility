@@ -114,9 +114,9 @@ export function RunResult({
 
   return (
     <Screen
-      eyebrow={<p className="text-sm text-muted-foreground">{primary.label}</p>}
+      eyebrow={<p className="eyebrow">{primary.label}</p>}
       title={value === undefined ? "–" : formatMetric(value, primary)}
-      titleClassName="font-mono text-5xl tabular-nums"
+      titleClassName="figure text-7xl"
       dock={
         <Button size="cta" onClick={onDone}>
           {doneLabel}
@@ -134,7 +134,7 @@ export function RunResult({
               </>
             ) : comparison.kind === "better" ? (
               <>
-                <ArrowUpRight aria-hidden className="size-4 text-primary" />
+                <ArrowUpRight aria-hidden className="size-4 text-glow" />
                 {comparison.percent}% better than usual
               </>
             ) : (
@@ -158,8 +158,8 @@ export function RunResult({
                 key={dot}
                 className={
                   dot <= prior.length
-                    ? "h-1 w-8 rounded-full bg-primary"
-                    : "h-1 w-8 rounded-full bg-border"
+                    ? "h-1 w-8 rounded-full bg-glow"
+                    : "h-1 w-8 rounded-full bg-foreground/15"
                 }
               />
             ))}
@@ -183,7 +183,7 @@ export function RunResult({
               className="flex items-baseline justify-between gap-4 py-3"
             >
               <dt className="text-sm text-muted-foreground">{metric.label}</dt>
-              <dd className="font-mono text-sm tabular-nums">
+              <dd className="text-sm tabular-nums">
                 {formatMetric(other, metric)}
               </dd>
             </div>

@@ -86,7 +86,7 @@ export function VisualSearchGame({
       <div
         data-testid="search-board"
         aria-hidden
-        className="relative mx-auto aspect-square w-full rounded-3xl bg-muted select-none"
+        className="relative mx-auto aspect-square w-full rounded-[2rem] bg-muted select-none"
       >
         {current?.items.map((item) => (
           <span

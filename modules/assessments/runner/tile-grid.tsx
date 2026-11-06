@@ -61,8 +61,8 @@ export function TileGrid({
           onKeyDown={(event) => onKeyDown(event, tile)}
           className={cn(
             "aspect-square touch-manipulation rounded-xl border border-border bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
-            selected.includes(tile) && "border-primary bg-primary/40",
-            lit.includes(tile) && "border-primary bg-primary"
+            selected.includes(tile) && "border-glow bg-glow/40",
+            lit.includes(tile) && "border-glow bg-glow"
           )}
         />
       ))}

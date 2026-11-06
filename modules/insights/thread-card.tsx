@@ -39,7 +39,7 @@ export function ThreadCard({
   return (
     <article
       className={cn(
-        "flex flex-col gap-3 rounded-3xl border border-border bg-card p-4",
+        "flex flex-col gap-3 rounded-3xl p-5 surface",
         (paused || completed) && "opacity-75"
       )}
     >
@@ -96,7 +96,7 @@ export function ThreadCard({
                   className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
                 >
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-glow"
                     style={{
                       width: `${Math.min(100, (item.have / item.need) * 100)}%`,
                     }}

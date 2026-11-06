@@ -16,7 +16,7 @@ export function SequenceRecallPreview() {
           >
             {order >= 0 ? (
               <span
-                className="demo-on demo-seq flex items-center justify-center font-mono text-sm font-medium text-primary-foreground"
+                className="demo-on demo-seq flex items-center justify-center font-mono text-sm font-medium text-glow-foreground"
                 style={{ animationDelay: `${order * 0.7}s` }}
               >
                 {order + 1}

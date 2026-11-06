@@ -19,7 +19,7 @@ export function ThreadGlyph({
       ? "var(--signal-hurt)"
       : helps === true
         ? "var(--signal-help)"
-        : "var(--primary)"
+        : "var(--glow)"
 
   return (
     <div aria-hidden className="flex items-center">
@@ -43,7 +43,7 @@ export function ThreadGlyph({
               cx="36"
               cy="10"
               r="8"
-              fill="var(--card)"
+              fill="var(--background)"
               stroke={color}
               strokeWidth="1.5"
             />

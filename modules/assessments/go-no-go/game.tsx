@@ -62,14 +62,14 @@ export function GoNoGoGame({ seed, mode, onComplete }: GameProps<GoNoGoTrial>) {
         onKeyDown={(event) => {
           if (event.code === "Enter") event.preventDefault()
         }}
-        className="flex min-h-72 w-full flex-1 touch-none items-center justify-center rounded-3xl bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-h-72 w-full flex-1 touch-none items-center justify-center rounded-[2rem] bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span
           data-stimulus={stimulus ?? "none"}
           aria-hidden
           className={cn(
             "size-28",
-            stimulus === "go" && "rounded-full bg-primary",
+            stimulus === "go" && "rounded-full bg-glow",
             stimulus === "no-go" && "border-8 border-destructive"
           )}
         />

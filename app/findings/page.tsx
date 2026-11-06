@@ -3,7 +3,7 @@ import { FindingsView } from "@/modules/insights/findings-view"
 
 export default function FindingsPage() {
   return (
-    <Screen title="Findings" titleClassName="voice-display">
+    <Screen wide title="Findings" titleClassName="voice-display">
       <FindingsView />
     </Screen>
   )

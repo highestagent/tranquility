@@ -188,7 +188,7 @@ export function DataView() {
       </Section>
 
       <Section label="Everything stored">
-        <ul className="flex flex-col divide-y divide-border border-y border-border">
+        <ul className="flex flex-col divide-y divide-border rounded-3xl px-5 surface">
           {STORE_NAMES.map((name) => (
             <li key={name}>
               <StoreRow name={name} count={counts[name]} />
@@ -254,7 +254,9 @@ function StoreRow({ name, count }: { name: StoreName; count: number }) {
       <summary className="flex h-12 cursor-pointer list-none items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Icon aria-hidden className="size-4 text-muted-foreground" />
         <span className="flex-1">{label}</span>
-        <span className="font-mono text-xs tabular-nums">{count}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {count}
+        </span>
         <ChevronDown
           aria-hidden
           className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"

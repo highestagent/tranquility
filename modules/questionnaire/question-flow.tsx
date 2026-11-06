@@ -6,6 +6,7 @@ import { createElement, useEffect, useRef, useState } from "react"
 import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { AgentOrb } from "@/modules/insights/agent-orb"
 
 import {
   getQuestion,
@@ -140,7 +141,7 @@ export function QuestionFlow({
   return (
     <section
       aria-label={`Question ${index + 1} of ${questionIds.length}`}
-      className="flex flex-1 flex-col"
+      className="mx-auto flex w-full max-w-lg flex-1 flex-col"
     >
       <div className="flex items-center gap-3 pb-3">
         <ol aria-hidden className="flex flex-1 gap-1">
@@ -148,8 +149,8 @@ export function QuestionFlow({
             <li
               key={questionId}
               className={cn(
-                "h-1 flex-1 rounded-full bg-border transition-colors duration-300",
-                segment <= index && "bg-primary"
+                "h-0.5 flex-1 rounded-full bg-foreground/12 transition-colors duration-500",
+                segment <= index && "bg-glow"
               )}
             />
           ))}
@@ -208,13 +209,18 @@ export function QuestionFlow({
           </div>
         }
       >
-        <span className="m-auto flex size-28 items-center justify-center rounded-full bg-muted">
-          {createElement(getQuestionIcon(question), {
-            "aria-hidden": true,
-            className: "size-11",
-            strokeWidth: 1.5,
-          })}
-        </span>
+        <div className="relative m-auto size-[min(15rem,34svh)]">
+          <AgentOrb state="resting" radius={0.3} className="absolute inset-0" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            {createElement(getQuestionIcon(question), {
+              "aria-hidden": true,
+              className:
+                "rise-in size-[17%] text-white drop-shadow-[0_1px_6px_rgb(0_0_0_/_0.45)]",
+              strokeWidth: 1.5,
+              key: id,
+            })}
+          </div>
+        </div>
       </Screen>
     </section>
   )
@@ -294,8 +300,9 @@ function ScalePicker({
             >
               <span
                 className={cn(
-                  "rounded-full border-2 border-primary/50 transition-all duration-200 group-hover:border-primary group-active:scale-90",
-                  selected && "border-primary bg-primary"
+                  "rounded-full bg-foreground/[0.07] ring-1 ring-foreground/20 transition-all duration-300 ring-inset group-hover:bg-foreground/15 group-active:scale-90",
+                  selected &&
+                    "bg-glow shadow-[0_0_28px_-2px_var(--glow)] ring-glow"
                 )}
                 style={{ width: `${size}rem`, height: `${size}rem` }}
               />
@@ -336,8 +343,8 @@ function YesNoPicker({
             aria-pressed={selected}
             onClick={() => onPick(option.value)}
             className={cn(
-              "flex h-24 flex-col items-center justify-center gap-1 rounded-3xl border-2 border-border bg-card text-sm font-medium transition-all duration-200 outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
-              selected && "border-primary bg-primary text-primary-foreground"
+              "flex h-24 flex-col items-center justify-center gap-1.5 rounded-3xl text-sm font-medium surface transition-all duration-200 outline-none hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]",
+              selected && "bg-primary text-primary-foreground"
             )}
           >
             <option.Icon aria-hidden className="size-6" />
@@ -379,9 +386,7 @@ function NumberDial({
   return (
     <div className="flex flex-col gap-2">
       <p className="flex items-baseline gap-2" aria-live="polite">
-        <span className="font-mono text-4xl tabular-nums">
-          {value === null ? "–" : value}
-        </span>
+        <span className="text-5xl figure">{value === null ? "–" : value}</span>
         <span className="text-sm text-muted-foreground">{unit}</span>
       </p>
       <input
@@ -395,7 +400,7 @@ function NumberDial({
         data-touched={value !== null || undefined}
         onChange={(event) => setValue(Number(event.target.value))}
         onPointerUp={(event) => setValue(Number(event.currentTarget.value))}
-        className="dial h-11 w-full cursor-pointer accent-primary"
+        className="dial h-11 w-full cursor-pointer"
       />
       <Button
         size="cta"
