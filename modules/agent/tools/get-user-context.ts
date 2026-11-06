@@ -1,6 +1,7 @@
 import { tool } from "ai"
 import { z } from "zod"
 
+import { recallMemories } from "@/modules/agent-memory/recall"
 import { getInvestigationState } from "@/modules/investigation"
 import { measurements, responses, sessions } from "@/modules/memory"
 import { ASSESSMENTS } from "@/modules/assessments"
@@ -10,6 +11,8 @@ import { summarizeCoverage } from "./coverage"
 import { questionIdSchema, reasonSchema } from "./shared"
 
 const RECENT_VALUES = 10
+const DEFAULT_MEMORY_QUERY =
+  "What has been learned about this person's sleep, habits, stress, mood, and thinking?"
 
 export const getUserContext = tool({
   description:
@@ -21,8 +24,13 @@ export const getUserContext = tool({
       .max(8)
       .optional()
       .describe("Questions to retrieve answers for."),
+    memoryQuery: z
+      .string()
+      .max(300)
+      .optional()
+      .describe("What to look up in your long-term memory of past sessions."),
   }),
-  execute: async ({ questionIds = [] }) => {
+  execute: async ({ questionIds = [], memoryQuery }) => {
     const [state, sessionRows, asked, responseRows, runCounts, answers] =
       await Promise.all([
         getInvestigationState(),
@@ -51,7 +59,11 @@ export const getUserContext = tool({
           })
         ),
       ])
+    const memories = await recallMemories(
+      memoryQuery ?? state.open[0]?.question ?? DEFAULT_MEMORY_QUERY
+    )
     return {
+      memories,
       sessions: sessionRows.length,
       askedThisSession: [...asked],
       runs: runCounts,

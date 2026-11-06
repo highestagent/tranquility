@@ -4,6 +4,8 @@ import { DirectChatTransport, type ChatTransport, type UIMessage } from "ai"
 import { createInvestigationAgent } from "@/modules/agent/agent"
 import { createBrowserModel } from "@/modules/agent/model"
 
+import { syncMemory } from "@/modules/agent-memory/sync"
+
 import { deriveActivity } from "./activity"
 import { setAgentRest } from "./wake"
 
@@ -35,4 +37,6 @@ export async function runAgentTurn(send: () => Promise<void>) {
       spoken: deriveActivity(current.messages).spoken,
     })
   }
+  // What this turn concluded is saved in the background.
+  void syncMemory()
 }

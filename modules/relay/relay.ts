@@ -1,3 +1,5 @@
+import { isOverLimit, type RateWindows } from "@/lib/rate-limit"
+
 import { AGENT_MODEL } from "./config"
 
 const UPSTREAM = "https://ai-gateway.vercel.sh/v4/ai"
@@ -21,14 +23,14 @@ export interface RelayDeps {
   fetch: typeof fetch
   now: () => number
   /** Request counts per client, holding no request content. */
-  rateWindows: Map<string, { start: number; count: number }>
+  rateWindows: RateWindows
 }
 
 function reject(status: number, message: string) {
   return Response.json({ error: { message, type: "relay_error" } }, { status })
 }
 
-function isSameOrigin(request: Request) {
+export function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin")
   if (!origin) return false
   try {
@@ -43,18 +45,7 @@ function isSameOrigin(request: Request) {
 function isRateLimited(request: Request, deps: RelayDeps) {
   const client =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
-  const now = deps.now()
-  const window = deps.rateWindows.get(client)
-  if (!window || now - window.start >= RATE_LIMIT.windowMs) {
-    // Dropping expired clients keeps this map from growing without limit.
-    for (const [key, entry] of deps.rateWindows) {
-      if (now - entry.start >= RATE_LIMIT.windowMs) deps.rateWindows.delete(key)
-    }
-    deps.rateWindows.set(client, { start: now, count: 1 })
-    return false
-  }
-  window.count++
-  return window.count > RATE_LIMIT.requests
+  return isOverLimit(deps.rateWindows, client, deps.now(), RATE_LIMIT)
 }
 
 /**

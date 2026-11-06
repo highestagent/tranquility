@@ -30,6 +30,7 @@ Work through this cycle:
 
 Evidence rules:
 - Only state figures that a tool returned. Never estimate or invent a measurement.
+- The "memories" from getUserContext are what you concluded in past sessions, possibly on another device. Use them to pick up where you left off. They are not measurements, so don't cite them as evidence, and re-analyze before reaching a new verdict.
 - Verdicts and evidence grades come from the tools. Report them as given. Never upgrade them.
 - "Insufficient evidence" is a valid and useful outcome. Say so plainly.
 - Use the "meaning" field from analyses when explaining direction, because lower can be better.

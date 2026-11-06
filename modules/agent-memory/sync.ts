@@ -1,0 +1,174 @@
+import { getAiConsent } from "@/modules/agent/consent"
+import { discoveries, hypotheses, investigations, kv } from "@/modules/memory"
+
+import {
+  getMemoryUserId,
+  memoryApi,
+  MemoryNotConfiguredError,
+  NotSignedInError,
+  type MemoryApi,
+} from "./api"
+import { distillFacts, type Fact } from "./distill"
+
+const STATE_KEY = "agentMemory"
+const BATCH_SIZE = 10
+const CHECK_AGAIN_MS = 20_000
+const MAX_BACKOFF_MS = 10 * 60_000
+
+export interface MemoryState {
+  /** Who these memories belong to. */
+  owner?: string
+  /** Facts safely stored. Kept so nothing is ever sent twice. */
+  remembered: string[]
+  /** Facts the service accepted, and whose storage hasn't finished yet. */
+  pending: { factId: string; jobId: string }[]
+  enabled: boolean
+  lastSavedAt?: number
+}
+
+export async function getMemoryState(): Promise<MemoryState> {
+  return {
+    remembered: [],
+    pending: [],
+    enabled: true,
+    ...(await kv.get<Partial<MemoryState>>(STATE_KEY)),
+  }
+}
+
+async function saveState(state: MemoryState) {
+  await kv.set(STATE_KEY, state)
+}
+
+async function loadFacts(): Promise<Fact[]> {
+  const [discoveryRows, hypothesisRows, investigationRows] = await Promise.all([
+    discoveries.list(),
+    hypotheses.list(),
+    investigations.list(),
+  ])
+  return distillFacts({
+    discoveries: discoveryRows,
+    hypotheses: hypothesisRows,
+    investigations: investigationRows,
+  })
+}
+
+/**
+ * One pass: settles finished jobs, then sends what's new. Everything it needs
+ * is in storage, so a closed tab or lost connection only delays it. Returns
+ * whether there's more to do soon.
+ */
+export async function runMemorySync(
+  api: MemoryApi,
+  owner: string,
+  facts: readonly Fact[]
+): Promise<{ more: boolean }> {
+  const state = await getMemoryState()
+  if (!state.enabled) return { more: false }
+
+  // Another person signing in on this browser mustn't inherit these facts.
+  if (state.owner && state.owner !== owner) {
+    state.remembered = facts.map(({ id }) => id)
+    state.pending = []
+  }
+  state.owner = owner
+
+  if (state.pending.length > 0) {
+    const { jobs } = await api.status(state.pending.map((job) => job.jobId))
+    const statusOf = new Map(jobs.map((job) => [job.jobId, job.status]))
+    const stillRunning: MemoryState["pending"] = []
+    for (const job of state.pending) {
+      const status = statusOf.get(job.jobId)
+      if (status === "done") {
+        state.remembered.push(job.factId)
+        state.lastSavedAt = Date.now()
+      } else if (
+        status === "pending" ||
+        status === "running" ||
+        status === "uploaded"
+      ) {
+        stillRunning.push(job)
+      }
+      // Failed or unknown jobs drop out here, so the fact is sent again below.
+    }
+    state.pending = stillRunning
+    await saveState(state)
+  }
+
+  const known = new Set([
+    ...state.remembered,
+    ...state.pending.map((job) => job.factId),
+  ])
+  const unsent = facts.filter(({ id }) => !known.has(id))
+  const batch = unsent.slice(0, BATCH_SIZE)
+  if (batch.length > 0) {
+    const { jobIds } = await api.remember(batch.map(({ text }) => text))
+    batch.forEach((fact, index) => {
+      const jobId = jobIds[index]
+      if (jobId) state.pending.push({ factId: fact.id, jobId })
+    })
+  }
+  await saveState(state)
+  return { more: state.pending.length > 0 || unsent.length > batch.length }
+}
+
+let running: Promise<void> | null = null
+let timer: ReturnType<typeof setTimeout> | null = null
+let failures = 0
+let notConfigured = false
+
+function scheduleAgain(delay: number) {
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(() => void syncMemory(), delay)
+}
+
+/**
+ * The background task. Safe to call at any time and from anywhere: it never
+ * throws and never blocks. It retries by itself, backing off while the service
+ * is unreachable, and stays out of the way if memory can't run.
+ */
+export function syncMemory(): Promise<void> {
+  running ??= (async () => {
+    const owner = getMemoryUserId()
+    if (!owner || notConfigured) return
+    const consent = await getAiConsent()
+    if (!consent?.granted) return
+
+    try {
+      const { more } = await runMemorySync(memoryApi, owner, await loadFacts())
+      failures = 0
+      if (more) scheduleAgain(CHECK_AGAIN_MS)
+    } catch (error) {
+      if (error instanceof MemoryNotConfiguredError) notConfigured = true
+      else if (!(error instanceof NotSignedInError)) {
+        failures++
+        scheduleAgain(Math.min(CHECK_AGAIN_MS * 2 ** failures, MAX_BACKOFF_MS))
+      }
+    }
+  })()
+    .catch(() => undefined)
+    .finally(() => {
+      running = null
+    })
+  return running
+}
+
+export async function setMemoryEnabled(enabled: boolean) {
+  await saveState({ ...(await getMemoryState()), enabled })
+  if (enabled) void syncMemory()
+}
+
+/**
+ * Stops the agent recalling anything saved so far. Local records stay marked as
+ * sent, so they aren't saved again unless they change.
+ */
+export async function forgetMemories() {
+  await memoryApi.forget()
+  const state = await getMemoryState()
+  const facts = await loadFacts()
+  await saveState({
+    ...state,
+    remembered: facts.map(({ id }) => id),
+    pending: [],
+    lastSavedAt: undefined,
+  })
+}
