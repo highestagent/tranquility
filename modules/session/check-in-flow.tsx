@@ -39,5 +39,11 @@ export function CheckInFlow() {
       />
     )
   }
-  return <QuestionFlow questionIds={state.data} onDone={toGames} />
+  return (
+    <QuestionFlow
+      questionIds={state.data}
+      recordDeclines={false}
+      onDone={toGames}
+    />
+  )
 }

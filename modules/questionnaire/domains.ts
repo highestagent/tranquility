@@ -1,13 +1,20 @@
 import {
   Activity,
+  BatteryMedium,
+  BedDouble,
+  BellRing,
+  Briefcase,
   Coffee,
+  Dumbbell,
   Moon,
   Smile,
+  Utensils,
   Volume2,
+  Wine,
   type LucideIcon,
 } from "lucide-react"
 
-import type { QuestionDomain } from "./bank"
+import type { Question, QuestionDomain } from "./bank"
 
 export const DOMAINS: readonly {
   id: QuestionDomain
@@ -23,4 +30,19 @@ export const DOMAINS: readonly {
 
 export function getDomain(id: QuestionDomain) {
   return DOMAINS.find((domain) => domain.id === id)!
+}
+
+/** Questions that a picture of their domain would misdescribe. */
+const QUESTION_ICONS: Partial<Record<string, LucideIcon>> = {
+  "sleep.nap_today": BedDouble,
+  "mood.energy": BatteryMedium,
+  "stress.workload": Briefcase,
+  "lifestyle.exercise_today": Dumbbell,
+  "lifestyle.alcohol_last_night": Wine,
+  "lifestyle.meal_recent": Utensils,
+  "environment.interruptions": BellRing,
+}
+
+export function getQuestionIcon(question: Question) {
+  return QUESTION_ICONS[question.id] ?? getDomain(question.domain).Icon
 }

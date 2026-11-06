@@ -39,7 +39,9 @@ export async function loadSnapshot() {
     latestDataAt: Math.max(
       0,
       ...runs.map((run) => run.completedAt),
-      ...answers.map((answer) => answer.answeredAt)
+      ...answers.flatMap((answer) =>
+        answer.value === null ? [] : [answer.answeredAt]
+      )
     ),
   }
 }

@@ -1,25 +1,38 @@
-import { getCurrentSession, newId, responses } from "@/modules/memory"
+import { getCurrentSession, responses } from "@/modules/memory"
 
 import { BANK_VERSION, type QuestionId } from "./bank"
 
-/** Stores answers; `null` records a declined question. */
-export async function saveAnswers(
-  answers: Partial<Record<QuestionId, number | null>>
-) {
+export type Answers = Partial<Record<QuestionId, number | null>>
+
+/**
+ * Stores one answer as soon as it's given, so nothing is lost if the page
+ * closes. The ID is stable per session and question, which makes repeats and
+ * changed answers overwrite rather than add a row. `null` records a decline.
+ */
+export async function saveAnswer(questionId: QuestionId, value: number | null) {
   const session = await getCurrentSession()
-  const answeredAt = Date.now()
-  await Promise.all(
-    Object.entries(answers).map(([questionId, value]) =>
-      responses.put({
-        id: newId(),
-        sessionId: session.id,
-        questionId,
-        bankVersion: BANK_VERSION,
-        value: value ?? null,
-        answeredAt,
-      })
-    )
-  )
+  await responses.put({
+    id: `${session.id}:${questionId}`,
+    sessionId: session.id,
+    questionId,
+    bankVersion: BANK_VERSION,
+    value,
+    answeredAt: Date.now(),
+  })
+}
+
+/** What's already been answered this session, for resuming a set of questions. */
+export async function loadSessionAnswers(
+  questionIds: readonly QuestionId[]
+): Promise<Answers> {
+  const session = await getCurrentSession()
+  const rows = await responses.bySession(session.id)
+  const answers: Answers = {}
+  for (const row of rows) {
+    const id = row.questionId as QuestionId
+    if (questionIds.includes(id)) answers[id] = row.value
+  }
+  return answers
 }
 
 export async function askedThisSession() {

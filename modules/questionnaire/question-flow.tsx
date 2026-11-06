@@ -1,7 +1,7 @@
 "use client"
 
 import { ArrowRight, Check, ChevronLeft, SkipForward, X } from "lucide-react"
-import { useState } from "react"
+import { createElement, useEffect, useRef, useState } from "react"
 
 import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
@@ -14,61 +14,111 @@ import {
   type Question,
   type QuestionId,
 } from "./bank"
-import { getDomain } from "./domains"
-import { saveAnswers } from "./responses"
+import { getQuestionIcon } from "./domains"
+import { loadSessionAnswers, saveAnswer, type Answers } from "./responses"
 
 /** How long a tapped answer stays visible before the next question appears. */
 const ADVANCE_DELAY_MS = 220
 
-type Answers = Partial<Record<QuestionId, number | null>>
-
 /**
  * One question at a time, with the answers in thumb reach. A tap answers and
- * moves on, and anything skipped is stored as declined.
+ * moves on. Each answer is saved straight away, so closing the page loses
+ * nothing and the flow picks up where it left off.
+ *
+ * `recordDeclines` is for when the agent asked. A check-in the user opened
+ * themselves has declined nothing by leaving it.
  */
 export function QuestionFlow({
   questionIds,
   eyebrow,
+  recordDeclines = true,
   onDone,
 }: {
   questionIds: readonly QuestionId[]
   eyebrow?: React.ReactNode
+  recordDeclines?: boolean
   onDone: (answered: number) => void
 }) {
   const [index, setIndex] = useState(0)
-  const [answers, setAnswers] = useState<Answers>({})
+  const [answers, setAnswers] = useState<Answers | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
+  // Tapped answers wait briefly before advancing. Further taps are ignored.
+  const advancing = useRef(false)
+  const finishing = useRef(false)
 
   const id = questionIds[index]
   const question = id ? (getQuestion(id) as Question) : null
 
   async function finish(final: Answers) {
-    const complete: Answers = {}
-    for (const questionId of questionIds) {
-      complete[questionId] = final[questionId] ?? null
-    }
+    if (finishing.current) return
+    finishing.current = true
     setSaving(true)
     setSaveFailed(false)
     try {
-      await saveAnswers(complete)
-      onDone(Object.values(complete).filter((value) => value !== null).length)
+      if (recordDeclines) {
+        await Promise.all(
+          questionIds
+            .filter((questionId) => !(questionId in final))
+            .map((questionId) => saveAnswer(questionId, null))
+        )
+      }
+      onDone(
+        questionIds.filter(
+          (questionId) =>
+            final[questionId] !== null && final[questionId] !== undefined
+        ).length
+      )
     } catch {
+      finishing.current = false
       setSaveFailed(true)
       setSaving(false)
     }
   }
 
+  const resume = (restored: Answers) => {
+    setAnswers(restored)
+    const next = questionIds.findIndex(
+      (questionId) => !(questionId in restored)
+    )
+    if (next === -1) void finish(restored)
+    else setIndex(next)
+  }
+  const resumeRef = useRef(resume)
+  useEffect(() => {
+    resumeRef.current = resume
+  })
+
+  useEffect(() => {
+    let active = true
+    loadSessionAnswers(questionIds).then(
+      (restored) => {
+        if (active) resumeRef.current(restored)
+      },
+      () => {
+        if (active) resumeRef.current({})
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [questionIds])
+
   function answer(value: number | null, delay = 0) {
-    if (!id) return
+    if (!id || !answers || advancing.current) return
+    advancing.current = true
     const next = { ...answers, [id]: value }
+    // A skip in a check-in isn't a decline: it just moves on.
+    if (value === null && !recordDeclines) delete next[id]
     setAnswers(next)
-    const advance = () => {
+    if (value !== null || recordDeclines) {
+      saveAnswer(id, value).catch(() => setSaveFailed(true))
+    }
+    setTimeout(() => {
+      advancing.current = false
       if (index + 1 < questionIds.length) setIndex(index + 1)
       else void finish(next)
-    }
-    if (delay > 0) setTimeout(advance, delay)
-    else advance()
+    }, delay)
   }
 
   if (saveFailed) {
@@ -77,7 +127,7 @@ export function QuestionFlow({
         <Screen
           title="I couldn't save that on this device."
           dock={
-            <Button size="cta" onClick={() => void finish(answers)}>
+            <Button size="cta" onClick={() => void finish(answers ?? {})}>
               Try again
             </Button>
           }
@@ -85,9 +135,7 @@ export function QuestionFlow({
       </div>
     )
   }
-  if (!question || !id) return null
-
-  const { Icon } = getDomain(question.domain)
+  if (!question || !id || !answers) return null
 
   return (
     <section
@@ -161,7 +209,11 @@ export function QuestionFlow({
         }
       >
         <span className="m-auto flex size-28 items-center justify-center rounded-full bg-muted">
-          <Icon aria-hidden className="size-11" strokeWidth={1.5} />
+          {createElement(getQuestionIcon(question), {
+            "aria-hidden": true,
+            className: "size-11",
+            strokeWidth: 1.5,
+          })}
         </span>
       </Screen>
     </section>
