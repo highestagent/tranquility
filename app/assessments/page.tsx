@@ -2,13 +2,14 @@ import Link from "next/link"
 
 import { PageHeader } from "@/components/page-header"
 import { ASSESSMENTS } from "@/modules/assessments"
+import { CheckIn } from "@/modules/session/check-in"
 
 export default function AssessmentsPage() {
   return (
     <>
       <PageHeader
         title="Assessments"
-        description="Short games with fixed protocols, so results stay comparable over time. You can play any of them directly."
+        description="Short games with fixed protocols, so results stay comparable over time. Check in below too, so results can be compared with how you were doing."
       />
       <ul className="flex flex-col gap-2">
         {ASSESSMENTS.map((assessment) => (
@@ -25,6 +26,7 @@ export default function AssessmentsPage() {
           </li>
         ))}
       </ul>
+      <CheckIn />
     </>
   )
 }
