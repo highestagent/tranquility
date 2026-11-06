@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from "next"
-import { Figtree, Geist_Mono, Newsreader } from "next/font/google"
+import { Geist_Mono, Instrument_Sans, Newsreader } from "next/font/google"
 
 import "./globals.css"
 import { AppNav } from "@/components/app-nav"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
-const fontSans = Figtree({ subsets: ["latin"], variable: "--font-sans" })
+const fontSans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
 
 /** The agent's voice. Everything it says to you is set in this face. */
 const fontVoice = Newsreader({
@@ -50,8 +53,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {/* A phone-width column everywhere, so layouts have one shape to get right. */}
-          <div className="mx-auto flex min-h-svh w-full max-w-md flex-col px-5">
+          <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
             <AppNav />
             <main className="flex flex-1 flex-col">{children}</main>
           </div>

@@ -42,8 +42,8 @@ export function EmptyMessage({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-3xl border border-dashed border-border p-5 text-sm">
-      <p className="font-medium">{title}</p>
+    <div className="flex flex-col gap-1 rounded-3xl p-6 text-sm surface">
+      <p className="voice-note not-italic">{title}</p>
       <div className="text-muted-foreground">{children}</div>
     </div>
   )

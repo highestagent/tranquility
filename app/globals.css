@@ -10,6 +10,8 @@
     --font-sans: var(--font-sans);
     --font-mono: var(--font-mono);
     --font-voice: var(--font-voice);
+    --color-glow: var(--glow);
+    --color-glow-foreground: var(--glow-foreground);
     --color-signal-help: var(--signal-help);
     --color-signal-hurt: var(--signal-hurt);
     --color-sidebar-ring: var(--sidebar-ring);
@@ -52,26 +54,31 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Still water: pale sage by day, deep ink at night, one living teal. */
+/*
+ * Near-monochrome: actions are ink on paper, or paper on ink. The only colour
+ * is `--glow`, and it's reserved for the agent and for data.
+ */
 :root {
-    --background: oklch(0.972 0.008 150);
-    --foreground: oklch(0.24 0.025 205);
-    --card: oklch(0.992 0.004 150);
-    --card-foreground: oklch(0.24 0.025 205);
-    --popover: oklch(0.992 0.004 150);
-    --popover-foreground: oklch(0.24 0.025 205);
-    --primary: oklch(0.46 0.1 178);
-    --primary-foreground: oklch(0.985 0.01 170);
-    --secondary: oklch(0.93 0.014 170);
-    --secondary-foreground: oklch(0.28 0.03 200);
-    --muted: oklch(0.935 0.01 160);
-    --muted-foreground: oklch(0.47 0.02 205);
-    --accent: oklch(0.93 0.014 170);
-    --accent-foreground: oklch(0.28 0.03 200);
-    --destructive: oklch(0.55 0.19 30);
-    --border: oklch(0.88 0.012 170);
-    --input: oklch(0.86 0.012 170);
-    --ring: oklch(0.6 0.09 178);
+    --background: oklch(0.975 0.006 95);
+    --foreground: oklch(0.2 0.015 220);
+    --card: oklch(0.995 0.003 95);
+    --card-foreground: oklch(0.2 0.015 220);
+    --popover: oklch(0.995 0.003 95);
+    --popover-foreground: oklch(0.2 0.015 220);
+    --primary: oklch(0.2 0.015 220);
+    --primary-foreground: oklch(0.98 0.004 95);
+    --secondary: oklch(0.2 0.02 220 / 6%);
+    --secondary-foreground: oklch(0.2 0.015 220);
+    --muted: oklch(0.2 0.02 220 / 5%);
+    --muted-foreground: oklch(0.45 0.015 220);
+    --accent: oklch(0.2 0.02 220 / 6%);
+    --accent-foreground: oklch(0.2 0.015 220);
+    --destructive: oklch(0.52 0.19 28);
+    --border: oklch(0.2 0.02 220 / 10%);
+    --input: oklch(0.2 0.02 220 / 14%);
+    --ring: oklch(0.52 0.1 178);
+    --glow: oklch(0.52 0.1 178);
+    --glow-foreground: oklch(0.985 0.006 170);
     /* Validated pair: see the dataviz palette check. Always paired with a +/− mark. */
     --signal-help: #008a72;
     --signal-hurt: #b85a14;
@@ -80,36 +87,38 @@
     --chart-3: oklch(0.58 0.1 178);
     --chart-4: oklch(0.46 0.1 178);
     --chart-5: oklch(0.36 0.08 178);
-    --radius: 0.75rem;
-    --sidebar: oklch(0.972 0.008 150);
-    --sidebar-foreground: oklch(0.24 0.025 205);
-    --sidebar-primary: oklch(0.46 0.1 178);
-    --sidebar-primary-foreground: oklch(0.985 0.01 170);
-    --sidebar-accent: oklch(0.93 0.014 170);
-    --sidebar-accent-foreground: oklch(0.28 0.03 200);
-    --sidebar-border: oklch(0.88 0.012 170);
-    --sidebar-ring: oklch(0.6 0.09 178);
+    --radius: 0.875rem;
+    --sidebar: oklch(0.975 0.006 95);
+    --sidebar-foreground: oklch(0.2 0.015 220);
+    --sidebar-primary: oklch(0.2 0.015 220);
+    --sidebar-primary-foreground: oklch(0.98 0.004 95);
+    --sidebar-accent: oklch(0.2 0.02 220 / 6%);
+    --sidebar-accent-foreground: oklch(0.2 0.015 220);
+    --sidebar-border: oklch(0.2 0.02 220 / 10%);
+    --sidebar-ring: oklch(0.52 0.1 178);
 }
 
 .dark {
-    --background: oklch(0.165 0.018 215);
-    --foreground: oklch(0.95 0.012 170);
-    --card: oklch(0.205 0.02 215);
-    --card-foreground: oklch(0.95 0.012 170);
-    --popover: oklch(0.205 0.02 215);
-    --popover-foreground: oklch(0.95 0.012 170);
-    --primary: oklch(0.76 0.115 175);
-    --primary-foreground: oklch(0.2 0.03 205);
-    --secondary: oklch(0.26 0.02 210);
-    --secondary-foreground: oklch(0.95 0.012 170);
-    --muted: oklch(0.25 0.018 212);
-    --muted-foreground: oklch(0.74 0.02 190);
-    --accent: oklch(0.26 0.02 210);
-    --accent-foreground: oklch(0.95 0.012 170);
-    --destructive: oklch(0.72 0.17 30);
-    --border: oklch(0.95 0.01 170 / 12%);
-    --input: oklch(0.95 0.01 170 / 18%);
-    --ring: oklch(0.76 0.115 175);
+    --background: oklch(0.135 0.012 225);
+    --foreground: oklch(0.97 0.006 170);
+    --card: oklch(0.19 0.014 225);
+    --card-foreground: oklch(0.97 0.006 170);
+    --popover: oklch(0.19 0.014 225);
+    --popover-foreground: oklch(0.97 0.006 170);
+    --primary: oklch(0.97 0.006 170);
+    --primary-foreground: oklch(0.16 0.014 225);
+    --secondary: oklch(1 0 0 / 8%);
+    --secondary-foreground: oklch(0.97 0.006 170);
+    --muted: oklch(1 0 0 / 6%);
+    --muted-foreground: oklch(0.73 0.012 205);
+    --accent: oklch(1 0 0 / 8%);
+    --accent-foreground: oklch(0.97 0.006 170);
+    --destructive: oklch(0.72 0.16 28);
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 13%);
+    --ring: oklch(0.84 0.12 172);
+    --glow: oklch(0.84 0.12 172);
+    --glow-foreground: oklch(0.18 0.03 205);
     --signal-help: #2ea68e;
     --signal-hurt: #c97b34;
     --chart-1: oklch(0.36 0.07 178);
@@ -117,37 +126,63 @@
     --chart-3: oklch(0.6 0.1 178);
     --chart-4: oklch(0.72 0.11 178);
     --chart-5: oklch(0.84 0.09 178);
-    --sidebar: oklch(0.165 0.018 215);
-    --sidebar-foreground: oklch(0.95 0.012 170);
-    --sidebar-primary: oklch(0.76 0.115 175);
-    --sidebar-primary-foreground: oklch(0.2 0.03 205);
-    --sidebar-accent: oklch(0.26 0.02 210);
-    --sidebar-accent-foreground: oklch(0.95 0.012 170);
-    --sidebar-border: oklch(0.95 0.01 170 / 12%);
-    --sidebar-ring: oklch(0.76 0.115 175);
+    --sidebar: oklch(0.135 0.012 225);
+    --sidebar-foreground: oklch(0.97 0.006 170);
+    --sidebar-primary: oklch(0.97 0.006 170);
+    --sidebar-primary-foreground: oklch(0.16 0.014 225);
+    --sidebar-accent: oklch(1 0 0 / 8%);
+    --sidebar-accent-foreground: oklch(0.97 0.006 170);
+    --sidebar-border: oklch(1 0 0 / 9%);
+    --sidebar-ring: oklch(0.84 0.12 172);
 }
 
 /*
- * The type scale. The agent speaks in three sizes; everything else is the body
- * size or a caption. Nothing on a screen should need a size outside these.
+ * The type scale. The agent speaks in a light serif at three sizes. Everything
+ * else is the body size, a figure, or a small-caps label.
  */
 @utility voice-display {
   font-family: var(--font-voice);
-  font-size: 2.25rem;
-  line-height: 1.08;
-  letter-spacing: -0.01em;
+  font-size: clamp(2.625rem, 1.9rem + 3.2vw, 4.25rem);
+  font-weight: 300;
+  line-height: 1.02;
+  letter-spacing: -0.024em;
 }
 @utility voice-title {
   font-family: var(--font-voice);
-  font-size: 1.625rem;
-  line-height: 1.2;
-  letter-spacing: -0.005em;
+  font-size: clamp(1.875rem, 1.55rem + 1.5vw, 2.875rem);
+  font-weight: 320;
+  line-height: 1.08;
+  letter-spacing: -0.018em;
 }
 @utility voice-note {
   font-family: var(--font-voice);
   font-size: 1.0625rem;
+  font-weight: 340;
   line-height: 1.35;
   font-style: italic;
+}
+@utility eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+@utility figure {
+  font-weight: 280;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Layered glass: a soft fill, a hairline, and a lit top edge. */
+@utility surface {
+  background: color-mix(in oklch, var(--card) 62%, transparent);
+  backdrop-filter: blur(28px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in oklch, var(--foreground) 10%, transparent),
+    inset 0 0 0 1px color-mix(in oklch, var(--foreground) 6%, transparent),
+    0 30px 60px -40px rgb(0 0 0 / 0.55);
 }
 
 @layer base {
@@ -156,14 +191,26 @@
     }
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(
-      60rem 32rem at 50% -8rem,
-      color-mix(in oklch, var(--primary) 13%, transparent),
-      transparent
-    );
-    background-attachment: fixed;
-    background-repeat: no-repeat;
     }
+  /* Atmosphere: light gathering at the top of the page, with a fine grain. */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before {
+    background:
+      radial-gradient(56rem 38rem at 82% -8%, color-mix(in oklch, var(--glow) 17%, transparent), transparent 72%),
+      radial-gradient(44rem 34rem at -6% 22%, color-mix(in oklch, var(--glow) 7%, transparent), transparent 72%);
+  }
+  body::after {
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
   html {
     @apply font-sans;
     }

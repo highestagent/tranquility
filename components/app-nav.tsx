@@ -13,26 +13,25 @@ const LINKS = [
   { href: "/you", label: "You", Icon: Fingerprint },
 ]
 
-const focusRing =
-  "rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-
 export function AppNav() {
   const pathname = usePathname()
 
   return (
     <nav
       aria-label="Main"
-      className="-mx-2 flex h-14 shrink-0 items-center justify-between"
+      className="flex h-[4.5rem] shrink-0 items-center justify-between"
     >
       <Link
         href="/"
-        aria-label="Tranquility home"
         aria-current={pathname === "/" ? "page" : undefined}
-        className={cn("flex size-11 items-center justify-center", focusRing)}
+        className="flex h-11 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <PoolMark className="size-7" />
+        <PoolMark className="size-6" />
+        <span className="font-voice text-lg tracking-[-0.01em]">
+          Tranquility
+        </span>
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 rounded-full p-1 surface">
         {LINKS.map(({ href, label, Icon }) => {
           const active = pathname.startsWith(href)
           return (
@@ -43,18 +42,12 @@ export function AppNav() {
               title={label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex size-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground",
-                focusRing,
-                active && "text-foreground"
+                "flex h-9 min-w-10 items-center justify-center gap-2 rounded-full px-2.5 text-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring lg:px-4",
+                active && "bg-foreground/10 text-foreground"
               )}
             >
-              <Icon aria-hidden className="size-5" />
-              {active ? (
-                <span
-                  aria-hidden
-                  className="absolute bottom-1 size-1 rounded-full bg-primary"
-                />
-              ) : null}
+              <Icon aria-hidden className="size-[1.0625rem]" />
+              <span className="hidden lg:inline">{label}</span>
             </Link>
           )
         })}

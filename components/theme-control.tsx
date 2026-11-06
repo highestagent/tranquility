@@ -27,9 +27,9 @@ export function ThemeControl() {
     <div
       role="radiogroup"
       aria-label="Appearance"
-      className="flex items-center justify-between gap-3 rounded-3xl border border-border bg-card p-4"
+      className="flex items-center justify-between gap-3 rounded-3xl p-4 pl-5 surface"
     >
-      <span className="font-medium">Appearance</span>
+      <span className="text-sm font-medium">Appearance</span>
       <span className="flex gap-1 rounded-full bg-muted p-1">
         {OPTIONS.map(({ value, label, Icon }) => {
           const selected = mounted && theme === value
@@ -44,7 +44,7 @@ export function ThemeControl() {
               onClick={() => setTheme(value)}
               className={cn(
                 "flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                selected && "bg-card text-foreground shadow-sm"
+                selected && "bg-foreground/10 text-foreground"
               )}
             >
               <Icon aria-hidden className="size-4" />

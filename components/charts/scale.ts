@@ -19,8 +19,9 @@ export function niceTicks(low: number, high: number, targetCount = 3) {
   if (!(span > 0)) return [low]
   const rawStep = span / Math.max(1, targetCount - 1)
   const magnitude = 10 ** Math.floor(Math.log10(rawStep))
-  const step = NICE_STEPS.map((nice) => nice * magnitude).reduce((best, next) =>
-    Math.abs(next - rawStep) < Math.abs(best - rawStep) ? next : best
+  const step = NICE_STEPS.map((nice) => nice * magnitude).reduce(
+    (best, next) =>
+      Math.abs(next - rawStep) < Math.abs(best - rawStep) ? next : best
   )
   const ticks = ticksFor(low, high, step)
   // A single gridline gives no sense of scale.

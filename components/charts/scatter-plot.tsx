@@ -140,8 +140,8 @@ export function ScatterPlot({
                 cx={cx}
                 cy={cy}
                 r="4"
-                fill="var(--primary)"
-                stroke="var(--card)"
+                fill="var(--glow)"
+                stroke="var(--background)"
                 strokeWidth="2"
                 className="dot-in"
                 style={{ animationDelay: `${index * 25}ms` }}
@@ -198,7 +198,7 @@ export function ScatterPlot({
             fill="var(--foreground)"
             className="pointer-events-none font-mono"
             paintOrder="stroke"
-            stroke="var(--card)"
+            stroke="var(--background)"
             strokeWidth="4"
           >
             {`${Math.round(active.x * 10) / 10} · ${formatY(active.y)}`}
