@@ -14,8 +14,8 @@ pnpm install
 ```
 
 The agent uses [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). Add your
-key to `.env.local`, which stays on the server. The gateway requires billing to
-be set up on your Vercel account.
+key to `.env.local`, which stays on the server. The agent's model needs paid AI
+Gateway credits on your Vercel account, because the free tier doesn't include it.
 
 ```bash
 echo 'AI_GATEWAY_API_KEY=your-key' >> .env.local

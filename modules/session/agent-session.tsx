@@ -33,6 +33,9 @@ function errorMessage(error: unknown) {
   if (/isn't configured/i.test(text)) {
     return "Cloud AI isn't set up on this server."
   }
+  if (/free tier/i.test(text)) {
+    return "This model needs paid AI Gateway credits on the account this server uses."
+  }
   if (/credit card|credits|billing/i.test(text)) {
     return "The AI service needs billing set up on the account this server uses."
   }
