@@ -27,7 +27,12 @@ export interface InvestigationSummary {
     factorId: string
     metric: Hypothesis["metric"]
   }[]
-  discoveries: { id: string; verdict: string; grade: string; observed: string }[]
+  discoveries: {
+    id: string
+    verdict: string
+    grade: string
+    observed: string
+  }[]
 }
 
 async function summarize(
@@ -84,7 +89,9 @@ export async function getInvestigationState() {
   }
 }
 
-export async function getInvestigationSummary(id: string) {
-  const investigation = await investigations.get(id)
-  return investigation ? summarize(investigation) : undefined
+export async function listInvestigationSummaries() {
+  const rows = await investigations.list()
+  return Promise.all(
+    rows.sort((a, b) => b.updatedAt - a.updatedAt).map(summarize)
+  )
 }

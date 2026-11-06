@@ -1,0 +1,1555 @@
+{
+  "format": "tranquility-export",
+  "version": 1,
+  "exportedAt": 1782378000000,
+  "data": {
+    "sessions": [
+      {
+        "id": "demo-session-0",
+        "startedAt": 1780304400000
+      },
+      {
+        "id": "demo-session-1",
+        "startedAt": 1780390800000
+      },
+      {
+        "id": "demo-session-2",
+        "startedAt": 1780477200000
+      },
+      {
+        "id": "demo-session-3",
+        "startedAt": 1780563600000
+      },
+      {
+        "id": "demo-session-4",
+        "startedAt": 1780650000000
+      },
+      {
+        "id": "demo-session-5",
+        "startedAt": 1780736400000
+      },
+      {
+        "id": "demo-session-6",
+        "startedAt": 1780822800000
+      },
+      {
+        "id": "demo-session-7",
+        "startedAt": 1780909200000
+      },
+      {
+        "id": "demo-session-8",
+        "startedAt": 1780995600000
+      },
+      {
+        "id": "demo-session-9",
+        "startedAt": 1781082000000
+      },
+      {
+        "id": "demo-session-10",
+        "startedAt": 1781168400000
+      },
+      {
+        "id": "demo-session-11",
+        "startedAt": 1781254800000
+      },
+      {
+        "id": "demo-session-12",
+        "startedAt": 1781341200000
+      },
+      {
+        "id": "demo-session-13",
+        "startedAt": 1781427600000
+      },
+      {
+        "id": "demo-session-14",
+        "startedAt": 1781514000000
+      },
+      {
+        "id": "demo-session-15",
+        "startedAt": 1781600400000
+      },
+      {
+        "id": "demo-session-16",
+        "startedAt": 1781686800000
+      },
+      {
+        "id": "demo-session-17",
+        "startedAt": 1781773200000
+      },
+      {
+        "id": "demo-session-18",
+        "startedAt": 1781859600000
+      },
+      {
+        "id": "demo-session-19",
+        "startedAt": 1781946000000
+      },
+      {
+        "id": "demo-session-20",
+        "startedAt": 1782032400000
+      },
+      {
+        "id": "demo-session-21",
+        "startedAt": 1782118800000
+      },
+      {
+        "id": "demo-session-22",
+        "startedAt": 1782205200000
+      },
+      {
+        "id": "demo-session-23",
+        "startedAt": 1782291600000
+      }
+    ],
+    "measurements": [
+      {
+        "id": "demo-session-0-go-no-go",
+        "sessionId": "demo-session-0",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 0,
+        "startedAt": 1780304460000,
+        "completedAt": 1780304580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 309.2,
+          "rtVariability": 56,
+          "commissionRate": 0.3,
+          "omissionRate": 0.1,
+          "dPrime": 2.9
+        }
+      },
+      {
+        "id": "demo-session-0-visual-search",
+        "sessionId": "demo-session-0",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 0,
+        "startedAt": 1780304460000,
+        "completedAt": 1780304580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1160,
+          "searchSlope": 33.9,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-1-go-no-go",
+        "sessionId": "demo-session-1",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 1,
+        "startedAt": 1780390860000,
+        "completedAt": 1780390980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 366.5,
+          "rtVariability": 58.5,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2.2
+        }
+      },
+      {
+        "id": "demo-session-1-visual-search",
+        "sessionId": "demo-session-1",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 1,
+        "startedAt": 1780390860000,
+        "completedAt": 1780390980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1158.8,
+          "searchSlope": 25.5,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-2-go-no-go",
+        "sessionId": "demo-session-2",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 2,
+        "startedAt": 1780477260000,
+        "completedAt": 1780477380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 366.9,
+          "rtVariability": 56.7,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2
+        }
+      },
+      {
+        "id": "demo-session-2-visual-search",
+        "sessionId": "demo-session-2",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 2,
+        "startedAt": 1780477260000,
+        "completedAt": 1780477380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1096.6,
+          "searchSlope": 31.8,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-3-go-no-go",
+        "sessionId": "demo-session-3",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 3,
+        "startedAt": 1780563660000,
+        "completedAt": 1780563780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 366,
+          "rtVariability": 62.9,
+          "commissionRate": 0.1,
+          "omissionRate": 0.1,
+          "dPrime": 2.3
+        }
+      },
+      {
+        "id": "demo-session-3-visual-search",
+        "sessionId": "demo-session-3",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 3,
+        "startedAt": 1780563660000,
+        "completedAt": 1780563780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1089.7,
+          "searchSlope": 25.2,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-4-go-no-go",
+        "sessionId": "demo-session-4",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 4,
+        "startedAt": 1780650060000,
+        "completedAt": 1780650180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 397.4,
+          "rtVariability": 58.6,
+          "commissionRate": 0.1,
+          "omissionRate": 0,
+          "dPrime": 2.7
+        }
+      },
+      {
+        "id": "demo-session-4-visual-search",
+        "sessionId": "demo-session-4",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 4,
+        "startedAt": 1780650060000,
+        "completedAt": 1780650180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1180.9,
+          "searchSlope": 26.6,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-5-go-no-go",
+        "sessionId": "demo-session-5",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 5,
+        "startedAt": 1780736460000,
+        "completedAt": 1780736580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 318.3,
+          "rtVariability": 61.9,
+          "commissionRate": 0,
+          "omissionRate": 0,
+          "dPrime": 2.6
+        }
+      },
+      {
+        "id": "demo-session-5-visual-search",
+        "sessionId": "demo-session-5",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 5,
+        "startedAt": 1780736460000,
+        "completedAt": 1780736580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1042.2,
+          "searchSlope": 30.2,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-6-go-no-go",
+        "sessionId": "demo-session-6",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 6,
+        "startedAt": 1780822860000,
+        "completedAt": 1780822980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 343.2,
+          "rtVariability": 62,
+          "commissionRate": 0,
+          "omissionRate": 0,
+          "dPrime": 2.7
+        }
+      },
+      {
+        "id": "demo-session-6-visual-search",
+        "sessionId": "demo-session-6",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 6,
+        "startedAt": 1780822860000,
+        "completedAt": 1780822980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1056.8,
+          "searchSlope": 28,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-7-go-no-go",
+        "sessionId": "demo-session-7",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 7,
+        "startedAt": 1780909260000,
+        "completedAt": 1780909380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 299.3,
+          "rtVariability": 67.3,
+          "commissionRate": 0.3,
+          "omissionRate": 0,
+          "dPrime": 2.3
+        }
+      },
+      {
+        "id": "demo-session-7-visual-search",
+        "sessionId": "demo-session-7",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 7,
+        "startedAt": 1780909260000,
+        "completedAt": 1780909380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1177.5,
+          "searchSlope": 32.1,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-8-go-no-go",
+        "sessionId": "demo-session-8",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 8,
+        "startedAt": 1780995660000,
+        "completedAt": 1780995780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 342.8,
+          "rtVariability": 62.9,
+          "commissionRate": 0.1,
+          "omissionRate": 0.1,
+          "dPrime": 2.6
+        }
+      },
+      {
+        "id": "demo-session-8-visual-search",
+        "sessionId": "demo-session-8",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 8,
+        "startedAt": 1780995660000,
+        "completedAt": 1780995780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1037.2,
+          "searchSlope": 28.9,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-9-go-no-go",
+        "sessionId": "demo-session-9",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 9,
+        "startedAt": 1781082060000,
+        "completedAt": 1781082180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 346,
+          "rtVariability": 51.2,
+          "commissionRate": 0.2,
+          "omissionRate": 0.1,
+          "dPrime": 2.1
+        }
+      },
+      {
+        "id": "demo-session-9-visual-search",
+        "sessionId": "demo-session-9",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 9,
+        "startedAt": 1781082060000,
+        "completedAt": 1781082180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1103.3,
+          "searchSlope": 28.6,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-10-go-no-go",
+        "sessionId": "demo-session-10",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 10,
+        "startedAt": 1781168460000,
+        "completedAt": 1781168580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 386.7,
+          "rtVariability": 67.5,
+          "commissionRate": 0.2,
+          "omissionRate": 0.1,
+          "dPrime": 2.5
+        }
+      },
+      {
+        "id": "demo-session-10-visual-search",
+        "sessionId": "demo-session-10",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 10,
+        "startedAt": 1781168460000,
+        "completedAt": 1781168580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1117.4,
+          "searchSlope": 27.8,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-11-go-no-go",
+        "sessionId": "demo-session-11",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 11,
+        "startedAt": 1781254860000,
+        "completedAt": 1781254980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 380.3,
+          "rtVariability": 50.3,
+          "commissionRate": 0.2,
+          "omissionRate": 0.1,
+          "dPrime": 3
+        }
+      },
+      {
+        "id": "demo-session-11-visual-search",
+        "sessionId": "demo-session-11",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 11,
+        "startedAt": 1781254860000,
+        "completedAt": 1781254980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1058.4,
+          "searchSlope": 27.7,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-12-go-no-go",
+        "sessionId": "demo-session-12",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 12,
+        "startedAt": 1781341260000,
+        "completedAt": 1781341380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 303.3,
+          "rtVariability": 69.7,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2.5
+        }
+      },
+      {
+        "id": "demo-session-12-visual-search",
+        "sessionId": "demo-session-12",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 12,
+        "startedAt": 1781341260000,
+        "completedAt": 1781341380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1192.7,
+          "searchSlope": 30.1,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-13-go-no-go",
+        "sessionId": "demo-session-13",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 13,
+        "startedAt": 1781427660000,
+        "completedAt": 1781427780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 357.7,
+          "rtVariability": 50.9,
+          "commissionRate": 0.1,
+          "omissionRate": 0.1,
+          "dPrime": 2.9
+        }
+      },
+      {
+        "id": "demo-session-13-visual-search",
+        "sessionId": "demo-session-13",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 13,
+        "startedAt": 1781427660000,
+        "completedAt": 1781427780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1023.3,
+          "searchSlope": 32.5,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-14-go-no-go",
+        "sessionId": "demo-session-14",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 14,
+        "startedAt": 1781514060000,
+        "completedAt": 1781514180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 401.6,
+          "rtVariability": 61.7,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2.2
+        }
+      },
+      {
+        "id": "demo-session-14-visual-search",
+        "sessionId": "demo-session-14",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 14,
+        "startedAt": 1781514060000,
+        "completedAt": 1781514180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1021.5,
+          "searchSlope": 26.6,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-15-go-no-go",
+        "sessionId": "demo-session-15",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 15,
+        "startedAt": 1781600460000,
+        "completedAt": 1781600580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 345.8,
+          "rtVariability": 59.3,
+          "commissionRate": 0,
+          "omissionRate": 0,
+          "dPrime": 2.2
+        }
+      },
+      {
+        "id": "demo-session-15-visual-search",
+        "sessionId": "demo-session-15",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 15,
+        "startedAt": 1781600460000,
+        "completedAt": 1781600580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1064.1,
+          "searchSlope": 28.7,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-16-go-no-go",
+        "sessionId": "demo-session-16",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 16,
+        "startedAt": 1781686860000,
+        "completedAt": 1781686980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 395.2,
+          "rtVariability": 51.3,
+          "commissionRate": 0.1,
+          "omissionRate": 0.1,
+          "dPrime": 2.9
+        }
+      },
+      {
+        "id": "demo-session-16-visual-search",
+        "sessionId": "demo-session-16",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 16,
+        "startedAt": 1781686860000,
+        "completedAt": 1781686980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1190.1,
+          "searchSlope": 30,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-17-go-no-go",
+        "sessionId": "demo-session-17",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 17,
+        "startedAt": 1781773260000,
+        "completedAt": 1781773380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 335.3,
+          "rtVariability": 56.4,
+          "commissionRate": 0.2,
+          "omissionRate": 0.1,
+          "dPrime": 3
+        }
+      },
+      {
+        "id": "demo-session-17-visual-search",
+        "sessionId": "demo-session-17",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 17,
+        "startedAt": 1781773260000,
+        "completedAt": 1781773380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1153.5,
+          "searchSlope": 31.3,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-18-go-no-go",
+        "sessionId": "demo-session-18",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 18,
+        "startedAt": 1781859660000,
+        "completedAt": 1781859780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 340,
+          "rtVariability": 53.8,
+          "commissionRate": 0.3,
+          "omissionRate": 0,
+          "dPrime": 2.7
+        }
+      },
+      {
+        "id": "demo-session-18-visual-search",
+        "sessionId": "demo-session-18",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 18,
+        "startedAt": 1781859660000,
+        "completedAt": 1781859780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1134,
+          "searchSlope": 32.6,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-19-go-no-go",
+        "sessionId": "demo-session-19",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 19,
+        "startedAt": 1781946060000,
+        "completedAt": 1781946180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 367,
+          "rtVariability": 54.4,
+          "commissionRate": 0.1,
+          "omissionRate": 0,
+          "dPrime": 2.4
+        }
+      },
+      {
+        "id": "demo-session-19-visual-search",
+        "sessionId": "demo-session-19",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 19,
+        "startedAt": 1781946060000,
+        "completedAt": 1781946180000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1166.6,
+          "searchSlope": 30.6,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-20-go-no-go",
+        "sessionId": "demo-session-20",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 20,
+        "startedAt": 1782032460000,
+        "completedAt": 1782032580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 324.5,
+          "rtVariability": 52.1,
+          "commissionRate": 0,
+          "omissionRate": 0,
+          "dPrime": 2.1
+        }
+      },
+      {
+        "id": "demo-session-20-visual-search",
+        "sessionId": "demo-session-20",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 20,
+        "startedAt": 1782032460000,
+        "completedAt": 1782032580000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1072.9,
+          "searchSlope": 34.2,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-21-go-no-go",
+        "sessionId": "demo-session-21",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 21,
+        "startedAt": 1782118860000,
+        "completedAt": 1782118980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 367.9,
+          "rtVariability": 59.4,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2.3
+        }
+      },
+      {
+        "id": "demo-session-21-visual-search",
+        "sessionId": "demo-session-21",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 21,
+        "startedAt": 1782118860000,
+        "completedAt": 1782118980000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1075.6,
+          "searchSlope": 27.9,
+          "accuracy": 0.9
+        }
+      },
+      {
+        "id": "demo-session-22-go-no-go",
+        "sessionId": "demo-session-22",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 22,
+        "startedAt": 1782205260000,
+        "completedAt": 1782205380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 370.3,
+          "rtVariability": 57,
+          "commissionRate": 0.3,
+          "omissionRate": 0,
+          "dPrime": 2.3
+        }
+      },
+      {
+        "id": "demo-session-22-visual-search",
+        "sessionId": "demo-session-22",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 22,
+        "startedAt": 1782205260000,
+        "completedAt": 1782205380000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1156.7,
+          "searchSlope": 28.1,
+          "accuracy": 1
+        }
+      },
+      {
+        "id": "demo-session-23-go-no-go",
+        "sessionId": "demo-session-23",
+        "assessmentId": "go-no-go",
+        "protocolVersion": 1,
+        "seed": 23,
+        "startedAt": 1782291660000,
+        "completedAt": 1782291780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 334.4,
+          "rtVariability": 63,
+          "commissionRate": 0.2,
+          "omissionRate": 0,
+          "dPrime": 2.8
+        }
+      },
+      {
+        "id": "demo-session-23-visual-search",
+        "sessionId": "demo-session-23",
+        "assessmentId": "visual-search",
+        "protocolVersion": 1,
+        "seed": 23,
+        "startedAt": 1782291660000,
+        "completedAt": 1782291780000,
+        "inputType": "keyboard",
+        "valid": true,
+        "trials": [],
+        "metrics": {
+          "medianRt": 1155.5,
+          "searchSlope": 28.9,
+          "accuracy": 1
+        }
+      }
+    ],
+    "responses": [
+      {
+        "id": "demo-session-0-sleep.hours",
+        "sessionId": "demo-session-0",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 9,
+        "answeredAt": 1780304400000
+      },
+      {
+        "id": "demo-session-0-stress.level",
+        "sessionId": "demo-session-0",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1780304400000
+      },
+      {
+        "id": "demo-session-0-mood.valence",
+        "sessionId": "demo-session-0",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1780304400000
+      },
+      {
+        "id": "demo-session-1-sleep.hours",
+        "sessionId": "demo-session-1",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1780390800000
+      },
+      {
+        "id": "demo-session-1-stress.level",
+        "sessionId": "demo-session-1",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1780390800000
+      },
+      {
+        "id": "demo-session-1-mood.valence",
+        "sessionId": "demo-session-1",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1780390800000
+      },
+      {
+        "id": "demo-session-2-sleep.hours",
+        "sessionId": "demo-session-2",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 6.5,
+        "answeredAt": 1780477200000
+      },
+      {
+        "id": "demo-session-2-stress.level",
+        "sessionId": "demo-session-2",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1780477200000
+      },
+      {
+        "id": "demo-session-2-mood.valence",
+        "sessionId": "demo-session-2",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1780477200000
+      },
+      {
+        "id": "demo-session-3-sleep.hours",
+        "sessionId": "demo-session-3",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1780563600000
+      },
+      {
+        "id": "demo-session-3-stress.level",
+        "sessionId": "demo-session-3",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1780563600000
+      },
+      {
+        "id": "demo-session-3-mood.valence",
+        "sessionId": "demo-session-3",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1780563600000
+      },
+      {
+        "id": "demo-session-4-sleep.hours",
+        "sessionId": "demo-session-4",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1780650000000
+      },
+      {
+        "id": "demo-session-4-stress.level",
+        "sessionId": "demo-session-4",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1780650000000
+      },
+      {
+        "id": "demo-session-4-mood.valence",
+        "sessionId": "demo-session-4",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1780650000000
+      },
+      {
+        "id": "demo-session-5-sleep.hours",
+        "sessionId": "demo-session-5",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 9,
+        "answeredAt": 1780736400000
+      },
+      {
+        "id": "demo-session-5-stress.level",
+        "sessionId": "demo-session-5",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1780736400000
+      },
+      {
+        "id": "demo-session-5-mood.valence",
+        "sessionId": "demo-session-5",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1780736400000
+      },
+      {
+        "id": "demo-session-6-sleep.hours",
+        "sessionId": "demo-session-6",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 6,
+        "answeredAt": 1780822800000
+      },
+      {
+        "id": "demo-session-6-stress.level",
+        "sessionId": "demo-session-6",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1780822800000
+      },
+      {
+        "id": "demo-session-6-mood.valence",
+        "sessionId": "demo-session-6",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1780822800000
+      },
+      {
+        "id": "demo-session-7-sleep.hours",
+        "sessionId": "demo-session-7",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 9,
+        "answeredAt": 1780909200000
+      },
+      {
+        "id": "demo-session-7-stress.level",
+        "sessionId": "demo-session-7",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1780909200000
+      },
+      {
+        "id": "demo-session-7-mood.valence",
+        "sessionId": "demo-session-7",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1780909200000
+      },
+      {
+        "id": "demo-session-8-sleep.hours",
+        "sessionId": "demo-session-8",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 7.5,
+        "answeredAt": 1780995600000
+      },
+      {
+        "id": "demo-session-8-stress.level",
+        "sessionId": "demo-session-8",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1780995600000
+      },
+      {
+        "id": "demo-session-8-mood.valence",
+        "sessionId": "demo-session-8",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1780995600000
+      },
+      {
+        "id": "demo-session-9-sleep.hours",
+        "sessionId": "demo-session-9",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 6.5,
+        "answeredAt": 1781082000000
+      },
+      {
+        "id": "demo-session-9-stress.level",
+        "sessionId": "demo-session-9",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781082000000
+      },
+      {
+        "id": "demo-session-9-mood.valence",
+        "sessionId": "demo-session-9",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781082000000
+      },
+      {
+        "id": "demo-session-10-sleep.hours",
+        "sessionId": "demo-session-10",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5.5,
+        "answeredAt": 1781168400000
+      },
+      {
+        "id": "demo-session-10-stress.level",
+        "sessionId": "demo-session-10",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781168400000
+      },
+      {
+        "id": "demo-session-10-mood.valence",
+        "sessionId": "demo-session-10",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781168400000
+      },
+      {
+        "id": "demo-session-11-sleep.hours",
+        "sessionId": "demo-session-11",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 6,
+        "answeredAt": 1781254800000
+      },
+      {
+        "id": "demo-session-11-stress.level",
+        "sessionId": "demo-session-11",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781254800000
+      },
+      {
+        "id": "demo-session-11-mood.valence",
+        "sessionId": "demo-session-11",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781254800000
+      },
+      {
+        "id": "demo-session-12-sleep.hours",
+        "sessionId": "demo-session-12",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 8.5,
+        "answeredAt": 1781341200000
+      },
+      {
+        "id": "demo-session-12-stress.level",
+        "sessionId": "demo-session-12",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1781341200000
+      },
+      {
+        "id": "demo-session-12-mood.valence",
+        "sessionId": "demo-session-12",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781341200000
+      },
+      {
+        "id": "demo-session-13-sleep.hours",
+        "sessionId": "demo-session-13",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5.5,
+        "answeredAt": 1781427600000
+      },
+      {
+        "id": "demo-session-13-stress.level",
+        "sessionId": "demo-session-13",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781427600000
+      },
+      {
+        "id": "demo-session-13-mood.valence",
+        "sessionId": "demo-session-13",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1781427600000
+      },
+      {
+        "id": "demo-session-14-sleep.hours",
+        "sessionId": "demo-session-14",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 4.5,
+        "answeredAt": 1781514000000
+      },
+      {
+        "id": "demo-session-14-stress.level",
+        "sessionId": "demo-session-14",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781514000000
+      },
+      {
+        "id": "demo-session-14-mood.valence",
+        "sessionId": "demo-session-14",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781514000000
+      },
+      {
+        "id": "demo-session-15-sleep.hours",
+        "sessionId": "demo-session-15",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 7.5,
+        "answeredAt": 1781600400000
+      },
+      {
+        "id": "demo-session-15-stress.level",
+        "sessionId": "demo-session-15",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1781600400000
+      },
+      {
+        "id": "demo-session-15-mood.valence",
+        "sessionId": "demo-session-15",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1781600400000
+      },
+      {
+        "id": "demo-session-16-sleep.hours",
+        "sessionId": "demo-session-16",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1781686800000
+      },
+      {
+        "id": "demo-session-16-stress.level",
+        "sessionId": "demo-session-16",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781686800000
+      },
+      {
+        "id": "demo-session-16-mood.valence",
+        "sessionId": "demo-session-16",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1781686800000
+      },
+      {
+        "id": "demo-session-17-sleep.hours",
+        "sessionId": "demo-session-17",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 8,
+        "answeredAt": 1781773200000
+      },
+      {
+        "id": "demo-session-17-stress.level",
+        "sessionId": "demo-session-17",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1781773200000
+      },
+      {
+        "id": "demo-session-17-mood.valence",
+        "sessionId": "demo-session-17",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1781773200000
+      },
+      {
+        "id": "demo-session-18-sleep.hours",
+        "sessionId": "demo-session-18",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 7.5,
+        "answeredAt": 1781859600000
+      },
+      {
+        "id": "demo-session-18-stress.level",
+        "sessionId": "demo-session-18",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781859600000
+      },
+      {
+        "id": "demo-session-18-mood.valence",
+        "sessionId": "demo-session-18",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781859600000
+      },
+      {
+        "id": "demo-session-19-sleep.hours",
+        "sessionId": "demo-session-19",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1781946000000
+      },
+      {
+        "id": "demo-session-19-stress.level",
+        "sessionId": "demo-session-19",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1781946000000
+      },
+      {
+        "id": "demo-session-19-mood.valence",
+        "sessionId": "demo-session-19",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 4,
+        "answeredAt": 1781946000000
+      },
+      {
+        "id": "demo-session-20-sleep.hours",
+        "sessionId": "demo-session-20",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 7,
+        "answeredAt": 1782032400000
+      },
+      {
+        "id": "demo-session-20-stress.level",
+        "sessionId": "demo-session-20",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1782032400000
+      },
+      {
+        "id": "demo-session-20-mood.valence",
+        "sessionId": "demo-session-20",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1782032400000
+      },
+      {
+        "id": "demo-session-21-sleep.hours",
+        "sessionId": "demo-session-21",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1782118800000
+      },
+      {
+        "id": "demo-session-21-stress.level",
+        "sessionId": "demo-session-21",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 3,
+        "answeredAt": 1782118800000
+      },
+      {
+        "id": "demo-session-21-mood.valence",
+        "sessionId": "demo-session-21",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1782118800000
+      },
+      {
+        "id": "demo-session-22-sleep.hours",
+        "sessionId": "demo-session-22",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 5,
+        "answeredAt": 1782205200000
+      },
+      {
+        "id": "demo-session-22-stress.level",
+        "sessionId": "demo-session-22",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1782205200000
+      },
+      {
+        "id": "demo-session-22-mood.valence",
+        "sessionId": "demo-session-22",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 2,
+        "answeredAt": 1782205200000
+      },
+      {
+        "id": "demo-session-23-sleep.hours",
+        "sessionId": "demo-session-23",
+        "questionId": "sleep.hours",
+        "bankVersion": 1,
+        "value": 8,
+        "answeredAt": 1782291600000
+      },
+      {
+        "id": "demo-session-23-stress.level",
+        "sessionId": "demo-session-23",
+        "questionId": "stress.level",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1782291600000
+      },
+      {
+        "id": "demo-session-23-mood.valence",
+        "sessionId": "demo-session-23",
+        "questionId": "mood.valence",
+        "bankVersion": 1,
+        "value": 1,
+        "answeredAt": 1782291600000
+      }
+    ],
+    "investigations": [],
+    "hypotheses": [],
+    "analyses": [],
+    "discoveries": [],
+    "decisions": [],
+    "kv": []
+  }
+}

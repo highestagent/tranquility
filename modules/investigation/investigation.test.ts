@@ -74,13 +74,25 @@ describe("decideVerdict", () => {
   it("supports only with moderate or strong matching evidence", () => {
     const base = { n: 24, ciLow: -0.8, ciHigh: -0.3 }
     expect(
-      decideVerdict("negative", { ...base, grade: "strong", direction: "negative" })
+      decideVerdict("negative", {
+        ...base,
+        grade: "strong",
+        direction: "negative",
+      })
     ).toBe("supported")
     expect(
-      decideVerdict("any", { ...base, grade: "moderate", direction: "positive" })
+      decideVerdict("any", {
+        ...base,
+        grade: "moderate",
+        direction: "positive",
+      })
     ).toBe("supported")
     expect(
-      decideVerdict("negative", { ...base, grade: "weak", direction: "negative" })
+      decideVerdict("negative", {
+        ...base,
+        grade: "weak",
+        direction: "negative",
+      })
     ).toBe("inconclusive")
   })
 
@@ -110,7 +122,12 @@ describe("decideVerdict", () => {
   })
 
   it("stays inconclusive on insufficient or contradictory evidence", () => {
-    const base = { n: 24, ciLow: null, ciHigh: null, direction: "none" } as const
+    const base = {
+      n: 24,
+      ciLow: null,
+      ciHigh: null,
+      direction: "none",
+    } as const
     expect(decideVerdict("any", { ...base, grade: "insufficient" })).toBe(
       "inconclusive"
     )
@@ -135,6 +152,15 @@ describe("evaluateHypothesis", () => {
     expect(discovery.grade).toBe("strong")
     expect(discovery.evidence).toContain("24 comparable sessions")
     expect(discovery.evidence).toContain("-0.60")
+    expect(discovery.evidence).toContain("p = 0.001")
+
+    await analyses.put(analysis({ id: "a2", createdAt: 2, pValue: 0.0005 }))
+    const tiny = await evaluateHypothesis({
+      hypothesisId: hypothesis.id,
+      analysisIds: ["a2"],
+      ...narrative,
+    })
+    expect(tiny.evidence).toContain("p < 0.001")
     expect((await hypotheses.get(hypothesis.id))?.status).toBe("supported")
   })
 

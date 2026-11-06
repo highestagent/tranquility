@@ -101,12 +101,19 @@ function describeEvidence(analysis: Analysis) {
   if (analysis.effect === null) {
     return `${analysis.n} comparable sessions so far. ${analysis.notes.join(" ")}`
   }
-  const name = analysis.method === "spearman" ? "correlation" : "group difference"
+  const name =
+    analysis.method === "spearman" ? "correlation" : "group difference"
+  const p =
+    analysis.pValue === null
+      ? ""
+      : analysis.pValue < 0.001
+        ? ", p < 0.001"
+        : `, p = ${analysis.pValue.toFixed(3)}`
   const interval =
     analysis.ciLow !== null && analysis.ciHigh !== null
       ? ` (95% interval ${analysis.ciLow.toFixed(2)} to ${analysis.ciHigh.toFixed(2)})`
       : ""
-  return `${analysis.n} comparable sessions: ${name} of ${analysis.effect.toFixed(2)}${interval}, p = ${analysis.pValue?.toFixed(3)}. ${analysis.notes.join(" ")}`
+  return `${analysis.n} comparable sessions: ${name} of ${analysis.effect.toFixed(2)}${interval}${p}. ${analysis.notes.join(" ")}`
 }
 
 const RELIABILITY: Record<Analysis["grade"], string> = {
