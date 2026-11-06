@@ -27,6 +27,27 @@ pnpm dev
 
 Games, questionnaires, statistics, and data tools all work without a key.
 
+### Accounts and memory
+
+Begin signs in with Google through [Privy](https://www.privy.io). The agent's
+findings and progress notes then sync to
+[Walrus Memory](https://docs.wal.app/walrus-memory) in the background, so it can
+pick up where it left off on any device. Add these to `.env.local`:
+
+| Variable | Where it comes from | Exposure |
+|---|---|---|
+| `NEXT_PUBLIC_PRIVY_APP_ID` | Privy dashboard | Public |
+| `PRIVY_APP_SECRET` | Privy dashboard | Server only |
+| `MEMWAL_ACCOUNT_ID` | [memory.walrus.xyz](https://memory.walrus.xyz) (or dev.memwal.ai for testnet) | Server only |
+| `MEMWAL_PRIVATE_KEY` | Same dashboard: the delegate key | Server only |
+| `MEMWAL_SERVER_URL` | Optional: `https://relayer.dev.memwal.ai` for testnet | Server only |
+
+Without the Walrus Memory variables, memory stays off and everything else works.
+Raw answers and game trials never leave the device, because the hosted relayer
+reads text in plaintext while storing and searching it. Walrus Memory has no
+delete, so "forget" moves a person to a new namespace, and old encrypted copies
+remain until they expire. See `modules/agent-memory/`.
+
 ### Try it with demo data
 
 To skip weeks of data collection, open **You** (the fingerprint icon) → **Import** and choose
@@ -64,6 +85,8 @@ modules/
   analytics/      Deterministic statistics
   investigation/  Hypotheses, verdicts, and resumable state
   agent/          ToolLoopAgent, tools, permissions, consent
+  account/        Sign-in with Google through Privy
+  agent-memory/   Background sync to Walrus Memory, and recall
   relay/          Forwards model requests, keeping the key on the server
   session/        The home screen and its phases
   insights/       The evidence map and findings
@@ -101,6 +124,9 @@ different `LanguageModel` from there.
 
 ## Known limits
 
+- **The app reads everyone's memories.** One Walrus Memory account holds all
+  users, separated by namespace, so whoever holds its key can read them. Giving
+  each person their own account would need a Sui wallet and gas for each of them.
 - **The relay is for personal use.** There are no accounts, so anyone who can reach
   a deployment can use its AI key, within basic same-origin and rate limits. Add
   real abuse protection before deploying publicly.

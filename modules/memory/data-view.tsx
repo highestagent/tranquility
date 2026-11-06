@@ -203,7 +203,10 @@ export function DataView() {
           aria-label="Confirm delete"
           className="rise-in flex flex-col gap-3 rounded-2xl border border-destructive p-4 text-sm"
         >
-          <p>Permanently delete everything from this browser?</p>
+          <p>
+            Permanently delete everything from this browser? To stop the agent
+            recalling what it saved, use Agent memory above.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <Button
               size="lg"
@@ -229,7 +232,7 @@ export function DataView() {
           onClick={() => setConfirmDelete(true)}
         >
           <Trash2 aria-hidden data-icon="inline-start" />
-          Delete everything
+          Delete from this browser
         </Button>
       )}
     </>
