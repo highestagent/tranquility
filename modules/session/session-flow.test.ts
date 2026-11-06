@@ -100,6 +100,38 @@ describe("deriveActivity", () => {
     )
     expect(deriveActivity([user("Internal", true)]).asked).toBeNull()
   })
+
+  it("drops an old question once a later turn has started", () => {
+    expect(
+      deriveActivity([
+        user("Does sleep matter?"),
+        assistant([{ type: "text", text: "Yes." }]),
+        user("Keep going", true),
+      ]).asked
+    ).toBeNull()
+  })
+
+  it("focuses the map on what a plan is about", () => {
+    const activity = deriveActivity([
+      assistant([
+        tool("planInvestigation", {
+          reason: "Planning",
+          evidence: [
+            {
+              factorId: "stress.level",
+              assessmentId: "visual-search",
+              metricId: "medianRt",
+              minPairs: 12,
+            },
+          ],
+        }),
+      ]),
+    ])
+    expect(activity.focus).toEqual({
+      domain: "stress",
+      assessmentId: "visual-search",
+    })
+  })
 })
 
 describe("shouldWake", () => {

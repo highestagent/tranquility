@@ -1,7 +1,6 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { DirectChatTransport } from "ai"
 import {
   useCallback,
   useEffect,
@@ -11,16 +10,15 @@ import {
   useState,
 } from "react"
 
-import { createInvestigationAgent } from "@/modules/agent/agent"
-import { createBrowserModel } from "@/modules/agent/model"
 import { clearPendingTask } from "@/modules/agent/pending-task"
 import { loadKnowledge } from "@/modules/insights/knowledge"
 import type { Measurement } from "@/modules/memory"
 
 import { deriveActivity } from "./activity"
+import { getAgentChat, runAgentTurn } from "./agent-runtime"
 import * as auto from "./messages"
 import { loadSnapshot, type Snapshot } from "./snapshot"
-import { setAgentRest, setSeenDiscoveriesAt, shouldWake } from "./wake"
+import { setSeenDiscoveriesAt, shouldWake } from "./wake"
 
 export type Phase =
   | "loading"
@@ -34,39 +32,35 @@ export type Phase =
 
 function describeError(error: unknown) {
   const text = error instanceof Error ? error.message : ""
-  if (/too many requests/i.test(text))
+  if (/too many requests/i.test(text)) {
     return "Too many requests. Give me a minute."
-  if (/isn't configured/i.test(text))
+  }
+  if (/isn't configured/i.test(text)) {
     return "Cloud AI isn't set up on this server."
+  }
   if (/free tier/i.test(text)) return "This model needs paid AI credits."
-  if (/credit card|credits|billing/i.test(text))
+  if (/credit card|credits|billing/i.test(text)) {
     return "AI billing needs attention."
+  }
   return "I can't reach my model right now."
 }
 
 /**
- * The agent's life on this device. It restores state, wakes itself when there's
- * a reason to, and reports one phase, which is what the screen shows.
+ * The agent as this screen sees it. It restores state, wakes the agent when
+ * there's a reason to, and reports one phase, which is what the screen shows.
  */
 export function useAgentSession() {
-  const [transport] = useState(
-    () =>
-      new DirectChatTransport({
-        agent: createInvestigationAgent(createBrowserModel()),
-        onError: (error) =>
-          error instanceof Error ? error.message : "Unknown error",
-      })
-  )
+  const [chat] = useState(getAgentChat)
   const { messages, sendMessage, status, error, stop, regenerate } = useChat({
-    transport,
+    chat,
   })
 
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
-  const [turnActive, setTurnActive] = useState(false)
-  const [turnsEnded, setTurnsEnded] = useState(0)
+  const [starting, setStarting] = useState<string | null>(null)
 
   const activity = useMemo(() => deriveActivity(messages), [messages])
+  const busy = status === "submitted" || status === "streaming"
 
   const refresh = useCallback(async () => {
     try {
@@ -77,18 +71,20 @@ export function useAgentSession() {
     }
   }, [])
 
-  async function runTurn(send: () => Promise<void>) {
-    setTurnActive(true)
+  /** `line` is what the screen says until the agent has something to say. */
+  async function runTurn(line: string, send: () => Promise<void>) {
+    setStarting(line)
     try {
-      await send()
+      await runAgentTurn(send)
     } finally {
-      setTurnActive(false)
-      setTurnsEnded((count) => count + 1)
+      setStarting(null)
     }
   }
 
-  function sendHidden(text: string) {
-    return runTurn(() => sendMessage({ text, metadata: { hidden: true } }))
+  function sendHidden(line: string, text: string) {
+    return runTurn(line, () =>
+      sendMessage({ text, metadata: { hidden: true } })
+    )
   }
 
   const boot = useEffectEvent(async () => {
@@ -96,6 +92,7 @@ export function useAgentSession() {
       const restored = await loadSnapshot()
       setSnapshot(restored)
       if (
+        !busy &&
         !restored.pending &&
         restored.unseen.length === 0 &&
         shouldWake({
@@ -104,7 +101,7 @@ export function useAgentSession() {
           now: Date.now(),
         })
       ) {
-        void sendHidden(auto.SESSION_START)
+        void sendHidden("Waking up…", auto.SESSION_START)
       }
     } catch {
       setLoadFailed(true)
@@ -128,32 +125,29 @@ export function useAgentSession() {
     )
   }, [completedTools])
 
-  const rememberTurn = useEffectEvent(async () => {
-    if (!error) {
-      await setAgentRest({ at: Date.now(), spoken: activity.spoken })
-    }
-  })
+  // Storage is the source of truth, so re-read it whenever a turn ends. This
+  // includes a turn that began before this screen did.
+  const wasBusy = useRef(busy)
   useEffect(() => {
-    if (turnsEnded === 0) return
-    rememberTurn()
-      .then(loadSnapshot)
-      .then(setSnapshot, () => setLoadFailed(true))
-  }, [turnsEnded])
+    if (wasBusy.current && !busy) {
+      loadSnapshot().then(setSnapshot, () => setLoadFailed(true))
+    }
+    wasBusy.current = busy
+  }, [busy])
 
   async function finishTask(text: string) {
-    setTurnActive(true)
+    setStarting("Taking that in…")
     await clearPendingTask()
     setSnapshot((old) => (old ? { ...old, pending: null } : old))
-    await sendHidden(text)
+    await sendHidden("Taking that in…", text)
   }
 
   const pending = snapshot?.pending ?? null
-  const busy = status === "submitted" || status === "streaming"
 
   let phase: Phase
   if (loadFailed) phase = "storage-error"
   else if (!snapshot) phase = "loading"
-  else if (turnActive || busy) phase = "thinking"
+  else if (starting || busy) phase = "thinking"
   else if (error) phase = "error"
   else if (snapshot.unseen.length > 0) phase = "reveal"
   else if (pending?.kind === "questions") phase = "asking"
@@ -165,13 +159,16 @@ export function useAgentSession() {
     activity,
     snapshot,
     pending,
+    /** Shown until the agent's own words arrive. */
+    startingLine: starting ?? "One moment…",
     spoken: activity.spoken ?? snapshot?.rest?.spoken ?? null,
     errorText: error ? describeError(error) : null,
-    retry: () => void runTurn(() => regenerate()),
+    retry: () => void runTurn("Trying again…", () => regenerate()),
     reload: () => void refresh(),
     stop: () => void stop(),
-    keepGoing: () => void sendHidden(auto.CONTINUE),
-    ask: (text: string) => void runTurn(() => sendMessage({ text })),
+    keepGoing: () => void sendHidden("Picking up the thread…", auto.CONTINUE),
+    ask: (text: string) =>
+      void runTurn("Thinking about that…", () => sendMessage({ text })),
     finishQuestions: (answered: number) => {
       if (pending?.kind !== "questions") return
       void finishTask(

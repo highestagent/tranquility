@@ -94,7 +94,7 @@ export function AgentHome() {
         scanning={phase === "thinking" && activity.scanning}
       />
       {phase === "thinking" ? null : (
-        <MapLegend links={snapshot.knowledge.links} />
+        <MapLegend knowledge={snapshot.knowledge} />
       )}
     </div>
   )
@@ -103,7 +103,7 @@ export function AgentHome() {
   ) : undefined
 
   if (phase === "thinking") {
-    const line = activity.spoken ?? activity.caption ?? "Waking up…"
+    const line = activity.spoken ?? activity.caption ?? session.startingLine
     return (
       <Screen
         eyebrow={asked}
@@ -163,7 +163,7 @@ export function AgentHome() {
 
   return (
     <Screen
-      eyebrow={asked}
+      eyebrow={activity.spoken ? asked : undefined}
       title={session.spoken ?? "Where next?"}
       action={<DecisionLog decisions={snapshot.log} />}
       dock={
@@ -188,7 +188,8 @@ function ActiveThread({
 }: {
   investigations: readonly InvestigationSummary[]
 }) {
-  const active = investigations.find(({ status }) => status === "active")
+  const running = investigations.filter(({ status }) => status === "active")
+  const active = running[0]
   if (!active) return null
   const progress =
     active.evidence.length === 0
@@ -231,6 +232,11 @@ function ActiveThread({
       <span className="min-w-0 flex-1 truncate text-sm font-medium">
         {active.title}
       </span>
+      {running.length > 1 ? (
+        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
+          +{running.length - 1}
+        </span>
+      ) : null}
       <span className="sr-only">
         {Math.round(progress * 100)}% of evidence collected
       </span>

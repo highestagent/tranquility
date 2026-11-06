@@ -52,7 +52,7 @@ export function RestingWithoutAi({ onWake }: { onWake: () => void }) {
     >
       <div className="my-auto flex flex-col gap-3">
         <KnowledgeMap knowledge={state.data} state="asleep" />
-        <MapLegend links={state.data.links} />
+        <MapLegend knowledge={state.data} />
       </div>
     </Screen>
   )

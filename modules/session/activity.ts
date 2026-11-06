@@ -43,8 +43,13 @@ function isToolPart(part: { type: string }) {
 }
 
 function focusFrom(input: ToolPart["input"]): MapFocus | null {
-  const factorId = input?.factorId
-  const assessmentId = input?.assessmentId
+  // A plan lists the pairs it's about in `evidence`.
+  const evidence = input?.evidence
+  const source = (
+    Array.isArray(evidence) ? evidence[0] : input
+  ) as ToolPart["input"]
+  const factorId = source?.factorId
+  const assessmentId = source?.assessmentId
   if (typeof factorId !== "string" || typeof assessmentId !== "string") {
     return null
   }
@@ -54,17 +59,18 @@ function focusFrom(input: ToolPart["input"]): MapFocus | null {
 
 /** Reads what the agent is doing from its live message stream. */
 export function deriveActivity(messages: readonly UIMessage[]): Activity {
+  // Only the latest turn counts: an old question shouldn't look unanswered.
   const lastUser = [...messages]
     .reverse()
-    .find(
-      (message) =>
-        message.role === "user" &&
-        !(message.metadata as { hidden?: boolean } | undefined)?.hidden
-    )
+    .find((message) => message.role === "user")
+  const hidden = (lastUser?.metadata as { hidden?: boolean } | undefined)
+    ?.hidden
   const asked =
-    lastUser?.parts
-      .flatMap((part) => (part.type === "text" ? [part.text] : []))
-      .join(" ") ?? null
+    lastUser && !hidden
+      ? lastUser.parts
+          .flatMap((part) => (part.type === "text" ? [part.text] : []))
+          .join(" ")
+      : null
 
   const last = messages.at(-1)
   if (last?.role !== "assistant") {

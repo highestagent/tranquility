@@ -87,8 +87,8 @@ export function DataView() {
     setImportFile(null)
     try {
       await importAll(JSON.parse(await file.text()))
-      setNotice({ kind: "info", text: `Imported ${file.name}.` })
-      await reload()
+      // The running agent's conversation describes data that's now gone.
+      window.location.reload()
     } catch (error) {
       setNotice({
         kind: "error",
@@ -104,8 +104,7 @@ export function DataView() {
     setConfirmDelete(false)
     try {
       await deleteAll()
-      setNotice({ kind: "info", text: "Everything was deleted." })
-      await reload()
+      window.location.replace("/")
     } catch {
       setNotice({ kind: "error", text: "The delete failed." })
     }

@@ -6,9 +6,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
 const SUGGESTIONS = [
-  { Icon: Coffee, text: "Does caffeine help my focus?" },
-  { Icon: Moon, text: "Does sleep change my memory?" },
-  { Icon: Activity, text: "How does stress affect me?" },
+  { Icon: Coffee, label: "Caffeine", text: "Does caffeine help my focus?" },
+  { Icon: Moon, label: "Sleep", text: "Does sleep change my memory?" },
+  { Icon: Activity, label: "Stress", text: "How does stress affect me?" },
 ]
 
 /** Asking is secondary, so suggestions appear only once you start to ask. */
@@ -20,17 +20,19 @@ export function Composer({ onAsk }: { onAsk: (text: string) => void }) {
     <div className="flex flex-col gap-2">
       {focused ? (
         <ul className="rise-in -mx-5 flex [scrollbar-width:none] gap-2 overflow-x-auto px-5">
-          {SUGGESTIONS.map(({ Icon, text }) => (
+          {SUGGESTIONS.map(({ Icon, label, text }) => (
             <li key={text} className="shrink-0">
               <button
                 type="button"
                 // Keeps focus in the field, so the chips stay until tapped.
                 onPointerDown={(event) => event.preventDefault()}
+                aria-label={text}
+                title={text}
                 onClick={() => onAsk(text)}
                 className="flex h-10 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-sm outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Icon aria-hidden className="size-4 text-muted-foreground" />
-                {text}
+                {label}
               </button>
             </li>
           ))}
