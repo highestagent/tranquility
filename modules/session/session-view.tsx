@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useState } from "react"
 
 import { StorageError } from "@/components/status-message"
+import { useAccount } from "@/modules/account/account-context"
 import { getAiConsent, setAiConsent } from "@/modules/agent/consent"
 
 import { AgentHome, HomeLoading } from "./agent-home"
+import { homeView } from "./home-view"
 import { RestingWithoutAi } from "./resting-without-ai"
 import { Welcome } from "./welcome"
 
 type ConsentState = "loading" | "error" | "ask" | "declined" | "granted"
 
 export function SessionView() {
+  const account = useAccount()
   const [consent, setConsent] = useState<ConsentState>("loading")
 
   const load = useCallback(() => {
@@ -35,16 +38,37 @@ export function SessionView() {
     }
   }
 
-  switch (consent) {
+  /** One click: consent, then straight to Google and back to the agent. */
+  async function begin() {
+    await choose(true)
+    if (account.available && !account.authenticated) account.signIn()
+  }
+
+  const view = homeView({
+    consent,
+    accountReady: account.ready,
+    accountAvailable: account.available,
+    authenticated: account.authenticated,
+  })
+
+  switch (view) {
     case "loading":
       return <HomeLoading />
     case "error":
       return <StorageError onRetry={load} />
-    case "ask":
-      return <Welcome onChoose={(granted) => void choose(granted)} />
-    case "declined":
-      return <RestingWithoutAi onWake={() => void choose(true)} />
-    case "granted":
+    case "welcome":
+      return (
+        <Welcome
+          useGoogle={account.available}
+          signingIn={account.signingIn}
+          signInFailed={account.signInFailed}
+          onBegin={() => void begin()}
+          onWithoutAi={() => void choose(false)}
+        />
+      )
+    case "asleep":
+      return <RestingWithoutAi onWake={() => void begin()} />
+    case "agent":
       return <AgentHome />
   }
 }

@@ -3,6 +3,7 @@ import { Geist_Mono, Instrument_Sans, Newsreader } from "next/font/google"
 
 import "./globals.css"
 import { AppNav } from "@/components/app-nav"
+import { AccountProvider } from "@/modules/account/account-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
@@ -53,10 +54,12 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
-            <AppNav />
-            <main className="flex flex-1 flex-col">{children}</main>
-          </div>
+          <AccountProvider>
+            <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
+              <AppNav />
+              <main className="flex flex-1 flex-col">{children}</main>
+            </div>
+          </AccountProvider>
         </ThemeProvider>
       </body>
     </html>
