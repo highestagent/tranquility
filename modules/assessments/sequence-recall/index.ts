@@ -1,13 +1,18 @@
+import { Route } from "lucide-react"
+
 import { scoreStaircase } from "../runner/staircase"
 import type { AssessmentDefinition } from "../types"
 import { SequenceRecallGame } from "./game"
+import { SequenceRecallPreview } from "./preview"
 import { PROTOCOL, type SequenceTrial } from "./protocol"
 
 export const sequenceRecall: AssessmentDefinition<SequenceTrial> = {
   id: "sequence-recall",
   name: "Sequence Recall",
+  shortName: "Sequence",
+  Icon: Route,
   measures: "Sequential working memory",
-  description: "Repeat the order in which tiles lit up.",
+  tagline: "Watch the order. Repeat it.",
   instructions: [
     "Tiles light up one at a time.",
     "When they stop, press the same tiles in the same order.",
@@ -33,4 +38,5 @@ export const sequenceRecall: AssessmentDefinition<SequenceTrial> = {
   primaryMetricId: "span",
   score: (trials) => scoreStaircase(trials, PROTOCOL.thresholdTrials),
   Game: SequenceRecallGame,
+  Preview: SequenceRecallPreview,
 }

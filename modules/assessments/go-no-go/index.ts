@@ -1,13 +1,18 @@
+import { Zap } from "lucide-react"
+
 import type { AssessmentDefinition } from "../types"
 import { GoNoGoGame } from "./game"
+import { GoNoGoPreview } from "./preview"
 import { PROTOCOL, type GoNoGoTrial } from "./protocol"
 import { scoreGoNoGo } from "./scoring"
 
 export const goNoGo: AssessmentDefinition<GoNoGoTrial> = {
   id: "go-no-go",
   name: "Go/No-Go",
+  shortName: "Reaction",
+  Icon: Zap,
   measures: "Response inhibition, attention, and reaction time",
-  description: "Respond quickly to one shape and hold back on another.",
+  tagline: "Tap circles. Let squares pass.",
   instructions: [
     "A filled circle means go: press Space or tap as fast as you can.",
     "An outlined square means stop: don't respond.",
@@ -50,4 +55,5 @@ export const goNoGo: AssessmentDefinition<GoNoGoTrial> = {
   primaryMetricId: "medianRt",
   score: scoreGoNoGo,
   Game: GoNoGoGame,
+  Preview: GoNoGoPreview,
 }

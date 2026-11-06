@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react"
 import type { ComponentType } from "react"
 
 export type GameMode = "practice" | "test"
@@ -23,8 +24,12 @@ export interface MetricDefinition {
 export interface AssessmentDefinition<Trial = unknown> {
   id: string
   name: string
+  /** One word, for the map. */
+  shortName: string
+  Icon: LucideIcon
   measures: string
-  description: string
+  /** One short line, shown with the animated preview. */
+  tagline: string
   instructions: string[]
   protocolVersion: number
   approxSeconds: number
@@ -32,4 +37,6 @@ export interface AssessmentDefinition<Trial = unknown> {
   primaryMetricId: string
   score: (trials: Trial[]) => Record<string, number>
   Game: ComponentType<GameProps<Trial>>
+  /** A looping demo of how to play, so the rules barely need words. */
+  Preview: ComponentType
 }
