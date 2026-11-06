@@ -42,10 +42,19 @@ export function isSameOrigin(request: Request) {
   }
 }
 
-function isRateLimited(request: Request, deps: RelayDeps) {
-  const client =
+export function clientAddress(request: Request) {
+  return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
-  return isOverLimit(deps.rateWindows, client, deps.now(), RATE_LIMIT)
+  )
+}
+
+function isRateLimited(request: Request, deps: RelayDeps) {
+  return isOverLimit(
+    deps.rateWindows,
+    clientAddress(request),
+    deps.now(),
+    RATE_LIMIT
+  )
 }
 
 /**
