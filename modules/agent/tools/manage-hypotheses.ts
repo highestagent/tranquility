@@ -18,7 +18,8 @@ import {
 export const manageHypotheses = tool({
   description: `Create or revise a hypothesis. Verdicts come only from evaluateEvidence.
 - "create": needs investigationId, statement, factorId, assessmentId, metricId, expectedDirection.
-- "start-testing" or "reject": needs hypothesisId.
+- "start-testing": marks a hypothesis as being tested while evidence is collected. Needs hypothesisId. It's optional, because evaluateEvidence works from any status except rejected.
+- "reject": needs hypothesisId.
 expectedDirection is the raw direction of the metric as the answer rises. Lower reaction time is a "negative" direction.`,
   inputSchema: z.object({
     reason: reasonSchema,

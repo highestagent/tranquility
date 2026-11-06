@@ -16,6 +16,7 @@ import {
   reasonSchema,
   requireField,
   requireMetric,
+  roundNumbers,
 } from "./shared"
 import { QUESTION_IDS } from "@/modules/questionnaire"
 
@@ -64,7 +65,7 @@ Each relationship keeps one analysis per state of the data, so re-running on unc
           metricId: primaryMetricId,
         }))
       )
-      return { mode, tested, findings: findings.map(present) }
+      return roundNumbers({ mode, tested, findings: findings.map(present) })
     }
 
     const assessment = requireField(assessmentId, "assessmentId")
@@ -74,19 +75,19 @@ Each relationship keeps one analysis per state of the data, so re-running on unc
 
     if (mode === "baseline") {
       const summary = await summarizeMetric(ref)
-      return {
+      return roundNumbers({
         mode,
         ...summary,
         higherIsBetter: getAssessment(assessment)!.metrics.find(
           ({ id }) => id === metric
         )!.higherIsBetter,
-      }
+      })
     }
 
     const analysis = await analyzeRelationship(
       requireField(factorId, "factorId"),
       ref
     )
-    return { mode, ...present(analysis) }
+    return roundNumbers({ mode, ...present(analysis) })
   },
 })

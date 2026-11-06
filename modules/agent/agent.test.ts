@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { createRandom } from "@/lib/random"
 import {
+  analyses,
   closeDb,
   decisions,
   discoveries,
@@ -23,7 +24,7 @@ import { createInvestigationAgent } from "./agent"
 import { clearPendingTask, getPendingTask } from "./pending-task"
 import { activeToolsFor, stageFor } from "./policy"
 import { investigationTools } from "./tools"
-import { describeEffect } from "./tools/shared"
+import { describeEffect, roundNumbers } from "./tools/shared"
 
 const USAGE = {
   inputTokens: {
@@ -301,6 +302,112 @@ describe("getUserContext", () => {
     ])
     // Values are still only sent for questions asked about by name.
     expect(output.answers).toEqual([])
+  })
+})
+
+describe("roundNumbers", () => {
+  it("rounds to four significant figures", () => {
+    expect(roundNumbers(335.59999999403954)).toBe(335.6)
+    expect(roundNumbers(-0.8907446750934906)).toBe(-0.8907)
+    expect(roundNumbers(1206.4)).toBe(1206)
+    expect(roundNumbers(0.000123456)).toBe(0.0001235)
+  })
+
+  it("leaves whole numbers exactly as they are", () => {
+    expect(roundNumbers(24)).toBe(24)
+    expect(roundNumbers(1793937731471)).toBe(1793937731471)
+    expect(roundNumbers(0)).toBe(0)
+  })
+
+  it("rounds at any depth, and touches nothing else", () => {
+    const input = {
+      analysisId: "a1",
+      grade: "strong",
+      ok: true,
+      none: null,
+      nested: { values: [1.23456, { deep: 9.87654 }] },
+    }
+    expect(roundNumbers(input)).toEqual({
+      analysisId: "a1",
+      grade: "strong",
+      ok: true,
+      none: null,
+      nested: { values: [1.235, { deep: 9.877 }] },
+    })
+    // The original isn't changed.
+    expect(input.nested.values[0]).toBe(1.23456)
+  })
+
+  it("doesn't break on values that can't be rounded", () => {
+    expect(roundNumbers(Number.NaN)).toBeNaN()
+    expect(roundNumbers(Number.POSITIVE_INFINITY)).toBe(
+      Number.POSITIVE_INFINITY
+    )
+  })
+})
+
+describe("figures in tool results", () => {
+  const METRIC_INPUT = { assessmentId: "go-no-go", metricId: "medianRt" }
+  const firstOutput = async (tool: string, input: object) => {
+    const { model } = scriptedModel(() => [
+      { tool: "getUserContext", input: { reason: "Review" } },
+      { tool, input: { reason: "Check", ...input } },
+      "Done.",
+    ])
+    const result = await createInvestigationAgent(model).generate({
+      prompt: "Go.",
+    })
+    return result.steps[1]?.toolResults[0]?.output as Record<string, unknown>
+  }
+  const isRounded = (value: number) => value === Number(value.toPrecision(4))
+
+  it("rounds a relationship but stores it at full precision", async () => {
+    await seedPlantedRelationship()
+
+    const output = await firstOutput("analyzePerformance", {
+      mode: "relationship",
+      factorId: "sleep.hours",
+      ...METRIC_INPUT,
+    })
+
+    const stored = await analyses.get(output.analysisId as string)
+    expect(isRounded(output.effect as number)).toBe(true)
+    expect(isRounded(stored!.effect!)).toBe(false)
+    expect(output.effect).toBe(Number(stored!.effect!.toPrecision(4)))
+    expect(output.grade).toBe(stored!.grade)
+  })
+
+  it("rounds a baseline comparison", async () => {
+    await seedPlantedRelationship()
+
+    const output = await firstOutput("analyzePerformance", {
+      mode: "baseline",
+      ...METRIC_INPUT,
+    })
+
+    expect(isRounded(output.latest as number)).toBe(true)
+  })
+
+  it("rounds measurements but leaves the stored runs alone", async () => {
+    await seedPlantedRelationship()
+
+    const output = (await firstOutput("getMeasurements", {
+      assessmentId: "go-no-go",
+    })) as {
+      recent: { measurementId: string; metrics: { medianRt: number } }[]
+    }
+
+    const [run] = output.recent
+    const stored = await measurements.get(run!.measurementId)
+    expect(isRounded(run!.metrics.medianRt)).toBe(true)
+    expect(isRounded(stored!.metrics.medianRt!)).toBe(false)
+  })
+
+  it("explains that start-testing is optional", () => {
+    expect(investigationTools.manageHypotheses.description).toMatch(
+      /being tested while evidence is collected/
+    )
+    expect(investigationTools.manageHypotheses.description).toMatch(/optional/)
   })
 })
 

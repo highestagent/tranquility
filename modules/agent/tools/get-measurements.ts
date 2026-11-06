@@ -5,7 +5,7 @@ import { summarizeMetric } from "@/modules/analytics"
 import { getAssessment } from "@/modules/assessments"
 import { measurements } from "@/modules/memory"
 
-import { assessmentIdSchema, reasonSchema } from "./shared"
+import { assessmentIdSchema, reasonSchema, roundNumbers } from "./shared"
 
 export const getMeasurements = tool({
   description:
@@ -31,7 +31,7 @@ export const getMeasurements = tool({
         }
       })
     )
-    return {
+    return roundNumbers({
       assessmentId,
       totalValidRuns: runs.length,
       recent: runs.slice(-limit).map((run) => ({
@@ -40,6 +40,6 @@ export const getMeasurements = tool({
         metrics: run.metrics,
       })),
       baselines,
-    }
+    })
   },
 })

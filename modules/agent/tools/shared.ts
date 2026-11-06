@@ -50,6 +50,32 @@ export function requireField<T>(value: T | undefined, name: string): T {
   return value
 }
 
+const SIGNIFICANT_FIGURES = 4
+
+/**
+ * Rounds a tool's output, because 335.59999999403954 says nothing 335.6 doesn't
+ * and only invites being repeated. This is for what's returned to the model:
+ * stored values and verdicts keep their full precision.
+ */
+export function roundNumbers<T>(value: T): T {
+  if (typeof value === "number") {
+    return (
+      Number.isFinite(value) && !Number.isInteger(value)
+        ? Number(value.toPrecision(SIGNIFICANT_FIGURES))
+        : value
+    ) as T
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => roundNumbers(item)) as T
+  }
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, roundNumbers(item)])
+    ) as T
+  }
+  return value
+}
+
 /**
  * States a result's meaning, so its polarity can't be misread, and so a faint
  * or empty result can't be repeated as though it were a finding.
