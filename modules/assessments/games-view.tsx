@@ -73,10 +73,8 @@ export function GamesView() {
                   href={`/assessments/${id}`}
                   className="flex h-full flex-col gap-3 rounded-3xl border border-border bg-card p-3 transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-28 items-center justify-center overflow-hidden">
-                    <span className="block h-full w-full">
-                      <Preview />
-                    </span>
+                  <span className="flex h-28 items-center justify-center">
+                    <Preview />
                   </span>
                   <span className="flex items-baseline justify-between gap-2 px-1">
                     <span className="text-sm font-medium">{shortName}</span>

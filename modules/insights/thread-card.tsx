@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Archive,
   Check,
   CircleHelp,
   FlaskConical,
@@ -65,7 +66,7 @@ export function ThreadCard({
             title={completed ? "Reopen" : "Mark complete"}
             onClick={() => onStatus(completed ? "active" : "completed")}
           >
-            {completed ? <Play aria-hidden /> : <Check aria-hidden />}
+            {completed ? <Play aria-hidden /> : <Archive aria-hidden />}
           </Button>
         </div>
       </div>

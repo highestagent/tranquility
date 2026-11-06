@@ -5,14 +5,14 @@ export function SequenceRecallPreview() {
   return (
     <div
       aria-hidden
-      className="mx-auto grid aspect-square h-full max-h-full max-w-full grid-cols-3 gap-1.5"
+      className="grid aspect-square h-full grid-cols-3 grid-rows-3 gap-1.5"
     >
       {Array.from({ length: 9 }, (_, tile) => {
         const order = ORDER.indexOf(tile)
         return (
           <span
             key={tile}
-            className="relative flex aspect-square items-center justify-center rounded-lg bg-muted"
+            className="relative flex items-center justify-center rounded-lg bg-muted"
           >
             {order >= 0 ? (
               <span

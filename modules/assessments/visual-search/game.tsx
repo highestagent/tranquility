@@ -110,7 +110,7 @@ export function VisualSearchGame({
           className="h-14 touch-manipulation"
           onPointerDown={(event) => respond(false, event.timeStamp)}
         >
-          No T (F)
+          No T <kbd className="hidden font-sans pointer-fine:inline">(F)</kbd>
         </Button>
         <Button
           size="lg"
@@ -118,7 +118,8 @@ export function VisualSearchGame({
           className="h-14 touch-manipulation"
           onPointerDown={(event) => respond(true, event.timeStamp)}
         >
-          T found (J)
+          T found{" "}
+          <kbd className="hidden font-sans pointer-fine:inline">(J)</kbd>
         </Button>
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">

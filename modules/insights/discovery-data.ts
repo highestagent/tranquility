@@ -19,6 +19,28 @@ export interface DiscoveryView {
   points: { x: number; y: number }[]
 }
 
+const VERDICT_ORDER: Record<Discovery["verdict"], number> = {
+  supported: 0,
+  refuted: 1,
+  inconclusive: 2,
+}
+const GRADE_ORDER: Record<Discovery["grade"], number> = {
+  strong: 0,
+  moderate: 1,
+  contradictory: 2,
+  weak: 3,
+  insufficient: 4,
+}
+
+/** What's most worth reading first: settled findings, then the rest by strength. */
+export function byImportance(a: DiscoveryView, b: DiscoveryView) {
+  return (
+    VERDICT_ORDER[a.discovery.verdict] - VERDICT_ORDER[b.discovery.verdict] ||
+    GRADE_ORDER[a.discovery.grade] - GRADE_ORDER[b.discovery.grade] ||
+    b.discovery.createdAt - a.discovery.createdAt
+  )
+}
+
 export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
   const [discoveryRows, hypothesisRows, analysisRows] = await Promise.all([
     discoveries.list(),
@@ -52,5 +74,5 @@ export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
       return { discovery, hypothesis, analysis, points }
     })
   )
-  return views.sort((a, b) => b.discovery.createdAt - a.discovery.createdAt)
+  return views
 }

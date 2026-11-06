@@ -16,7 +16,7 @@ import {
 } from "@/modules/investigation"
 
 import { DiscoveryCard } from "./discovery-card"
-import { loadDiscoveryViews } from "./discovery-data"
+import { byImportance, loadDiscoveryViews } from "./discovery-data"
 import { ThreadCard } from "./thread-card"
 
 async function loadFindings() {
@@ -24,7 +24,7 @@ async function loadFindings() {
     listInvestigationSummaries(),
     loadDiscoveryViews(),
   ])
-  return { threads, discoveries }
+  return { threads, discoveries: discoveries.sort(byImportance) }
 }
 
 export function FindingsView() {

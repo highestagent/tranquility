@@ -50,7 +50,7 @@ function threadPath(domain: QuestionDomain, assessmentId: string) {
 }
 
 /** A point on the thread, close enough to the shore to clear the pool. */
-function markerPoint(domain: QuestionDomain, assessmentId: string, t = 0.16) {
+function markerPoint(domain: QuestionDomain, assessmentId: string, t: number) {
   const c = controls(factorY(domain), abilityY(assessmentId))
   const u = 1 - t
   const at = (a: number, b: number, d: number, e: number) =>
@@ -129,10 +129,13 @@ function Thread({ link }: { link: KnowledgeLink }) {
   )
 }
 
-function Marker({ link }: { link: KnowledgeLink }) {
+function Marker({ link, order }: { link: KnowledgeLink; order: number }) {
   const glyph = markerGlyph(link)
-  if (!glyph || link.state === "hint") return null
-  const { x, y } = markerPoint(link.domain, link.assessmentId)
+  if (!glyph) return null
+  // Threads leave a node together, so marks sharing a node step along their
+  // threads rather than landing on each other.
+  const t = 0.15 + order * 0.13
+  const { x, y } = markerPoint(link.domain, link.assessmentId, t)
   return (
     <g aria-hidden className="rise-in">
       <circle
@@ -295,9 +298,19 @@ export function KnowledgeMap({
         visited={visited}
       />
 
-      {knowledge.links.map((link) => (
-        <Marker key={`${link.domain}-${link.assessmentId}`} link={link} />
-      ))}
+      {knowledge.links
+        .filter((link) => link.state !== "hint" && markerGlyph(link))
+        .map((link, index, marked) => (
+          <Marker
+            key={`${link.domain}-${link.assessmentId}`}
+            link={link}
+            order={
+              marked
+                .slice(0, index)
+                .filter(({ domain }) => domain === link.domain).length
+            }
+          />
+        ))}
 
       {DOMAINS.map(({ id, label, Icon }) => (
         <Node
@@ -326,50 +339,66 @@ export function KnowledgeMap({
 }
 
 /** Keys only for what's on the map right now, with a mark as well as a colour. */
-export function MapLegend({ links }: { links: readonly KnowledgeLink[] }) {
+export function MapLegend({ knowledge }: { knowledge: Knowledge }) {
+  const { links, factors, abilities } = knowledge
   const has = (test: (link: KnowledgeLink) => boolean) => links.some(test)
   const settled = (link: KnowledgeLink) =>
     link.state === "supported" || link.state === "signal"
+  const hasData = [...factors, ...abilities].some(({ filled }) => filled > 0)
   const items = [
     has((l) => settled(l) && l.helps === true) && {
       glyph: "+",
       color: "var(--signal-help)",
+      style: "solid",
       text: "Helps",
     },
     has((l) => settled(l) && l.helps === false) && {
       glyph: "−",
       color: "var(--signal-hurt)",
+      style: "solid",
       text: "Hurts",
     },
     has((l) => l.state === "testing") && {
       glyph: "",
       color: "var(--primary)",
+      style: "dashed",
       text: "Testing",
+    },
+    has((l) => l.state === "hint") && {
+      glyph: "",
+      color: "var(--border)",
+      style: "solid",
+      text: "Faint hint",
     },
     has((l) => l.state === "inconclusive") && {
       glyph: "?",
       color: "var(--muted-foreground)",
+      style: "solid",
       text: "Unclear",
     },
     has((l) => l.state === "refuted") && {
       glyph: "×",
       color: "var(--muted-foreground)",
+      style: "solid",
       text: "No link",
+    },
+    hasData && {
+      glyph: "",
+      color: "var(--primary)",
+      style: "solid",
+      text: "Data so far",
     },
   ].filter((item) => item !== false)
   if (items.length === 0) return null
 
   return (
-    <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-      {items.map(({ glyph, color, text }) => (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {items.map(({ glyph, color, style, text }) => (
         <li key={text} className="flex items-center gap-1.5">
           <span
             aria-hidden
             className="flex size-4 items-center justify-center rounded-full border-[1.5px] text-[0.65rem] font-semibold text-foreground"
-            style={{
-              borderColor: color,
-              borderStyle: glyph ? "solid" : "dashed",
-            }}
+            style={{ borderColor: color, borderStyle: style }}
           >
             {glyph}
           </span>

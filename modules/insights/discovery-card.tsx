@@ -11,7 +11,7 @@ import {
 
 import { ScatterPlot } from "@/components/charts/scatter-plot"
 import { cn } from "@/lib/utils"
-import { formatMetric, getAssessment } from "@/modules/assessments"
+import { formatMetric, formatTick, getAssessment } from "@/modules/assessments"
 import type { Discovery } from "@/modules/memory"
 import { getDomain, getQuestion } from "@/modules/questionnaire"
 
@@ -85,8 +85,9 @@ export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
         <ScatterPlot
           points={points}
           xLabel={question.label}
-          yLabel={metric.label}
+          yLabel={metric.unit === "ms" ? `${metric.label} (ms)` : metric.label}
           formatY={(value) => formatMetric(value, metric)}
+          formatYTick={(value) => formatTick(value, metric)}
           binary={question.kind.type === "yes-no"}
           showTrend={
             discovery.grade === "strong" || discovery.grade === "moderate"

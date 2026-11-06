@@ -123,7 +123,7 @@ export function AssessmentRunner({
             </>
           }
         >
-          <div className="rise-in my-auto">
+          <div className="rise-in my-auto flex h-52 items-center justify-center">
             <Preview />
           </div>
           <details className="group text-sm text-muted-foreground">
@@ -219,7 +219,7 @@ export function AssessmentRunner({
             </Button>
           }
         >
-          <div className="my-auto opacity-60">
+          <div className="my-auto flex h-52 items-center justify-center opacity-60">
             <Preview />
           </div>
         </Screen>

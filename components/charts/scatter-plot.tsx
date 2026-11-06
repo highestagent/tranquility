@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 
+import { niceTicks } from "./scale"
+
 const WIDTH = 320
-const HEIGHT = 200
-const MARGIN = { top: 12, right: 12, bottom: 34, left: 44 }
+const HEIGHT = 196
+const MARGIN = { top: 8, right: 8, bottom: 40, left: 34 }
 const PLOT_WIDTH = WIDTH - MARGIN.left - MARGIN.right
 const PLOT_HEIGHT = HEIGHT - MARGIN.top - MARGIN.bottom
 
@@ -39,12 +41,16 @@ function trendLine(points: readonly ScatterPoint[]) {
  * One person's sessions, one dot each. `showTrend` should be set only when the
  * analysis found a real relationship, and the line is hidden if the raw points
  * lean the other way, as they can before practice effects are removed.
+ *
+ * Ticks carry no unit, so they fit. The vertical axis is named above the plot
+ * and the horizontal one below it, so each sits by the axis it describes.
  */
 export function ScatterPlot({
   points,
   xLabel,
   yLabel,
   formatY,
+  formatYTick,
   binary = false,
   showTrend = false,
   expectedSign = 0,
@@ -52,7 +58,10 @@ export function ScatterPlot({
   points: readonly ScatterPoint[]
   xLabel: string
   yLabel: string
+  /** Full value with its unit, for tooltips and the table. */
   formatY: (value: number) => string
+  /** Compact value for the axis. */
+  formatYTick: (value: number) => string
   binary?: boolean
   showTrend?: boolean
   expectedSign?: number
@@ -73,18 +82,20 @@ export function ScatterPlot({
 
   const line = !binary && showTrend ? trendLine(points) : null
   const showLine = line && Math.sign(line.slope) === Math.sign(expectedSign)
-  const gridLines = [0, 0.5, 1].map((t) => lowY + t * (highY - lowY))
   const active = hovered === null ? null : points[hovered]
 
   return (
-    <figure className="flex flex-col">
+    <figure className="flex flex-col gap-2">
+      <figcaption className="text-xs text-muted-foreground">
+        {yLabel}
+      </figcaption>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
         aria-label={`${yLabel} against ${xLabel}, ${points.length} sessions`}
         className="w-full"
       >
-        {gridLines.map((value) => (
+        {niceTicks(lowY, highY).map((value) => (
           <g key={value}>
             <line
               x1={MARGIN.left}
@@ -101,7 +112,7 @@ export function ScatterPlot({
               fill="var(--muted-foreground)"
               className="font-mono"
             >
-              {formatY(value)}
+              {formatYTick(value)}
             </text>
           </g>
         ))}
@@ -147,58 +158,41 @@ export function ScatterPlot({
           )
         })}
 
-        {binary ? (
-          [
-            { value: 0, text: "No" },
-            { value: 1, text: "Yes" },
-          ].map(({ value, text }) => (
-            <text
-              key={value}
-              x={scaleX(value)}
-              y={HEIGHT - 20}
-              textAnchor="middle"
-              fontSize="11"
-              fill="var(--muted-foreground)"
-            >
-              {text}
-            </text>
-          ))
-        ) : (
-          <>
-            <text
-              x={MARGIN.left}
-              y={HEIGHT - 20}
-              fontSize="10"
-              fill="var(--muted-foreground)"
-              className="font-mono"
-            >
-              {Math.round(lowX * 10) / 10}
-            </text>
-            <text
-              x={WIDTH - MARGIN.right}
-              y={HEIGHT - 20}
-              textAnchor="end"
-              fontSize="10"
-              fill="var(--muted-foreground)"
-              className="font-mono"
-            >
-              {Math.round(highX * 10) / 10}
-            </text>
-          </>
-        )}
+        {(binary
+          ? [
+              { value: 0, text: "No" },
+              { value: 1, text: "Yes" },
+            ]
+          : niceTicks(lowX, highX, 4).map((value) => ({
+              value,
+              text: String(value),
+            }))
+        ).map(({ value, text }) => (
+          <text
+            key={value}
+            x={scaleX(value)}
+            y={HEIGHT - 26}
+            textAnchor="middle"
+            fontSize={binary ? 11 : 10}
+            fill="var(--muted-foreground)"
+            className={binary ? undefined : "font-mono"}
+          >
+            {text}
+          </text>
+        ))}
         <text
           x={MARGIN.left + PLOT_WIDTH / 2}
-          y={HEIGHT - 5}
+          y={HEIGHT - 8}
           textAnchor="middle"
           fontSize="11"
-          fill="var(--foreground)"
+          fill="var(--muted-foreground)"
         >
           {xLabel}
         </text>
 
         {active && hovered !== null ? (
           <text
-            x={Math.min(scaleX(active.x + jitter(hovered)) + 10, WIDTH - 70)}
+            x={Math.min(scaleX(active.x + jitter(hovered)) + 10, WIDTH - 90)}
             y={Math.max(scaleY(active.y) - 10, 12)}
             fontSize="11"
             fill="var(--foreground)"
@@ -211,28 +205,27 @@ export function ScatterPlot({
           </text>
         ) : null}
       </svg>
-      <figcaption className="text-xs text-muted-foreground">
-        {yLabel}, by session
-      </figcaption>
-      <table className="sr-only">
-        <caption>
-          {yLabel} against {xLabel}
-        </caption>
-        <thead>
-          <tr>
-            <th>{xLabel}</th>
-            <th>{yLabel}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point, index) => (
-            <tr key={index}>
-              <td>{point.x}</td>
-              <td>{formatY(point.y)}</td>
+      <div className="sr-only">
+        <table>
+          <caption>
+            {yLabel} against {xLabel}
+          </caption>
+          <thead>
+            <tr>
+              <th>{xLabel}</th>
+              <th>{yLabel}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point, index) => (
+              <tr key={index}>
+                <td>{point.x}</td>
+                <td>{formatY(point.y)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   )
 }

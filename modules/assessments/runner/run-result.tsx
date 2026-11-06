@@ -150,8 +150,8 @@ export function RunResult({
         ) : (
           <div
             role="img"
-            aria-label={`${Math.min(prior.length + 1, MIN_BASELINE_RUNS + 1)} of ${MIN_BASELINE_RUNS + 1} runs towards your baseline`}
-            className="flex items-center gap-1.5"
+            aria-label={`Run ${Math.min(prior.length + 1, MIN_BASELINE_RUNS + 1)} of ${MIN_BASELINE_RUNS + 1} towards your baseline`}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
           >
             {Array.from({ length: MIN_BASELINE_RUNS + 1 }, (_, dot) => (
               <span
@@ -163,6 +163,7 @@ export function RunResult({
                 }
               />
             ))}
+            <span className="ml-1">Your baseline</span>
           </div>
         )}
         <Sparkline
