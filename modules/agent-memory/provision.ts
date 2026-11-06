@@ -16,7 +16,8 @@ import {
   type SuiWallet,
 } from "./wallet"
 
-const SAVED_ACCOUNT_KEY = "agentMemoryAccount"
+/** Per network, since an account on one doesn't exist on another. */
+const SAVED_ACCOUNT_KEY = "agentMemoryAccount:mainnet"
 const KEY_LABEL = "Tranquility"
 
 interface SavedAccount {

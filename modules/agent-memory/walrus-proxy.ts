@@ -1,7 +1,7 @@
 import { isOverLimit, type RateWindows } from "@/lib/rate-limit"
 import { clientAddress, isSameOrigin } from "@/modules/relay/relay"
 
-export const DEFAULT_RELAYER_URL = "https://relayer.dev.memwal.ai"
+export const RELAYER_URL = "https://relayer.memory.walrus.xyz"
 
 const RATE_LIMIT = { requests: 120, windowMs: 60_000 }
 const MAX_BODY_BYTES = 64 * 1024
@@ -48,7 +48,7 @@ function isFromThisApp(request: Request) {
 }
 
 /**
- * The Walrus Memory relayer only accepts browsers from a list of origins, so
+ * The Walrus Memory relayer only accepts browsers from Walrus's own apps, so
  * requests reach it through here. It holds no keys and adds no credentials: the
  * browser signs each request and the relayer checks that signature, so this can
  * only pass along what the signer already authorized. It stores and logs nothing.

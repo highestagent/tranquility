@@ -50,7 +50,7 @@ function stubRelayer(onChain: {
       return Response.json({
         packageId: "0xpackage",
         registryId: "0xregistry",
-        network: "testnet",
+        network: "mainnet",
         suiGrpcUrl: "http://sui.test",
       })
     }
@@ -120,7 +120,10 @@ describe("connectMemoryAccount", () => {
   })
 
   it("ignores an account saved for a different wallet", async () => {
-    await kv.set("agentMemoryAccount", { owner: "0xother", accountId: "0xa" })
+    await kv.set("agentMemoryAccount:mainnet", {
+      owner: "0xother",
+      accountId: "0xa",
+    })
     stubRelayer({ account_id: null, keys: [] })
     const { accountId } = await connectMemoryAccount(wallet, RELAYER)
     expect(accountId).toBe("0xnew")
@@ -129,7 +132,7 @@ describe("connectMemoryAccount", () => {
   it("never saves the key in local storage", async () => {
     stubRelayer({ account_id: null, keys: [] })
     const { key } = await connectMemoryAccount(wallet, RELAYER)
-    const saved = await kv.get("agentMemoryAccount")
+    const saved = await kv.get("agentMemoryAccount:mainnet")
     expect(saved).toEqual({ owner: address, accountId: "0xnew" })
     expect(JSON.stringify(saved)).not.toContain(key)
   })
@@ -146,14 +149,14 @@ describe("connectMemoryAccount", () => {
     )
     expect(createAccount).not.toHaveBeenCalled()
     expect(addDelegateKey).not.toHaveBeenCalled()
-    expect(await kv.get("agentMemoryAccount")).toBeUndefined()
+    expect(await kv.get("agentMemoryAccount:mainnet")).toBeUndefined()
   })
 
   it("stops without saving if the chain write fails, so it can retry", async () => {
     stubRelayer({ account_id: null, keys: [] })
     vi.mocked(createAccount).mockRejectedValueOnce(new Error("sponsor down"))
     await expect(connectMemoryAccount(wallet, RELAYER)).rejects.toThrow()
-    expect(await kv.get("agentMemoryAccount")).toBeUndefined()
+    expect(await kv.get("agentMemoryAccount:mainnet")).toBeUndefined()
   })
 })
 

@@ -1,8 +1,5 @@
 import type { RateWindows } from "@/lib/rate-limit"
-import {
-  DEFAULT_RELAYER_URL,
-  proxyToWalrus,
-} from "@/modules/agent-memory/walrus-proxy"
+import { proxyToWalrus, RELAYER_URL } from "@/modules/agent-memory/walrus-proxy"
 
 const rateWindows: RateWindows = new Map()
 
@@ -12,7 +9,7 @@ async function handle(
 ) {
   const { path } = await params
   return proxyToWalrus(request, path, {
-    relayerUrl: process.env.MEMWAL_SERVER_URL ?? DEFAULT_RELAYER_URL,
+    relayerUrl: RELAYER_URL,
     fetch,
     now: Date.now,
     rateWindows,

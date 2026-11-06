@@ -121,7 +121,7 @@ describe("runMemorySync", () => {
   })
 
   it("stops reporting a failure once it gets through", async () => {
-    await kv.set("agentMemory", { failing: true })
+    await kv.set("agentMemory:mainnet", { failing: true })
     await runMemorySync(fakeApi(), "u1", facts(1))
     expect((await getMemoryState()).failing).toBe(false)
   })

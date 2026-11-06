@@ -9,7 +9,8 @@ import {
 } from "./api"
 import { distillFacts, type Fact } from "./distill"
 
-const STATE_KEY = "agentMemory"
+/** Per network, since what's saved on one doesn't exist on another. */
+const STATE_KEY = "agentMemory:mainnet"
 const BATCH_SIZE = 10
 const CHECK_AGAIN_MS = 20_000
 const MAX_BACKOFF_MS = 10 * 60_000
