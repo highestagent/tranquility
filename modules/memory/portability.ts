@@ -1,0 +1,122 @@
+import { z } from "zod"
+
+import { getDb, STORE_NAMES, type StoreName } from "./db"
+import {
+  analysisSchema,
+  decisionSchema,
+  discoverySchema,
+  hypothesisSchema,
+  investigationSchema,
+  kvSchema,
+  measurementSchema,
+  responseSchema,
+  sessionSchema,
+} from "./schemas"
+
+export const EXPORT_FORMAT = "tranquility-export"
+export const EXPORT_VERSION = 1
+
+const exportSchema = z.object({
+  format: z.literal(EXPORT_FORMAT),
+  version: z.literal(EXPORT_VERSION),
+  exportedAt: z.number(),
+  data: z.object({
+    sessions: z.array(sessionSchema),
+    measurements: z.array(measurementSchema),
+    responses: z.array(responseSchema),
+    investigations: z.array(investigationSchema),
+    hypotheses: z.array(hypothesisSchema),
+    analyses: z.array(analysisSchema),
+    discoveries: z.array(discoverySchema),
+    decisions: z.array(decisionSchema),
+    kv: z.array(kvSchema),
+  }),
+})
+
+export type TranquilityExport = z.infer<typeof exportSchema>
+
+export async function exportAll(): Promise<TranquilityExport> {
+  const db = await getDb()
+  const tx = db.transaction(STORE_NAMES, "readonly")
+  const [
+    sessions,
+    measurements,
+    responses,
+    investigations,
+    hypotheses,
+    analyses,
+    discoveries,
+    decisions,
+    kv,
+  ] = await Promise.all([
+    tx.objectStore("sessions").getAll(),
+    tx.objectStore("measurements").getAll(),
+    tx.objectStore("responses").getAll(),
+    tx.objectStore("investigations").getAll(),
+    tx.objectStore("hypotheses").getAll(),
+    tx.objectStore("analyses").getAll(),
+    tx.objectStore("discoveries").getAll(),
+    tx.objectStore("decisions").getAll(),
+    tx.objectStore("kv").getAll(),
+  ])
+  await tx.done
+  return {
+    format: EXPORT_FORMAT,
+    version: EXPORT_VERSION,
+    exportedAt: Date.now(),
+    data: {
+      sessions,
+      measurements,
+      responses,
+      investigations,
+      hypotheses,
+      analyses,
+      discoveries,
+      decisions,
+      kv,
+    },
+  }
+}
+
+export class InvalidImportError extends Error {}
+
+/**
+ * Replaces everything on this device with the file's contents. The file is
+ * fully validated first and the write is one transaction, so a bad file or a
+ * failed write leaves existing data untouched.
+ */
+export async function importAll(input: unknown): Promise<void> {
+  const parsed = exportSchema.safeParse(input)
+  if (!parsed.success) {
+    throw new InvalidImportError("This file is not a valid Tranquility export.")
+  }
+  const db = await getDb()
+  const tx = db.transaction(STORE_NAMES, "readwrite")
+  const work: Promise<unknown>[] = []
+  for (const name of STORE_NAMES) {
+    const store = tx.objectStore(name)
+    work.push(store.clear())
+    for (const row of parsed.data.data[name]) {
+      work.push(store.put(row as never))
+    }
+  }
+  work.push(tx.done)
+  await Promise.all(work)
+}
+
+export async function deleteAll(): Promise<void> {
+  const db = await getDb()
+  const tx = db.transaction(STORE_NAMES, "readwrite")
+  await Promise.all([
+    ...STORE_NAMES.map((name) => tx.objectStore(name).clear()),
+    tx.done,
+  ])
+}
+
+export async function countAll(): Promise<Record<StoreName, number>> {
+  const db = await getDb()
+  const entries = await Promise.all(
+    STORE_NAMES.map(async (name) => [name, await db.count(name)] as const)
+  )
+  return Object.fromEntries(entries) as Record<StoreName, number>
+}
