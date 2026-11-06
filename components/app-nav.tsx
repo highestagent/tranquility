@@ -18,7 +18,7 @@ export function AppNav() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="Main" className="-mx-2 flex gap-1 overflow-x-auto">
+    <nav aria-label="Main" className="-mx-2 flex [scrollbar-width:none] gap-1 overflow-x-auto">
       {LINKS.map(({ href, label }) => {
         const active =
           href === "/" ? pathname === "/" : pathname.startsWith(href)
