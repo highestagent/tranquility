@@ -1,6 +1,7 @@
 import { z } from "zod"
 
 import { ASSESSMENTS, getAssessment } from "@/modules/assessments"
+import type { EvidenceGrade } from "@/modules/memory"
 import { QUESTION_IDS } from "@/modules/questionnaire"
 
 export const questionIdSchema = z.enum(QUESTION_IDS)
@@ -49,16 +50,30 @@ export function requireField<T>(value: T | undefined, name: string): T {
   return value
 }
 
-/** States a result's meaning, so the model can't misread a metric's polarity. */
+/**
+ * States a result's meaning, so its polarity can't be misread, and so a faint
+ * or empty result can't be repeated as though it were a finding.
+ */
 export function describeEffect(
   assessmentId: string,
   metricId: string,
-  direction: "positive" | "negative" | "none"
+  analysis: {
+    direction: "positive" | "negative" | "none"
+    grade: EvidenceGrade
+  }
 ) {
+  const { direction, grade } = analysis
+  if (grade === "insufficient") return "Not enough data to say anything yet."
+  if (grade === "contradictory") {
+    return "The pattern reversed over time, so no direction can be trusted."
+  }
   if (direction === "none") return "No meaningful relationship in this data."
   const metric = requireMetric(assessmentId, metricId)
   const better = (direction === "positive") === metric.higherIsBetter
-  return `When this answer is higher, ${metric.label.toLowerCase()} tends to be ${
+  const statement = `when this answer is higher, ${metric.label.toLowerCase()} tends to be ${
     direction === "positive" ? "higher" : "lower"
   }, which is ${better ? "better" : "worse"} performance.`
+  return grade === "weak"
+    ? `A faint pattern that could easily be chance: ${statement}`
+    : statement[0]!.toUpperCase() + statement.slice(1)
 }

@@ -35,7 +35,7 @@ function present(analysis: Analysis) {
     meaning: describeEffect(
       analysis.metric.assessmentId,
       analysis.metric.metricId,
-      analysis.direction
+      analysis
     ),
     notes: analysis.notes,
   }

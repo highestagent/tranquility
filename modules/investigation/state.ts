@@ -89,9 +89,22 @@ export async function getInvestigationState() {
   }
 }
 
+const STATUS_ORDER: Record<Investigation["status"], number> = {
+  active: 0,
+  paused: 1,
+  completed: 2,
+}
+
+/** Active work first, and in a stable order so cards don't jump when changed. */
 export async function listInvestigationSummaries() {
   const rows = await investigations.list()
   return Promise.all(
-    rows.sort((a, b) => b.updatedAt - a.updatedAt).map(summarize)
+    rows
+      .sort(
+        (a, b) =>
+          STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+          a.createdAt - b.createdAt
+      )
+      .map(summarize)
   )
 }

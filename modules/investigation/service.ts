@@ -160,6 +160,13 @@ export async function evaluateHypothesis(input: {
     )
   }
 
+  // "Too little data" is a fair finding. "No data at all" is not a finding yet.
+  if (latest.n === 0) {
+    throw new Error(
+      "There's no data for this relationship yet. Collect some before recording a finding."
+    )
+  }
+
   const verdict = decideVerdict(hypothesis.expectedDirection, latest)
   const discovery = await discoveries.put({
     id: newId(),

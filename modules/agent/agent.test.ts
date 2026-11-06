@@ -14,6 +14,7 @@ import {
   measurements,
   responses,
   sessions,
+  type EvidenceGrade,
 } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
 
@@ -21,6 +22,7 @@ import { createInvestigationAgent } from "./agent"
 import { clearPendingTask, getPendingTask } from "./pending-task"
 import { activeToolsFor, stageFor } from "./policy"
 import { investigationTools } from "./tools"
+import { describeEffect } from "./tools/shared"
 
 const USAGE = {
   inputTokens: {
@@ -132,6 +134,24 @@ describe("policy", () => {
     expect(
       activeToolsFor(stageFor(["getUserContext", "analyzePerformance"]))
     ).toContain("evaluateEvidence")
+  })
+})
+
+describe("describeEffect", () => {
+  const describe_ = (
+    direction: "positive" | "negative" | "none",
+    grade: EvidenceGrade
+  ) => describeEffect("go-no-go", "medianRt", { direction, grade })
+
+  it("reads polarity from the metric", () => {
+    expect(describe_("negative", "strong")).toMatch(/lower, which is better/)
+    expect(describe_("positive", "moderate")).toMatch(/higher, which is worse/)
+  })
+
+  it("never presents a faint or empty result as a finding", () => {
+    expect(describe_("none", "insufficient")).toMatch(/not enough data/i)
+    expect(describe_("negative", "weak")).toMatch(/could easily be chance/)
+    expect(describe_("negative", "contradictory")).toMatch(/reversed/)
   })
 })
 

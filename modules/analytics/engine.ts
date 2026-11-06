@@ -57,7 +57,7 @@ function buildAnalysis(
 
   if (observations.length < THRESHOLDS.minPairs) {
     return insufficient(
-      `Only ${observations.length} of ${THRESHOLDS.minPairs} needed sessions have both this answer and a valid result.`
+      `${observations.length} sessions have both this answer and a valid result. Testing needs at least ${THRESHOLDS.minPairs}.`
     )
   }
   const distinct = new Set(observations.map((o) => o.x))

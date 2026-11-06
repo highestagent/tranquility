@@ -175,6 +175,28 @@ describe("evaluateHypothesis", () => {
     ).rejects.toThrow(/Unknown analysis/)
   })
 
+  it("refuses to record a finding with no data behind it", async () => {
+    const { hypothesis } = await setup()
+    await analyses.put(
+      analysis({
+        n: 0,
+        grade: "insufficient",
+        direction: "none",
+        effect: null,
+        ciLow: null,
+        ciHigh: null,
+      })
+    )
+    await expect(
+      evaluateHypothesis({
+        hypothesisId: hypothesis.id,
+        analysisIds: ["a1"],
+        ...narrative,
+      })
+    ).rejects.toThrow(/no data/)
+    expect((await hypotheses.get(hypothesis.id))?.status).toBe("proposed")
+  })
+
   it("refuses an analysis of a different relationship", async () => {
     const { hypothesis } = await setup()
     await analyses.put(analysis({ factorId: "mood.energy" }))
