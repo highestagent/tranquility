@@ -127,6 +127,29 @@
     --sidebar-ring: oklch(0.76 0.115 175);
 }
 
+/*
+ * The type scale. The agent speaks in three sizes; everything else is the body
+ * size or a caption. Nothing on a screen should need a size outside these.
+ */
+@utility voice-display {
+  font-family: var(--font-voice);
+  font-size: 2.25rem;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+@utility voice-title {
+  font-family: var(--font-voice);
+  font-size: 1.625rem;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+@utility voice-note {
+  font-family: var(--font-voice);
+  font-size: 1.0625rem;
+  line-height: 1.35;
+  font-style: italic;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -62,7 +62,7 @@ export function GoNoGoGame({ seed, mode, onComplete }: GameProps<GoNoGoTrial>) {
         onKeyDown={(event) => {
           if (event.code === "Enter") event.preventDefault()
         }}
-        className="flex h-72 w-full touch-none items-center justify-center bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-[min(58svh,26rem)] w-full touch-none items-center justify-center rounded-3xl bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span
           data-stimulus={stimulus ?? "none"}

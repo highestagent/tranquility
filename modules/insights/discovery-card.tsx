@@ -29,15 +29,13 @@ const VERDICTS: Record<
   inconclusive: { label: "Unclear", Icon: CircleHelp, solid: false },
 }
 
-export function DiscoveryCard({ view }: { view: DiscoveryView }) {
-  const { discovery, hypothesis, analysis, points } = view
+/** Which habit and ability this is about, and what the evidence decided. */
+export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
+  const { discovery, hypothesis, analysis } = view
   const question = hypothesis ? getQuestion(hypothesis.factorId) : undefined
   const assessment = hypothesis
     ? getAssessment(hypothesis.metric.assessmentId)
     : undefined
-  const metric = assessment?.metrics.find(
-    ({ id }) => id === hypothesis?.metric.metricId
-  )
   const verdict = VERDICTS[discovery.verdict]
   const helps =
     hypothesis && analysis
@@ -45,33 +43,44 @@ export function DiscoveryCard({ view }: { view: DiscoveryView }) {
       : null
 
   return (
-    <article className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5">
-      <header className="flex items-center justify-between gap-3">
-        {question && assessment ? (
-          <ThreadGlyph
-            FactorIcon={getDomain(question.domain).Icon}
-            AbilityIcon={assessment.Icon}
-            helps={helps}
-            settled={discovery.verdict === "supported"}
-          />
-        ) : (
-          <Telescope aria-hidden className="size-6 text-muted-foreground" />
+    <div className="flex items-center justify-between gap-3">
+      {question && assessment ? (
+        <ThreadGlyph
+          FactorIcon={getDomain(question.domain).Icon}
+          AbilityIcon={assessment.Icon}
+          helps={helps}
+          settled={discovery.verdict === "supported"}
+        />
+      ) : (
+        <Telescope aria-hidden className="size-6 text-muted-foreground" />
+      )}
+      <span
+        className={cn(
+          "stamp-in flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+          verdict.solid
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border text-muted-foreground"
         )}
-        <span
-          className={cn(
-            "stamp-in flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
-            verdict.solid
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border text-muted-foreground"
-          )}
-        >
-          <verdict.Icon aria-hidden className="size-3.5" />
-          {verdict.label}
-        </span>
-      </header>
+      >
+        <verdict.Icon aria-hidden className="size-3.5" />
+        {verdict.label}
+      </span>
+    </div>
+  )
+}
 
-      <h2 className="font-voice text-2xl text-balance">{discovery.observed}</h2>
+/** The chart, how strong the evidence is, and the rest one tap away. */
+export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
+  const { discovery, hypothesis, analysis, points } = view
+  const question = hypothesis ? getQuestion(hypothesis.factorId) : undefined
+  const metric = hypothesis
+    ? getAssessment(hypothesis.metric.assessmentId)?.metrics.find(
+        ({ id }) => id === hypothesis.metric.metricId
+      )
+    : undefined
 
+  return (
+    <>
       {question && metric && points.length > 0 ? (
         <ScatterPlot
           points={points}
@@ -86,17 +95,18 @@ export function DiscoveryCard({ view }: { view: DiscoveryView }) {
         />
       ) : null}
 
-      <StrengthMeter grade={discovery.grade} />
-
       <details className="group text-sm">
-        <summary className="flex cursor-pointer list-none items-center gap-1 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-          The details
-          <ChevronDown
-            aria-hidden
-            className="size-3.5 transition-transform duration-200 group-open:rotate-180"
-          />
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <StrengthMeter grade={discovery.grade} />
+          <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+            Details
+            <ChevronDown
+              aria-hidden
+              className="size-3.5 transition-transform duration-200 group-open:rotate-180"
+            />
+          </span>
         </summary>
-        <dl className="mt-3 flex flex-col gap-3">
+        <dl className="mt-4 flex flex-col gap-3">
           <Detail Icon={Telescope} label="Evidence" text={discovery.evidence} />
           <Detail
             Icon={Check}
@@ -111,6 +121,17 @@ export function DiscoveryCard({ view }: { view: DiscoveryView }) {
           <Detail Icon={Compass} label="Next" text={discovery.nextStep} />
         </dl>
       </details>
+    </>
+  )
+}
+
+/** A finding as a self-contained card, for lists. */
+export function DiscoveryCard({ view }: { view: DiscoveryView }) {
+  return (
+    <article className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5">
+      <DiscoveryEyebrow view={view} />
+      <h2 className="voice-title text-balance">{view.discovery.observed}</h2>
+      <DiscoveryEvidence view={view} />
     </article>
   )
 }

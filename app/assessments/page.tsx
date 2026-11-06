@@ -1,13 +1,10 @@
-import { PageHeader } from "@/components/page-header"
+import { Screen } from "@/components/screen"
 import { GamesView } from "@/modules/assessments/games-view"
-import { CheckIn } from "@/modules/session/check-in"
 
 export default function GamesPage() {
   return (
-    <>
-      <PageHeader title="Games" />
-      <CheckIn />
+    <Screen title="Games" titleClassName="voice-display">
       <GamesView />
-    </>
+    </Screen>
   )
 }

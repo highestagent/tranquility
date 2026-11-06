@@ -42,11 +42,11 @@ export function ThreadCard({
         (paused || completed) && "opacity-75"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="pt-2 font-voice text-xl text-balance">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="min-w-0 font-medium text-pretty">
           {investigation.title}
-        </h2>
-        <div className="flex shrink-0">
+        </h3>
+        <div className="-my-1 -mr-2 flex shrink-0">
           {completed ? null : (
             <Button
               variant="ghost"

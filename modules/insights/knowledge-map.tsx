@@ -5,13 +5,13 @@ import { AgentPoolGroup, type PoolState, type Stage } from "./agent-pool"
 import type { Knowledge, KnowledgeLink, KnowledgeNode } from "./knowledge"
 
 const WIDTH = 360
-const HEIGHT = 330
-const CENTER = { x: 180, y: 165 }
+const HEIGHT = 306
+const CENTER = { x: 180, y: 150 }
 const NODE_RADIUS = 19
 const FACTOR_X = 38
 const ABILITY_X = 322
-const FACTOR_YS = [45, 105, 165, 225, 285]
-const ABILITY_YS = [75, 135, 195, 255]
+const FACTOR_YS = [30, 90, 150, 210, 270]
+const ABILITY_YS = [60, 120, 180, 240]
 
 export interface MapFocus {
   domain: QuestionDomain
@@ -252,7 +252,7 @@ export function KnowledgeMap({
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
       aria-label={summarize(knowledge)}
-      className="mx-auto w-full max-w-[26rem]"
+      className="w-full"
     >
       {scanning
         ? DOMAINS.flatMap(({ id: domain }, row) =>

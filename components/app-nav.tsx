@@ -20,7 +20,10 @@ export function AppNav() {
   const pathname = usePathname()
 
   return (
-    <nav aria-label="Main" className="flex items-center justify-between py-3">
+    <nav
+      aria-label="Main"
+      className="-mx-2 flex h-14 shrink-0 items-center justify-between"
+    >
       <Link
         href="/"
         aria-label="Tranquility home"

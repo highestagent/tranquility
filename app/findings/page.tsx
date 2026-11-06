@@ -1,11 +1,10 @@
-import { PageHeader } from "@/components/page-header"
+import { Screen } from "@/components/screen"
 import { FindingsView } from "@/modules/insights/findings-view"
 
 export default function FindingsPage() {
   return (
-    <>
-      <PageHeader title="Findings" />
+    <Screen title="Findings" titleClassName="voice-display">
       <FindingsView />
-    </>
+    </Screen>
   )
 }

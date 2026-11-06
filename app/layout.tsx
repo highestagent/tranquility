@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Figtree, Geist_Mono, Newsreader } from "next/font/google"
 
 import "./globals.css"
@@ -26,6 +26,11 @@ export const metadata: Metadata = {
     "A personal research agent that investigates what shapes your thinking. Your data is stored on your device.",
 }
 
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,9 +50,10 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <div className="mx-auto flex min-h-svh w-full max-w-xl flex-col px-4 pb-6">
+          {/* A phone-width column everywhere, so layouts have one shape to get right. */}
+          <div className="mx-auto flex min-h-svh w-full max-w-md flex-col px-5">
             <AppNav />
-            <main className="flex flex-1 flex-col gap-6">{children}</main>
+            <main className="flex flex-1 flex-col">{children}</main>
           </div>
         </ThemeProvider>
       </body>

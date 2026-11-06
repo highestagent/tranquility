@@ -46,7 +46,10 @@ new data, or a long rest), and the screen follows what it's doing.
 | Asking | One tap-to-answer question at a time |
 | Playing | A game with an animated preview, then a visual result |
 | Reveal | A new finding, with its chart and evidence strength |
-| Resting | The map, what the agent said, and a way to ask your own question |
+| Resting | What the agent said, the map, and a way to ask your own question |
+
+Every screen uses the same layout (`components/screen.tsx`): a quiet reason, one
+thing to read, one thing to look at, and one action in thumb reach.
 
 Closing the browser loses nothing, because the investigation and any pending task
 are stored. See `modules/session/use-agent-session.ts`.

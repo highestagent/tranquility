@@ -1,13 +1,12 @@
-import { PageHeader } from "@/components/page-header"
+import { Screen } from "@/components/screen"
 import { AiSettings } from "@/modules/agent/ai-settings"
 import { DataView } from "@/modules/memory/data-view"
 
 export default function YouPage() {
   return (
-    <>
-      <PageHeader title="You" />
+    <Screen title="You" titleClassName="voice-display">
       <AiSettings />
       <DataView />
-    </>
+    </Screen>
   )
 }

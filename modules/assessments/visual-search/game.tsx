@@ -86,7 +86,7 @@ export function VisualSearchGame({
       <div
         data-testid="search-board"
         aria-hidden
-        className="relative mx-auto aspect-square w-full max-w-md bg-muted select-none"
+        className="relative mx-auto aspect-square w-full rounded-3xl bg-muted select-none"
       >
         {current?.items.map((item) => (
           <span
@@ -107,7 +107,7 @@ export function VisualSearchGame({
         <Button
           size="lg"
           variant="outline"
-          className="h-12 touch-manipulation"
+          className="h-14 touch-manipulation"
           onPointerDown={(event) => respond(false, event.timeStamp)}
         >
           No T (F)
@@ -115,7 +115,7 @@ export function VisualSearchGame({
         <Button
           size="lg"
           variant="outline"
-          className="h-12 touch-manipulation"
+          className="h-14 touch-manipulation"
           onPointerDown={(event) => respond(true, event.timeStamp)}
         >
           T found (J)

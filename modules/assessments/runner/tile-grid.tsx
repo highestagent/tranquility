@@ -39,7 +39,7 @@ export function TileGrid({
     <div
       role="group"
       aria-label="Tiles"
-      className="mx-auto grid w-full max-w-sm gap-2"
+      className="grid w-full gap-2"
       style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: size * size }, (_, tile) => (
@@ -60,7 +60,7 @@ export function TileGrid({
           }}
           onKeyDown={(event) => onKeyDown(event, tile)}
           className={cn(
-            "aspect-square touch-manipulation border border-border bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
+            "aspect-square touch-manipulation rounded-xl border border-border bg-muted outline-none select-none focus-visible:ring-2 focus-visible:ring-ring",
             selected.includes(tile) && "border-primary bg-primary/40",
             lit.includes(tile) && "border-primary bg-primary"
           )}

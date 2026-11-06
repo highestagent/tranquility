@@ -1,3 +1,4 @@
+import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 
 export function LoadingMessage({
@@ -6,7 +7,7 @@ export function LoadingMessage({
   children?: string
 }) {
   return (
-    <p role="status" className="py-8 text-center text-sm text-muted-foreground">
+    <p role="status" className="py-8 text-sm text-muted-foreground">
       {children}
     </p>
   )
@@ -14,19 +15,21 @@ export function LoadingMessage({
 
 export function StorageError({ onRetry }: { onRetry?: () => void }) {
   return (
-    <div
-      role="alert"
-      className="flex flex-col items-center gap-3 py-8 text-center text-sm"
-    >
-      <p>
-        Can&apos;t read this browser&apos;s storage. Private windows can block
-        it.
-      </p>
-      {onRetry ? (
-        <Button size="lg" variant="outline" onClick={onRetry}>
-          Try again
-        </Button>
-      ) : null}
+    <div role="alert" className="flex flex-1 flex-col">
+      <Screen
+        title="I can't read this browser's storage."
+        dock={
+          onRetry ? (
+            <Button size="cta" variant="outline" onClick={onRetry}>
+              Try again
+            </Button>
+          ) : undefined
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Private windows can block it.
+        </p>
+      </Screen>
     </div>
   )
 }
@@ -39,8 +42,8 @@ export function EmptyMessage({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border p-8 text-center text-sm">
-      <p className="font-voice text-2xl">{title}</p>
+    <div className="flex flex-col gap-1 rounded-3xl border border-dashed border-border p-5 text-sm">
+      <p className="font-medium">{title}</p>
       <div className="text-muted-foreground">{children}</div>
     </div>
   )

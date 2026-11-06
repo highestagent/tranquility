@@ -3,6 +3,7 @@
 import { ArrowRight, Check, ChevronLeft, SkipForward, X } from "lucide-react"
 import { useState } from "react"
 
+import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -22,14 +23,16 @@ const ADVANCE_DELAY_MS = 220
 type Answers = Partial<Record<QuestionId, number | null>>
 
 /**
- * One question at a time. A tap answers and moves on, and anything skipped is
- * stored as declined.
+ * One question at a time, with the answers in thumb reach. A tap answers and
+ * moves on, and anything skipped is stored as declined.
  */
 export function QuestionFlow({
   questionIds,
+  eyebrow,
   onDone,
 }: {
   questionIds: readonly QuestionId[]
+  eyebrow?: React.ReactNode
   onDone: (answered: number) => void
 }) {
   const [index, setIndex] = useState(0)
@@ -70,14 +73,15 @@ export function QuestionFlow({
 
   if (saveFailed) {
     return (
-      <div
-        role="alert"
-        className="flex flex-col items-center gap-4 py-8 text-sm"
-      >
-        <p>Couldn&apos;t save on this device.</p>
-        <Button size="lg" onClick={() => void finish(answers)}>
-          Try again
-        </Button>
+      <div role="alert" className="flex flex-1 flex-col">
+        <Screen
+          title="I couldn't save that on this device."
+          dock={
+            <Button size="cta" onClick={() => void finish(answers)}>
+              Try again
+            </Button>
+          }
+        />
       </div>
     )
   }
@@ -88,27 +92,16 @@ export function QuestionFlow({
   return (
     <section
       aria-label={`Question ${index + 1} of ${questionIds.length}`}
-      className="flex flex-col gap-6 rounded-3xl border border-border bg-card p-5"
+      className="flex flex-1 flex-col"
     >
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label="Previous question"
-          disabled={index === 0 || saving}
-          className={cn(index === 0 && "invisible")}
-          onClick={() => setIndex(index - 1)}
-        >
-          <ChevronLeft aria-hidden />
-        </Button>
-        <ol aria-hidden className="flex items-center gap-1.5">
-          {questionIds.map((questionId, dot) => (
+      <div className="flex items-center gap-3 pb-3">
+        <ol aria-hidden className="flex flex-1 gap-1">
+          {questionIds.map((questionId, segment) => (
             <li
               key={questionId}
               className={cn(
-                "size-1.5 rounded-full bg-border transition-all duration-300",
-                dot < index && "bg-primary/50",
-                dot === index && "w-5 bg-primary"
+                "h-1 flex-1 rounded-full bg-border transition-colors duration-300",
+                segment <= index && "bg-primary"
               )}
             />
           ))}
@@ -118,6 +111,7 @@ export function QuestionFlow({
           size="icon-lg"
           aria-label="Skip the rest"
           title="Skip the rest"
+          className="-mr-2"
           disabled={saving}
           onClick={() => void finish(answers)}
         >
@@ -125,33 +119,51 @@ export function QuestionFlow({
         </Button>
       </div>
 
-      <div key={id} className="rise-in flex flex-col items-center gap-6">
-        <span className="flex size-14 items-center justify-center rounded-full bg-muted">
-          <Icon aria-hidden className="size-7" />
-        </span>
-        <h2 className="text-center font-voice text-2xl text-balance">
-          {question.prompt}
-        </h2>
-        <AnswerControl
-          key={id}
-          question={question}
-          value={answers[id] ?? null}
-          disabled={saving}
-          onPick={(value) => answer(value, ADVANCE_DELAY_MS)}
-          onSubmit={(value) => answer(value)}
-        />
-      </div>
-
-      <Button
-        variant="ghost"
-        size="lg"
-        disabled={saving}
-        className="self-center text-muted-foreground"
-        onClick={() => answer(null)}
+      <Screen
+        eyebrow={eyebrow}
+        title={question.prompt}
+        titleKey={id}
+        dock={
+          <div key={id} className="rise-in flex flex-col gap-3">
+            <AnswerControl
+              question={question}
+              value={answers[id] ?? null}
+              disabled={saving}
+              onPick={(value) => answer(value, ADVANCE_DELAY_MS)}
+              onSubmit={(value) => answer(value)}
+            />
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="lg"
+                className={cn(
+                  "-ml-2 text-muted-foreground",
+                  index === 0 && "invisible"
+                )}
+                disabled={index === 0 || saving}
+                onClick={() => setIndex(index - 1)}
+              >
+                <ChevronLeft aria-hidden data-icon="inline-start" />
+                Back
+              </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                className="-mr-2 text-muted-foreground"
+                disabled={saving}
+                onClick={() => answer(null)}
+              >
+                Skip
+                <SkipForward aria-hidden data-icon="inline-end" />
+              </Button>
+            </div>
+          </div>
+        }
       >
-        <SkipForward aria-hidden data-icon="inline-start" />
-        Skip
-      </Button>
+        <span className="m-auto flex size-28 items-center justify-center rounded-full bg-muted">
+          <Icon aria-hidden className="size-11" strokeWidth={1.5} />
+        </span>
+      </Screen>
     </section>
   )
 }
@@ -213,8 +225,8 @@ function ScalePicker({
   onPick: (value: number) => void
 }) {
   return (
-    <div className="flex w-full max-w-sm flex-col gap-2">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-1">
+      <div className="-mx-1 flex items-center justify-between">
         {SCALE_POINTS.map((point) => {
           const size = 1.25 + point * 0.4
           const selected = value === point
@@ -239,7 +251,7 @@ function ScalePicker({
           )
         })}
       </div>
-      <p className="flex justify-between gap-4 px-2 text-xs text-muted-foreground">
+      <p className="flex justify-between gap-4 text-xs text-muted-foreground">
         <span>{low}</span>
         <span>{high}</span>
       </p>
@@ -261,7 +273,7 @@ function YesNoPicker({
     { value: 0, label: "No", Icon: X },
   ]
   return (
-    <div className="grid w-full max-w-sm grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       {options.map((option) => {
         const selected = value === option.value
         return (
@@ -272,7 +284,7 @@ function YesNoPicker({
             aria-pressed={selected}
             onClick={() => onPick(option.value)}
             className={cn(
-              "flex h-24 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-border text-sm font-medium transition-all duration-200 outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+              "flex h-24 flex-col items-center justify-center gap-1 rounded-3xl border-2 border-border bg-card text-sm font-medium transition-all duration-200 outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
               selected && "border-primary bg-primary text-primary-foreground"
             )}
           >
@@ -313,9 +325,9 @@ function NumberDial({
   const error = value === null ? null : validateAnswer(question, value)
 
   return (
-    <div className="flex w-full max-w-sm flex-col items-center gap-4">
+    <div className="flex flex-col gap-2">
       <p className="flex items-baseline gap-2" aria-live="polite">
-        <span className="font-mono text-5xl tabular-nums">
+        <span className="font-mono text-4xl tabular-nums">
           {value === null ? "–" : value}
         </span>
         <span className="text-sm text-muted-foreground">{unit}</span>
@@ -334,14 +346,14 @@ function NumberDial({
         className="dial h-11 w-full cursor-pointer accent-primary"
       />
       <Button
-        size="icon-lg"
-        aria-label="Next"
+        size="cta"
         disabled={disabled || value === null || error !== null}
         onClick={() => {
           if (value !== null) onSubmit(value)
         }}
       >
-        <ArrowRight aria-hidden />
+        Next
+        <ArrowRight aria-hidden data-icon="inline-end" />
       </Button>
     </div>
   )

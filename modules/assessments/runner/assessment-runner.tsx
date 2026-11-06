@@ -1,8 +1,9 @@
 "use client"
 
-import { Clock, Play, X } from "lucide-react"
+import { ChevronDown, Clock, Play, X } from "lucide-react"
 import { useEffect, useEffectEvent, useRef, useState } from "react"
 
+import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 import { randomSeed } from "@/lib/random"
 import {
@@ -31,6 +32,8 @@ type Stage =
 
 export interface AssessmentRunnerProps {
   assessmentId: string
+  /** Why this game, shown only before it starts. */
+  eyebrow?: React.ReactNode
   /** Called with the saved run, or `null` if the user stopped before the end. */
   onFinish?: (measurement: Measurement | null) => void
   doneLabel?: string
@@ -40,6 +43,7 @@ type InputType = Measurement["inputType"]
 
 export function AssessmentRunner({
   assessmentId,
+  eyebrow,
   onFinish,
   doneLabel = "Done",
 }: AssessmentRunnerProps) {
@@ -83,69 +87,59 @@ export function AssessmentRunner({
   })
 
   const { Game, Preview, Icon } = assessment
-  const inProgress =
-    stage.name === "practice" ||
-    stage.name === "countdown" ||
-    stage.name === "test"
 
-  return (
-    <section
-      aria-label={assessment.name}
-      className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-5"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-full bg-muted">
-            <Icon aria-hidden className="size-4.5" />
-          </span>
-          <h2 className="font-medium">{assessment.name}</h2>
-        </div>
-        {inProgress ? (
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label="Stop"
-            title="Stop"
-            onClick={() => {
-              setStage({ name: "intro" })
-              onFinish?.(null)
-            }}
-          >
-            <X aria-hidden />
-          </Button>
-        ) : null}
-      </div>
+  function stop() {
+    setStage({ name: "intro" })
+    onFinish?.(null)
+  }
 
-      {stage.name === "intro" ? (
-        <div className="rise-in flex flex-col gap-5">
-          <Preview />
-          <p className="text-center font-voice text-2xl text-balance">
-            {assessment.tagline}
-          </p>
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button size="lg" onClick={() => setStage({ name: "practice" })}>
+  switch (stage.name) {
+    case "intro":
+      return (
+        <Screen
+          eyebrow={
+            eyebrow ?? (
+              <p className="text-sm text-muted-foreground">
+                {assessment.measures}
+              </p>
+            )
+          }
+          title={assessment.tagline}
+          dock={
+            <>
+              <Button size="cta" onClick={() => setStage({ name: "practice" })}>
                 <Play aria-hidden data-icon="inline-start" />
                 Try it
               </Button>
               {onFinish ? (
                 <Button
-                  size="lg"
-                  variant="outline"
+                  size="cta"
+                  variant="ghost"
                   onClick={() => onFinish(null)}
                 >
                   Not now
                 </Button>
               ) : null}
-            </div>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock aria-hidden className="size-3.5" />
-              {Math.ceil(assessment.approxSeconds / 60)} min · stay on this tab
-            </p>
+            </>
+          }
+        >
+          <div className="rise-in my-auto">
+            <Preview />
           </div>
-          <details className="text-sm text-muted-foreground">
-            <summary className="cursor-pointer text-center text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              Rules
+          <details className="group text-sm text-muted-foreground">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="flex items-center gap-1.5">
+                <Clock aria-hidden className="size-3.5" />
+                {Math.ceil(assessment.approxSeconds / 60)} min · stay on this
+                tab
+              </span>
+              <span className="flex items-center gap-1">
+                Rules
+                <ChevronDown
+                  aria-hidden
+                  className="size-3.5 transition-transform duration-200 group-open:rotate-180"
+                />
+              </span>
             </summary>
             <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
               {assessment.instructions.map((line) => (
@@ -153,74 +147,107 @@ export function AssessmentRunner({
               ))}
             </ul>
           </details>
-        </div>
-      ) : null}
+        </Screen>
+      )
 
-      {stage.name === "practice" ? (
-        <Game
-          seed={PRACTICE_SEED}
-          mode="practice"
-          onComplete={() => setStage({ name: "ready" })}
-        />
-      ) : null}
-
-      {stage.name === "ready" ? (
-        <div className="rise-in flex flex-col items-center gap-5 py-8">
-          <p className="font-voice text-2xl">Now for real.</p>
-          <Button
-            size="icon-lg"
-            aria-label="Start the run"
-            className="size-16 [&_svg:not([class*='size-'])]:size-6"
-            onClick={() => setStage({ name: "countdown" })}
-          >
-            <Play aria-hidden />
-          </Button>
-        </div>
-      ) : null}
-
-      {stage.name === "countdown" ? (
-        <Countdown
-          onDone={() =>
-            setStage({
-              name: "test",
-              seed: randomSeed(),
-              startedAt: Date.now(),
-            })
-          }
-        />
-      ) : null}
-
-      {stage.name === "test" ? (
-        <Game
-          key={stage.seed}
-          seed={stage.seed}
-          mode="test"
-          onComplete={(trials) => void save(stage, trials)}
-        />
-      ) : null}
-
-      {stage.name === "saving" ? (
-        <p
-          role="status"
-          className="py-8 text-center text-sm text-muted-foreground"
+    case "practice":
+    case "countdown":
+    case "test":
+      // Nothing but the game and a way out, so nothing competes with what's
+      // being measured.
+      return (
+        <section
+          aria-label={assessment.name}
+          className="flex flex-1 flex-col pb-6"
         >
+          <div className="flex items-center justify-between gap-3 pb-3">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Icon aria-hidden className="size-4" />
+              {stage.name === "practice" ? "Practice" : assessment.shortName}
+            </p>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label="Stop"
+              title="Stop"
+              className="-mr-2"
+              onClick={stop}
+            >
+              <X aria-hidden />
+            </Button>
+          </div>
+          {stage.name === "practice" ? (
+            <Game
+              seed={PRACTICE_SEED}
+              mode="practice"
+              onComplete={() => setStage({ name: "ready" })}
+            />
+          ) : null}
+          {stage.name === "countdown" ? (
+            <Countdown
+              onDone={() =>
+                setStage({
+                  name: "test",
+                  seed: randomSeed(),
+                  startedAt: Date.now(),
+                })
+              }
+            />
+          ) : null}
+          {stage.name === "test" ? (
+            <Game
+              key={stage.seed}
+              seed={stage.seed}
+              mode="test"
+              onComplete={(trials) => void save(stage, trials)}
+            />
+          ) : null}
+        </section>
+      )
+
+    case "ready":
+      return (
+        <Screen
+          eyebrow={
+            <p className="text-sm text-muted-foreground">Practice done</p>
+          }
+          title="Now for real."
+          dock={
+            <Button size="cta" onClick={() => setStage({ name: "countdown" })}>
+              <Play aria-hidden data-icon="inline-start" />
+              Start
+            </Button>
+          }
+        >
+          <div className="my-auto opacity-60">
+            <Preview />
+          </div>
+        </Screen>
+      )
+
+    case "saving":
+      return (
+        <p role="status" className="py-8 text-sm text-muted-foreground">
           Saving…
         </p>
-      ) : null}
+      )
 
-      {stage.name === "error" ? (
-        <div
-          role="alert"
-          className="flex flex-col items-center gap-3 py-6 text-sm"
-        >
-          <p>Couldn&apos;t save this run on this device.</p>
-          <Button size="lg" onClick={() => setStage({ name: "intro" })}>
-            Try again
-          </Button>
+    case "error":
+      return (
+        <div role="alert" className="flex flex-1 flex-col">
+          <Screen
+            title="I couldn't save this run."
+            dock={
+              <Button size="cta" onClick={() => setStage({ name: "intro" })}>
+                Try again
+              </Button>
+            }
+          />
         </div>
-      ) : null}
+      )
 
-      {stage.name === "result" ? (
+    case "result":
+      return (
         <RunResult
           assessment={assessment}
           measurement={stage.measurement}
@@ -231,9 +258,8 @@ export function AssessmentRunner({
             else setStage({ name: "intro" })
           }}
         />
-      ) : null}
-    </section>
-  )
+      )
+  }
 }
 
 function Countdown({ onDone }: { onDone: () => void }) {
@@ -252,7 +278,7 @@ function Countdown({ onDone }: { onDone: () => void }) {
     <p
       key={count}
       role="status"
-      className="count-in flex h-72 items-center justify-center font-voice text-8xl italic"
+      className="count-in m-auto font-voice text-8xl italic"
     >
       {count}
     </p>

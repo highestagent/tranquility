@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 
+import { Section } from "@/components/screen"
 import {
   EmptyMessage,
   LoadingMessage,
@@ -51,22 +52,26 @@ export function FindingsView() {
 
   return (
     <>
-      <div className="flex flex-col gap-3">
-        {threads.map((thread) => (
-          <ThreadCard
-            key={thread.id}
-            investigation={thread}
-            onStatus={(status) => void setStatus(thread.id, status)}
-          />
-        ))}
-      </div>
-      <div className="flex flex-col gap-4">
-        {discoveries.map((view) => (
-          <DiscoveryCard key={view.discovery.id} view={view} />
-        ))}
-      </div>
+      {discoveries.map((view) => (
+        <DiscoveryCard key={view.discovery.id} view={view} />
+      ))}
+
+      {threads.length > 0 ? (
+        <Section label="Investigations">
+          <div className="flex flex-col gap-3">
+            {threads.map((thread) => (
+              <ThreadCard
+                key={thread.id}
+                investigation={thread}
+                onStatus={(status) => void setStatus(thread.id, status)}
+              />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
       {discoveries.length > 0 ? (
-        <p className="text-center text-xs text-pretty text-muted-foreground">
+        <p className="text-xs text-pretty text-muted-foreground">
           Patterns in your own data, not diagnoses, and they don&apos;t show
           cause. For health concerns, see a professional.
         </p>

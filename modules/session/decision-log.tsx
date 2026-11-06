@@ -1,5 +1,6 @@
 import { History } from "lucide-react"
 
+import { Sheet } from "@/components/sheet"
 import { STAGE_ICONS, type Stage } from "@/modules/insights/agent-pool"
 import type { Decision } from "@/modules/memory"
 
@@ -19,12 +20,8 @@ const ACTION_STAGES: Record<string, Stage> = {
 export function DecisionLog({ decisions }: { decisions: readonly Decision[] }) {
   if (decisions.length === 0) return null
   return (
-    <details className="text-sm">
-      <summary className="mx-auto flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-        <History aria-hidden className="size-3.5" />
-        What I did
-      </summary>
-      <ol className="mt-3 flex flex-col gap-3">
+    <Sheet label="What I did" Icon={History} title="What I did">
+      <ol className="flex flex-col gap-3 text-sm">
         {decisions.map((decision) => {
           const Icon =
             STAGE_ICONS[ACTION_STAGES[decision.action] ?? "understand"]
@@ -40,6 +37,6 @@ export function DecisionLog({ decisions }: { decisions: readonly Decision[] }) {
           )
         })}
       </ol>
-    </details>
+    </Sheet>
   )
 }

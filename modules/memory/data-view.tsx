@@ -1,7 +1,10 @@
 "use client"
 
 import {
+  CalendarDays,
+  ChartScatter,
   Check,
+  ChevronDown,
   ClipboardList,
   Download,
   Gamepad2,
@@ -11,17 +14,14 @@ import {
   Telescope,
   Trash2,
   Upload,
-  Waypoints,
-  ChartScatter,
-  CalendarDays,
   type LucideIcon,
 } from "lucide-react"
 import { useRef, useState } from "react"
 
+import { Section } from "@/components/screen"
 import { LoadingMessage, StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
-import { cn } from "@/lib/utils"
 
 import { getDb, STORE_NAMES, type StoreName } from "./db"
 import {
@@ -44,6 +44,9 @@ const STORES: Record<StoreName, { label: string; Icon: LucideIcon }> = {
   kv: { label: "Settings", Icon: Settings2 },
 }
 
+/** What most people care about. The rest is one tap away. */
+const HEADLINE_STORES: StoreName[] = ["sessions", "measurements", "responses"]
+
 type Notice = { kind: "info" | "error"; text: string } | null
 
 function downloadJson(data: unknown, filename: string) {
@@ -62,8 +65,6 @@ export function DataView() {
   const [notice, setNotice] = useState<Notice>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
-  const [inspecting, setInspecting] = useState<StoreName | null>(null)
-  const [rows, setRows] = useState<unknown[] | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   if (state.status === "loading") return <LoadingMessage />
@@ -71,21 +72,6 @@ export function DataView() {
     return <StorageError onRetry={() => void reload()} />
   }
   const counts = state.data
-
-  async function inspect(name: StoreName) {
-    if (inspecting === name) {
-      setInspecting(null)
-      return
-    }
-    setInspecting(name)
-    setRows(null)
-    try {
-      const db = await getDb()
-      setRows(await db.getAll(name))
-    } catch {
-      setNotice({ kind: "error", text: "Couldn't read that." })
-    }
-  }
 
   async function runExport() {
     try {
@@ -102,7 +88,6 @@ export function DataView() {
     try {
       await importAll(JSON.parse(await file.text()))
       setNotice({ kind: "info", text: `Imported ${file.name}.` })
-      setInspecting(null)
       await reload()
     } catch (error) {
       setNotice({
@@ -120,7 +105,6 @@ export function DataView() {
     try {
       await deleteAll()
       setNotice({ kind: "info", text: "Everything was deleted." })
-      setInspecting(null)
       await reload()
     } catch {
       setNotice({ kind: "error", text: "The delete failed." })
@@ -128,71 +112,37 @@ export function DataView() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section aria-label="What's stored" className="flex flex-col gap-3">
-        <ul className="grid grid-cols-3 gap-2">
-          {STORE_NAMES.map((name) => {
-            const { label, Icon } = STORES[name]
-            return (
-              <li key={name}>
-                <button
-                  type="button"
-                  aria-expanded={inspecting === name}
-                  aria-label={`${label}: ${counts[name]}`}
-                  onClick={() => void inspect(name)}
-                  className={cn(
-                    "flex w-full flex-col items-center gap-1 rounded-2xl border border-border bg-card p-3 transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring",
-                    inspecting === name && "border-primary"
-                  )}
-                >
-                  <Icon aria-hidden className="size-4 text-muted-foreground" />
-                  <span className="font-mono text-lg tabular-nums">
-                    {counts[name]}
-                  </span>
-                  <span className="text-center text-xs leading-tight text-muted-foreground">
-                    {label}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-        {inspecting && rows ? (
-          <pre className="rise-in max-h-80 overflow-auto rounded-2xl bg-muted p-3 font-mono text-xs">
-            {JSON.stringify(rows, null, 2)}
-          </pre>
-        ) : null}
-      </section>
-
-      <p className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Waypoints aria-hidden className="size-3.5 shrink-0" />
-        Only in this browser, which can clear it. Export a copy regularly.
-      </p>
-
-      {notice ? (
-        <p
-          role={notice.kind === "error" ? "alert" : "status"}
-          className={
-            notice.kind === "error" ? "text-sm text-destructive" : "text-sm"
-          }
-        >
-          {notice.text}
+    <>
+      <Section label="Stored on this device">
+        <dl className="grid grid-cols-3 gap-3">
+          {HEADLINE_STORES.map((name) => (
+            <div key={name} className="flex flex-col gap-0.5">
+              <dd className="font-mono text-2xl tabular-nums">
+                {counts[name]}
+              </dd>
+              <dt className="text-xs text-muted-foreground">
+                {STORES[name].label}
+              </dt>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs text-pretty text-muted-foreground">
+          Browsers can clear storage, so export a copy regularly.
         </p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <Button size="lg" onClick={() => void runExport()}>
-          <Download aria-hidden data-icon="inline-start" />
-          Export
-        </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={() => fileInput.current?.click()}
-        >
-          <Upload aria-hidden data-icon="inline-start" />
-          Import
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="cta" onClick={() => void runExport()}>
+            <Download aria-hidden data-icon="inline-start" />
+            Export
+          </Button>
+          <Button
+            size="cta"
+            variant="outline"
+            onClick={() => fileInput.current?.click()}
+          >
+            <Upload aria-hidden data-icon="inline-start" />
+            Import
+          </Button>
+        </div>
         <input
           ref={fileInput}
           type="file"
@@ -205,52 +155,63 @@ export function DataView() {
             event.target.value = ""
           }}
         />
-        <Button
-          size="lg"
-          variant="destructive"
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Trash2 aria-hidden data-icon="inline-start" />
-          Delete
-        </Button>
-      </div>
-
-      {importFile ? (
-        <div
-          role="alertdialog"
-          aria-label="Confirm import"
-          className="rise-in flex flex-col items-start gap-3 rounded-2xl border border-border p-4 text-sm"
-        >
-          <p>Replace everything here with {importFile.name}?</p>
-          <div className="flex flex-wrap gap-2">
-            <Button size="lg" onClick={() => void runImport(importFile)}>
-              Replace my data
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => setImportFile(null)}
-            >
-              Cancel
-            </Button>
+        {notice ? (
+          <p
+            role={notice.kind === "error" ? "alert" : "status"}
+            className={
+              notice.kind === "error" ? "text-sm text-destructive" : "text-sm"
+            }
+          >
+            {notice.text}
+          </p>
+        ) : null}
+        {importFile ? (
+          <div
+            role="alertdialog"
+            aria-label="Confirm import"
+            className="rise-in flex flex-col gap-3 rounded-2xl border border-border p-4 text-sm"
+          >
+            <p>Replace everything here with {importFile.name}?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="lg" onClick={() => void runImport(importFile)}>
+                Replace
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => setImportFile(null)}
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </Section>
+
+      <Section label="Everything stored">
+        <ul className="flex flex-col divide-y divide-border border-y border-border">
+          {STORE_NAMES.map((name) => (
+            <li key={name}>
+              <StoreRow name={name} count={counts[name]} />
+            </li>
+          ))}
+        </ul>
+      </Section>
 
       {confirmDelete ? (
         <div
           role="alertdialog"
           aria-label="Confirm delete"
-          className="rise-in flex flex-col items-start gap-3 rounded-2xl border border-destructive p-4 text-sm"
+          className="rise-in flex flex-col gap-3 rounded-2xl border border-destructive p-4 text-sm"
         >
           <p>Permanently delete everything from this browser?</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <Button
               size="lg"
               variant="destructive"
               onClick={() => void runDelete()}
             >
-              Delete everything
+              Delete
             </Button>
             <Button
               size="lg"
@@ -261,7 +222,50 @@ export function DataView() {
             </Button>
           </div>
         </div>
+      ) : (
+        <Button
+          size="cta"
+          variant="ghost"
+          className="text-destructive"
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 aria-hidden data-icon="inline-start" />
+          Delete everything
+        </Button>
+      )}
+    </>
+  )
+}
+
+function StoreRow({ name, count }: { name: StoreName; count: number }) {
+  const [rows, setRows] = useState<unknown[] | null>(null)
+  const { label, Icon } = STORES[name]
+
+  return (
+    <details
+      className="group text-sm"
+      onToggle={(event) => {
+        if (event.currentTarget.open && rows === null) {
+          void getDb()
+            .then((db) => db.getAll(name))
+            .then(setRows)
+        }
+      }}
+    >
+      <summary className="flex h-12 cursor-pointer list-none items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Icon aria-hidden className="size-4 text-muted-foreground" />
+        <span className="flex-1">{label}</span>
+        <span className="font-mono text-xs tabular-nums">{count}</span>
+        <ChevronDown
+          aria-hidden
+          className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+        />
+      </summary>
+      {rows ? (
+        <pre className="mb-3 max-h-72 overflow-auto rounded-2xl bg-muted p-3 font-mono text-xs">
+          {JSON.stringify(rows, null, 2)}
+        </pre>
       ) : null}
-    </div>
+    </details>
   )
 }
