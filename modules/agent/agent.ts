@@ -10,6 +10,7 @@ import { decisions, getCurrentSession, newId } from "@/modules/memory"
 import { buildInstructions } from "./instructions"
 import { activeToolsFor, stageFor } from "./policy"
 import { investigationTools, type InvestigationTools } from "./tools"
+import { trimHistory } from "./trim-history"
 
 const MAX_STEPS = 12
 
@@ -43,7 +44,7 @@ export function createInvestigationAgent(model: LanguageModel) {
     toolCallConcurrency: 1,
     maxOutputTokens: 1500,
     stopWhen: [isStepCount(MAX_STEPS), awaitingUser],
-    prepareStep: ({ steps }) => {
+    prepareStep: ({ steps, messages }) => {
       const called = steps.flatMap((step) =>
         step.toolCalls.map((call) => call.toolName)
       )
@@ -51,6 +52,8 @@ export function createInvestigationAgent(model: LanguageModel) {
       return {
         activeTools: activeToolsFor(stage),
         ...(stage === "understand" ? { toolChoice: "required" as const } : {}),
+        // An override becomes the base for later steps, so this runs only once.
+        ...(steps.length === 0 ? { messages: trimHistory(messages) } : {}),
       }
     },
     onToolExecutionEnd: async ({ toolCall, toolOutput }) => {

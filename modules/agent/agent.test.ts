@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto"
 
 import { deleteDB } from "idb"
+import { simulateReadableStream, type ModelMessage } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -41,10 +42,12 @@ function scriptedModel(
   script: (previousResults: Map<string, unknown>) => (ToolCall | string)[]
 ) {
   const offered: string[][] = []
+  const prompts: unknown[] = []
   const model = new MockLanguageModelV4({
     doGenerate: async (options) => {
       const step = offered.length
       offered.push((options.tools ?? []).map((tool) => tool.name))
+      prompts.push(options.prompt)
 
       const results = new Map<string, unknown>()
       for (const message of options.prompt) {
@@ -80,7 +83,50 @@ function scriptedModel(
       }
     },
   })
-  return { model, offered }
+  return { model, offered, prompts }
+}
+
+/** The tool results a model request carried, by their call IDs. */
+function toolResultIds(prompt: unknown) {
+  return (prompt as { role: string; content: { toolCallId?: string }[] }[])
+    .filter(({ role }) => role === "tool")
+    .flatMap(({ content }) => content.map(({ toolCallId }) => toolCallId))
+}
+
+/** A session so far: each turn read state through a tool, then answered. */
+function earlierTurns(count: number): ModelMessage[] {
+  return Array.from({ length: count }, (_, index): ModelMessage[] => [
+    { role: "user", content: `Earlier question ${index}` },
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "tool-call",
+          toolCallId: `old-${index}`,
+          toolName: "getUserContext",
+          input: { reason: "Review" },
+        },
+      ],
+    },
+    {
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId: `old-${index}`,
+          toolName: "getUserContext",
+          output: {
+            type: "json",
+            value: { sessions: 24, filler: "x".repeat(500) },
+          },
+        },
+      ],
+    },
+    {
+      role: "assistant",
+      content: [{ type: "text", text: `Earlier answer ${index}` }],
+    },
+  ]).flat()
 }
 
 async function seedPlantedRelationship(count = 24) {
@@ -255,6 +301,103 @@ describe("getUserContext", () => {
     ])
     // Values are still only sent for questions asked about by name.
     expect(output.answers).toEqual([])
+  })
+})
+
+describe("history sent to the model", () => {
+  const twoSteps = () =>
+    scriptedModel(() => [
+      { tool: "getUserContext", input: { reason: "Review" } },
+      "Done.",
+    ])
+
+  it("drops old tool results and keeps the current turn's", async () => {
+    const { model, prompts } = twoSteps()
+
+    await createInvestigationAgent(model).generate({
+      messages: [...earlierTurns(5), { role: "user", content: "Now" }],
+    })
+
+    expect(prompts).toHaveLength(2)
+    expect(toolResultIds(prompts[0])).toEqual([])
+    // The second step still sees what the first step's tool returned.
+    expect(toolResultIds(prompts[1])).toEqual(["call-0"])
+    const text = JSON.stringify(prompts[1])
+    expect(text).not.toContain("old-")
+    expect(text).toContain("Earlier answer 4")
+    expect(text).toContain("Now")
+  })
+
+  it("keeps the instructions on every step", async () => {
+    const { model, prompts } = twoSteps()
+
+    await createInvestigationAgent(model).generate({
+      messages: [...earlierTurns(2), { role: "user", content: "Now" }],
+    })
+
+    for (const prompt of prompts as { role: string }[][]) {
+      expect(prompt[0]?.role).toBe("system")
+    }
+  })
+
+  it("doesn't grow with the length of the session", async () => {
+    const promptSize = async (turns: number) => {
+      const { model, prompts } = twoSteps()
+      await createInvestigationAgent(model).generate({
+        messages: [...earlierTurns(turns), { role: "user", content: "Now" }],
+      })
+      return JSON.stringify(prompts[0]).length
+    }
+
+    const atFive = await promptSize(5)
+    expect(await promptSize(50)).toBeLessThan(atFive + 50)
+  })
+
+  it("does the same when streaming, which is how the app calls it", async () => {
+    const prompts: unknown[] = []
+    const finish = (unified: "stop" | "tool-calls") =>
+      ({
+        type: "finish",
+        finishReason: { unified, raw: undefined },
+        usage: USAGE,
+      }) as const
+    const model = new MockLanguageModelV4({
+      doStream: async (options) => {
+        prompts.push(options.prompt)
+        return {
+          stream:
+            prompts.length === 1
+              ? simulateReadableStream({
+                  chunks: [
+                    {
+                      type: "tool-call",
+                      toolCallId: "call-0",
+                      toolName: "getUserContext",
+                      input: JSON.stringify({ reason: "Review" }),
+                    },
+                    finish("tool-calls"),
+                  ],
+                })
+              : simulateReadableStream({
+                  chunks: [
+                    { type: "text-start", id: "t" },
+                    { type: "text-delta", id: "t", delta: "Done." },
+                    { type: "text-end", id: "t" },
+                    finish("stop"),
+                  ],
+                }),
+        }
+      },
+    })
+
+    const result = await createInvestigationAgent(model).stream({
+      messages: [...earlierTurns(5), { role: "user", content: "Now" }],
+    })
+    await result.consumeStream()
+
+    expect(prompts).toHaveLength(2)
+    expect(toolResultIds(prompts[0])).toEqual([])
+    expect(toolResultIds(prompts[1])).toEqual(["call-0"])
   })
 })
 
