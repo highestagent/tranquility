@@ -1,8 +1,6 @@
 import type { MemWal } from "@mysten-incubation/memwal"
 
 const PROXY_PATH = "/api/walrus"
-/** Weaker matches than this are more noise than memory. */
-const MAX_DISTANCE = 0.8
 const MAX_QUERY_LENGTH = 300
 
 /** The signed-in person's wallet, as the account module gets it from Privy. */
@@ -92,12 +90,16 @@ function failAfter(ms: number) {
   })
 }
 
+/**
+ * Takes the closest matches with no minimum score. Everything in here is this
+ * person's own notes, and a broad question like "what do you remember about me?"
+ * scores poorly against all of them despite being the one they most need to hear.
+ */
 async function recall(query: string, limit: number) {
   const { client, namespace } = await getSession()
   const { results } = await client.recall(query.slice(0, MAX_QUERY_LENGTH), {
     limit,
     namespace,
-    maxDistance: MAX_DISTANCE,
   })
   return {
     memories: results.map(({ text, created_at }): RecalledMemory => ({
