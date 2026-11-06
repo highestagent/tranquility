@@ -1,4 +1,6 @@
-const ROTATIONS = [0, 90, 180, 270, 90, 0, 270, 180, 90, 180, 0, 270, 180, 90, 0, 270]
+const ROTATIONS = [
+  0, 90, 180, 270, 90, 0, 270, 180, 90, 180, 0, 270, 180, 90, 0, 270,
+]
 const TARGET = 9
 
 export function VisualSearchPreview() {

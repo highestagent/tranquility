@@ -6,7 +6,7 @@ export function LoadingMessage({
   children?: string
 }) {
   return (
-    <p role="status" className="text-sm text-muted-foreground">
+    <p role="status" className="py-8 text-center text-sm text-muted-foreground">
       {children}
     </p>
   )
@@ -14,10 +14,13 @@ export function LoadingMessage({
 
 export function StorageError({ onRetry }: { onRetry?: () => void }) {
   return (
-    <div role="alert" className="flex flex-col items-start gap-3 text-sm">
+    <div
+      role="alert"
+      className="flex flex-col items-center gap-3 py-8 text-center text-sm"
+    >
       <p>
-        Your data couldn&apos;t be read from this browser. Private windows and
-        some settings block storage.
+        Can&apos;t read this browser&apos;s storage. Private windows can block
+        it.
       </p>
       {onRetry ? (
         <Button size="lg" variant="outline" onClick={onRetry}>
@@ -36,8 +39,8 @@ export function EmptyMessage({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-start gap-2 border border-dashed border-border p-4 text-sm">
-      <p className="font-medium">{title}</p>
+    <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border p-8 text-center text-sm">
+      <p className="font-voice text-2xl">{title}</p>
       <div className="text-muted-foreground">{children}</div>
     </div>
   )

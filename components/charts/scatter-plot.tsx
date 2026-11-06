@@ -60,13 +60,16 @@ export function ScatterPlot({
   const [hovered, setHovered] = useState<number | null>(null)
 
   const [lowY, highY] = extent(points.map((p) => p.y))
-  const [lowX, highX] = binary ? ([-0.6, 1.6] as const) : extent(points.map((p) => p.x))
+  const [lowX, highX] = binary
+    ? ([-0.6, 1.6] as const)
+    : extent(points.map((p) => p.x))
   const scaleX = (x: number) =>
     MARGIN.left + ((x - lowX) / (highX - lowX)) * PLOT_WIDTH
   const scaleY = (y: number) =>
     MARGIN.top + (1 - (y - lowY) / (highY - lowY)) * PLOT_HEIGHT
   // Spreads dots in the yes/no columns. Stable, so nothing shifts on re-render.
-  const jitter = (index: number) => (binary ? (((index * 37) % 17) / 17 - 0.5) * 0.5 : 0)
+  const jitter = (index: number) =>
+    binary ? (((index * 37) % 17) / 17 - 0.5) * 0.5 : 0
 
   const line = !binary && showTrend ? trendLine(points) : null
   const showLine = line && Math.sign(line.slope) === Math.sign(expectedSign)
@@ -162,10 +165,23 @@ export function ScatterPlot({
           ))
         ) : (
           <>
-            <text x={MARGIN.left} y={HEIGHT - 20} fontSize="10" fill="var(--muted-foreground)" className="font-mono">
+            <text
+              x={MARGIN.left}
+              y={HEIGHT - 20}
+              fontSize="10"
+              fill="var(--muted-foreground)"
+              className="font-mono"
+            >
               {Math.round(lowX * 10) / 10}
             </text>
-            <text x={WIDTH - MARGIN.right} y={HEIGHT - 20} textAnchor="end" fontSize="10" fill="var(--muted-foreground)" className="font-mono">
+            <text
+              x={WIDTH - MARGIN.right}
+              y={HEIGHT - 20}
+              textAnchor="end"
+              fontSize="10"
+              fill="var(--muted-foreground)"
+              className="font-mono"
+            >
               {Math.round(highX * 10) / 10}
             </text>
           </>

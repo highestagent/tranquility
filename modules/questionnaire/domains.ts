@@ -1,4 +1,11 @@
-import { Activity, Coffee, Moon, Smile, Volume2, type LucideIcon } from "lucide-react"
+import {
+  Activity,
+  Coffee,
+  Moon,
+  Smile,
+  Volume2,
+  type LucideIcon,
+} from "lucide-react"
 
 import type { QuestionDomain } from "./bank"
 

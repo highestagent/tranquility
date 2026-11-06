@@ -43,10 +43,7 @@ function hypothesis(overrides: Partial<Hypothesis> = {}): Hypothesis {
   }
 }
 
-const build = (input: {
-  analyses?: Analysis[]
-  hypotheses?: Hypothesis[]
-}) =>
+const build = (input: { analyses?: Analysis[]; hypotheses?: Hypothesis[] }) =>
   buildKnowledge({
     responses: [],
     measurements: [],
@@ -64,11 +61,19 @@ describe("buildKnowledge", () => {
 
   it("reads polarity from the metric, since lower reaction time is better", () => {
     const [sleep] = build({ analyses: [analysis()] }).links
-    expect(sleep).toMatchObject({ state: "signal", helps: true, domain: "sleep" })
+    expect(sleep).toMatchObject({
+      state: "signal",
+      helps: true,
+      domain: "sleep",
+    })
 
     const [stress] = build({
       analyses: [
-        analysis({ factorId: "stress.level", effect: 0.7, direction: "positive" }),
+        analysis({
+          factorId: "stress.level",
+          effect: 0.7,
+          direction: "positive",
+        }),
       ],
     }).links
     expect(stress?.helps).toBe(false)
@@ -121,7 +126,11 @@ describe("buildKnowledge", () => {
   })
 
   it("fills nodes by usable data, counting a session once per domain", () => {
-    const answer = (sessionId: string, questionId: string, value: number | null) => ({
+    const answer = (
+      sessionId: string,
+      questionId: string,
+      value: number | null
+    ) => ({
       id: `${sessionId}-${questionId}`,
       sessionId,
       questionId,

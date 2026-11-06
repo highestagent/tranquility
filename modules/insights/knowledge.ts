@@ -18,12 +18,7 @@ import {
 } from "@/modules/questionnaire"
 
 export type LinkState =
-  | "supported"
-  | "refuted"
-  | "testing"
-  | "signal"
-  | "inconclusive"
-  | "hint"
+  "supported" | "refuted" | "testing" | "signal" | "inconclusive" | "hint"
 
 export interface KnowledgeLink {
   domain: QuestionDomain
@@ -82,7 +77,7 @@ function latestAnalysis(
     .sort((a, b) => b.createdAt - a.createdAt)[0]
 }
 
-function helpsFrom(metric: Analysis["metric"], effect: number | null) {
+export function helpsFrom(metric: Analysis["metric"], effect: number | null) {
   if (effect === null || effect === 0) return null
   const definition = getAssessment(metric.assessmentId)?.metrics.find(
     ({ id }) => id === metric.metricId
@@ -110,7 +105,8 @@ function stateFromHypothesis(status: Hypothesis["status"]): LinkState | null {
 function stateFromAnalysis(analysis: Analysis): LinkState | null {
   if (analysis.grade === "contradictory") return "inconclusive"
   if (analysis.direction === "none") return null
-  if (analysis.grade === "moderate" || analysis.grade === "strong") return "signal"
+  if (analysis.grade === "moderate" || analysis.grade === "strong")
+    return "signal"
   return analysis.grade === "weak" ? "hint" : null
 }
 
@@ -162,7 +158,11 @@ export function buildKnowledge(input: {
     )
   }
   for (const analysis of input.analyses) {
-    const latest = latestAnalysis(input.analyses, analysis.factorId, analysis.metric)
+    const latest = latestAnalysis(
+      input.analyses,
+      analysis.factorId,
+      analysis.metric
+    )
     if (latest?.id !== analysis.id) continue
     const state = stateFromAnalysis(analysis)
     if (state) consider(analysis.factorId, analysis.metric, state, analysis)

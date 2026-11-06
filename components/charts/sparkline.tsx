@@ -29,7 +29,9 @@ export function Sparkline({
     const ratio = (value - low) / span
     return PADDING + (invert ? ratio : 1 - ratio) * (HEIGHT - PADDING * 2)
   }
-  const points = values.map((value, index) => `${x(index)},${y(value)}`).join(" ")
+  const points = values
+    .map((value, index) => `${x(index)},${y(value)}`)
+    .join(" ")
   const last = values.length - 1
 
   return (
@@ -56,7 +58,13 @@ export function Sparkline({
         strokeWidth="2"
       />
       {values.map((value, index) => (
-        <circle key={index} cx={x(index)} cy={y(value)} r="10" fill="transparent">
+        <circle
+          key={index}
+          cx={x(index)}
+          cy={y(value)}
+          r="10"
+          fill="transparent"
+        >
           <title>{format(value)}</title>
         </circle>
       ))}

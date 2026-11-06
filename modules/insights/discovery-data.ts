@@ -27,7 +27,9 @@ export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
   ])
   const views = await Promise.all(
     discoveryRows.map(async (discovery) => {
-      const hypothesis = hypothesisRows.find(({ id }) => id === discovery.hypothesisId)
+      const hypothesis = hypothesisRows.find(
+        ({ id }) => id === discovery.hypothesisId
+      )
       const analysis = analysisRows
         .filter(({ id }) => discovery.analysisIds.includes(id))
         .sort((a, b) => b.createdAt - a.createdAt)[0]
@@ -42,9 +44,11 @@ export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
         measurements.byAssessment(hypothesis.metric.assessmentId),
         responses.byQuestion(hypothesis.factorId),
       ])
-      const points = pairObservations(runs, answers, hypothesis.metric.metricId).map(
-        ({ x, y }) => ({ x, y })
-      )
+      const points = pairObservations(
+        runs,
+        answers,
+        hypothesis.metric.metricId
+      ).map(({ x, y }) => ({ x, y }))
       return { discovery, hypothesis, analysis, points }
     })
   )

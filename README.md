@@ -29,17 +29,27 @@ Games, questionnaires, statistics, and data tools all work without a key.
 
 ### Try it with demo data
 
-To skip weeks of data collection, go to **Your data → Import a file** and choose
+To skip weeks of data collection, open **You** (the fingerprint icon) → **Import** and choose
 [`fixtures/demo-data.json`](fixtures/demo-data.json). It's synthetic, with one
 planted pattern: more sleep, faster reactions. Importing replaces what's stored
 in that browser. Regenerate it with `scripts/generate-demo-data.mjs`.
 
 ## How it works
 
-The agent runs in the browser and all data stays in IndexedDB. Each turn it reads
-its state through tools, decides what it needs, and either analyzes data or hands
-the user a question set or game. Closing the browser loses nothing, because the
-investigation and any pending task are stored.
+The agent runs in the browser and all data stays in IndexedDB. There's no start
+button: when you open the app, the agent wakes if it has a reason to (first run,
+new data, or a long rest), and the screen follows what it's doing.
+
+| Phase | What you see |
+|---|---|
+| Thinking | The evidence map, with the pool rippling and threads forming live |
+| Asking | One tap-to-answer question at a time |
+| Playing | A game with an animated preview, then a visual result |
+| Reveal | A new finding, with its chart and evidence strength |
+| Resting | The map, what the agent said, and a way to ask your own question |
+
+Closing the browser loses nothing, because the investigation and any pending task
+are stored. See `modules/session/use-agent-session.ts`.
 
 ```
 app/          Thin routes, plus the stateless AI relay at /api/ai
@@ -51,8 +61,8 @@ modules/
   investigation/  Hypotheses, verdicts, and resumable state
   agent/          ToolLoopAgent, tools, permissions, consent
   relay/          Forwards model requests, keeping the key on the server
-  session/        The session UI
-  insights/       Findings
+  session/        The home screen and its phases
+  insights/       The evidence map and findings
 ```
 
 Dependencies run one way: `agent → investigation → analytics → memory`.

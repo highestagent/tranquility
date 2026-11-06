@@ -13,9 +13,15 @@ export const evaluateEvidence = tool({
     reason: reasonSchema,
     hypothesisId: z.string(),
     analysisIds: z.array(z.string()).min(1).max(5),
-    observed: narrativeSchema.describe("What was observed, in plain language."),
-    uncertainty: narrativeSchema.describe("What remains uncertain."),
-    nextStep: narrativeSchema.describe("What you propose to look at next."),
+    observed: narrativeSchema.describe(
+      "What was observed, in one short plain sentence. This is the headline."
+    ),
+    uncertainty: narrativeSchema.describe(
+      "What remains uncertain, in one short sentence."
+    ),
+    nextStep: narrativeSchema.describe(
+      "What you propose to look at next, in one short sentence."
+    ),
   }),
   execute: async ({
     hypothesisId,

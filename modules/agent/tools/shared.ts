@@ -13,8 +13,10 @@ export const assessmentIdSchema = z.enum(
 export const reasonSchema = z
   .string()
   .min(1)
-  .max(280)
-  .describe("One plain sentence explaining why you are doing this.")
+  .max(160)
+  .describe(
+    "Why you are doing this, in under twelve plain words. Shown to the user."
+  )
 
 /**
  * Agent-written text can't contain numerals, so it can't state a figure that
@@ -23,7 +25,7 @@ export const reasonSchema = z
 export const narrativeSchema = z
   .string()
   .min(1)
-  .max(500)
+  .max(240)
   .refine((text) => !/\d/.test(text), {
     message:
       "Write this without numerals. Figures are shown from the analysis automatically.",

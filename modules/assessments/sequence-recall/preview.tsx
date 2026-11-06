@@ -3,7 +3,10 @@ const ORDER = [4, 0, 8, 5]
 /** Tiles light in order, then the same order is shown being pressed. */
 export function SequenceRecallPreview() {
   return (
-    <div aria-hidden className="mx-auto grid w-full max-w-52 grid-cols-3 gap-1.5">
+    <div
+      aria-hidden
+      className="mx-auto grid w-full max-w-52 grid-cols-3 gap-1.5"
+    >
       {Array.from({ length: 9 }, (_, tile) => {
         const order = ORDER.indexOf(tile)
         return (

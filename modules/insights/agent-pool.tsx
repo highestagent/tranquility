@@ -113,7 +113,8 @@ export function AgentPoolGroup({
       ) : null}
       {state === "thinking"
         ? STAGE_ORDER.map((id, index) => {
-            const angle = (index / STAGE_ORDER.length) * 2 * Math.PI - Math.PI / 2
+            const angle =
+              (index / STAGE_ORDER.length) * 2 * Math.PI - Math.PI / 2
             const current = id === stage
             const seen = visited.includes(id)
             return (
@@ -122,7 +123,9 @@ export function AgentPoolGroup({
                 cx={cx + Math.cos(angle) * (r + 7)}
                 cy={cy + Math.sin(angle) * (r + 7)}
                 r={current ? 3.5 : 2}
-                fill={current || seen ? "var(--primary)" : "var(--muted-foreground)"}
+                fill={
+                  current || seen ? "var(--primary)" : "var(--muted-foreground)"
+                }
                 opacity={current ? 1 : seen ? 0.7 : 0.3}
               />
             )

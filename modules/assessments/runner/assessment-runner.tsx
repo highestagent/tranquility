@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Clock, Play, X } from "lucide-react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { randomSeed } from "@/lib/random"
@@ -12,15 +13,17 @@ import {
 } from "@/modules/memory"
 
 import { getAssessment } from "../registry"
-import type { AssessmentDefinition, MetricDefinition } from "../types"
+import { RunResult } from "./run-result"
 
 /** Practice stimuli stay the same each time, so they never leak into tests. */
 const PRACTICE_SEED = 20240229
+const COUNTDOWN_STEP_MS = 800
 
 type Stage =
   | { name: "intro" }
   | { name: "practice" }
   | { name: "ready" }
+  | { name: "countdown" }
   | { name: "test"; seed: number; startedAt: number }
   | { name: "saving" }
   | { name: "result"; measurement: Measurement }
@@ -44,7 +47,7 @@ export function AssessmentRunner({
   if (!assessment) throw new Error(`Unknown assessment: ${assessmentId}`)
 
   const [stage, setStage] = useState<Stage>({ name: "intro" })
-  const inputType = useRef<InputType>("unknown")
+  const inputTypeRef = useRef<InputType>("unknown")
 
   async function save(
     test: Extract<Stage, { name: "test" }>,
@@ -62,7 +65,7 @@ export function AssessmentRunner({
         seed: test.seed,
         startedAt: test.startedAt,
         completedAt: Date.now(),
-        inputType: inputType.current,
+        inputType: inputTypeRef.current,
         valid: !invalidReason,
         invalidReason,
         trials,
@@ -75,61 +78,81 @@ export function AssessmentRunner({
   }
 
   const test = stage.name === "test" ? stage : null
-  useRunGuards(test !== null, inputType, () => {
+  useRunGuards(test !== null, inputTypeRef, () => {
     if (test) void save(test, [], "The tab lost focus during the run.")
   })
 
-  const Game = assessment.Game
+  const { Game, Preview, Icon } = assessment
+  const inProgress =
+    stage.name === "practice" ||
+    stage.name === "countdown" ||
+    stage.name === "test"
 
   return (
     <section
       aria-label={assessment.name}
-      className="flex flex-col gap-4 border border-border p-4"
+      className="flex flex-col gap-5 rounded-3xl border border-border bg-card p-5"
     >
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 items-center justify-center rounded-full bg-muted">
+            <Icon aria-hidden className="size-4.5" />
+          </span>
           <h2 className="font-medium">{assessment.name}</h2>
-          <p className="text-sm text-muted-foreground">{assessment.measures}</p>
         </div>
-        {stage.name === "practice" || stage.name === "test" ? (
+        {inProgress ? (
           <Button
             variant="ghost"
-            size="lg"
+            size="icon-lg"
+            aria-label="Stop"
+            title="Stop"
             onClick={() => {
               setStage({ name: "intro" })
               onFinish?.(null)
             }}
           >
-            Stop
+            <X aria-hidden />
           </Button>
         ) : null}
       </div>
 
       {stage.name === "intro" ? (
-        <div className="flex flex-col gap-4">
-          <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-            {assessment.instructions.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          <p className="text-sm text-muted-foreground">
-            About {Math.ceil(assessment.approxSeconds / 60)} min. Stay on this
-            tab, because switching away cancels the run.
+        <div className="rise-in flex flex-col gap-5">
+          <Preview />
+          <p className="text-center font-voice text-2xl text-balance">
+            {assessment.tagline}
           </p>
-          <div className="flex flex-wrap gap-2">
-            <Button size="lg" onClick={() => setStage({ name: "practice" })}>
-              Start practice
-            </Button>
-            {onFinish ? (
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => onFinish(null)}
-              >
-                Not now
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button size="lg" onClick={() => setStage({ name: "practice" })}>
+                <Play aria-hidden data-icon="inline-start" />
+                Try it
               </Button>
-            ) : null}
+              {onFinish ? (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => onFinish(null)}
+                >
+                  Not now
+                </Button>
+              ) : null}
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock aria-hidden className="size-3.5" />
+              {Math.ceil(assessment.approxSeconds / 60)} min · stay on this tab
+            </p>
           </div>
+          <details className="text-sm text-muted-foreground">
+            <summary className="cursor-pointer text-center text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+              Rules
+            </summary>
+            <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
+              {assessment.instructions.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </details>
         </div>
       ) : null}
 
@@ -142,23 +165,29 @@ export function AssessmentRunner({
       ) : null}
 
       {stage.name === "ready" ? (
-        <div className="flex flex-col items-start gap-4">
-          <p className="text-sm">
-            Practice complete. The real run is recorded and has no feedback.
-          </p>
+        <div className="rise-in flex flex-col items-center gap-5 py-8">
+          <p className="font-voice text-2xl">Now for real.</p>
           <Button
-            size="lg"
-            onClick={() =>
-              setStage({
-                name: "test",
-                seed: randomSeed(),
-                startedAt: Date.now(),
-              })
-            }
+            size="icon-lg"
+            aria-label="Start the run"
+            className="size-16 [&_svg:not([class*='size-'])]:size-6"
+            onClick={() => setStage({ name: "countdown" })}
           >
-            Start run
+            <Play aria-hidden />
           </Button>
         </div>
+      ) : null}
+
+      {stage.name === "countdown" ? (
+        <Countdown
+          onDone={() =>
+            setStage({
+              name: "test",
+              seed: randomSeed(),
+              startedAt: Date.now(),
+            })
+          }
+        />
       ) : null}
 
       {stage.name === "test" ? (
@@ -171,17 +200,20 @@ export function AssessmentRunner({
       ) : null}
 
       {stage.name === "saving" ? (
-        <p role="status" className="text-sm text-muted-foreground">
-          Saving your run…
+        <p
+          role="status"
+          className="py-8 text-center text-sm text-muted-foreground"
+        >
+          Saving…
         </p>
       ) : null}
 
       {stage.name === "error" ? (
-        <div role="alert" className="flex flex-col items-start gap-3 text-sm">
-          <p>
-            This run couldn&apos;t be saved on this device. Check that browser
-            storage is enabled, then try again.
-          </p>
+        <div
+          role="alert"
+          className="flex flex-col items-center gap-3 py-6 text-sm"
+        >
+          <p>Couldn&apos;t save this run on this device.</p>
           <Button size="lg" onClick={() => setStage({ name: "intro" })}>
             Try again
           </Button>
@@ -201,6 +233,29 @@ export function AssessmentRunner({
         />
       ) : null}
     </section>
+  )
+}
+
+function Countdown({ onDone }: { onDone: () => void }) {
+  const [count, setCount] = useState(3)
+  const finish = useEffectEvent(onDone)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (count === 1) finish()
+      else setCount(count - 1)
+    }, COUNTDOWN_STEP_MS)
+    return () => clearTimeout(timer)
+  }, [count])
+
+  return (
+    <p
+      key={count}
+      role="status"
+      className="count-in flex h-72 items-center justify-center font-voice text-8xl italic"
+    >
+      {count}
+    </p>
   )
 }
 
@@ -238,74 +293,4 @@ function useRunGuards(
       document.removeEventListener("visibilitychange", onVisibility)
     }
   }, [active, inputTypeRef])
-}
-
-function formatMetric(value: number, metric: MetricDefinition) {
-  switch (metric.unit) {
-    case "ms":
-      return `${Math.round(value)} ms`
-    case "ms/item":
-      return `${value.toFixed(1)} ms/item`
-    case "ratio":
-      return `${Math.round(value * 100)}%`
-    case "count":
-      return String(Math.round(value))
-    case "index":
-      return value.toFixed(2)
-  }
-}
-
-function RunResult({
-  assessment,
-  measurement,
-  doneLabel,
-  onRetry,
-  onDone,
-}: {
-  assessment: AssessmentDefinition<never>
-  measurement: Measurement
-  doneLabel: string
-  onRetry: () => void
-  onDone: () => void
-}) {
-  if (!measurement.valid) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 text-sm">
-        <p>
-          This run was cancelled and won&apos;t be used in any analysis.{" "}
-          {measurement.invalidReason}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button size="lg" onClick={onRetry}>
-            Run again
-          </Button>
-          <Button size="lg" variant="outline" onClick={onDone}>
-            {doneLabel}
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-4">
-      <dl className="grid w-full grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-        {assessment.metrics.flatMap((metric) => {
-          const value = measurement.metrics[metric.id]
-          if (value === undefined) return []
-          return (
-            <div key={metric.id}>
-              <dt className="text-xs text-muted-foreground">{metric.label}</dt>
-              <dd className="font-mono text-sm tabular-nums">
-                {formatMetric(value, metric)}
-              </dd>
-            </div>
-          )
-        })}
-      </dl>
-      <Button size="lg" onClick={onDone}>
-        {doneLabel}
-      </Button>
-    </div>
-  )
 }

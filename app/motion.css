@@ -282,3 +282,11 @@
     opacity: 1;
   }
 }
+
+/* Number dial: no thumb until touched, so nothing anchors the answer. */
+.dial:not([data-touched])::-webkit-slider-thumb {
+  opacity: 0;
+}
+.dial:not([data-touched])::-moz-range-thumb {
+  opacity: 0;
+}

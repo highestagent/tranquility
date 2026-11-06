@@ -2,13 +2,22 @@ import { ArrowRight } from "lucide-react"
 
 const PATTERN = [1, 3, 8]
 
-function MiniGrid({ animation, stagger }: { animation: string; stagger: number }) {
+function MiniGrid({
+  animation,
+  stagger,
+}: {
+  animation: string
+  stagger: number
+}) {
   return (
     <div className="grid flex-1 grid-cols-3 gap-1.5">
       {Array.from({ length: 9 }, (_, tile) => {
         const order = PATTERN.indexOf(tile)
         return (
-          <span key={tile} className="relative aspect-square rounded-lg bg-muted">
+          <span
+            key={tile}
+            className="relative aspect-square rounded-lg bg-muted"
+          >
             {order >= 0 ? (
               <span
                 className={`demo-on ${animation}`}

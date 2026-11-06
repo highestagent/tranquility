@@ -7,7 +7,7 @@ import type { Knowledge, KnowledgeLink, KnowledgeNode } from "./knowledge"
 const WIDTH = 360
 const HEIGHT = 330
 const CENTER = { x: 180, y: 165 }
-const NODE_RADIUS = 22
+const NODE_RADIUS = 19
 const FACTOR_X = 38
 const ABILITY_X = 322
 const FACTOR_YS = [45, 105, 165, 225, 285]
@@ -23,7 +23,10 @@ function factorY(domain: QuestionDomain) {
 }
 
 function abilityY(assessmentId: string) {
-  return ABILITY_YS[ASSESSMENTS.findIndex(({ id }) => id === assessmentId)] ?? CENTER.y
+  return (
+    ABILITY_YS[ASSESSMENTS.findIndex(({ id }) => id === assessmentId)] ??
+    CENTER.y
+  )
 }
 
 function controls(fromY: number, toY: number) {
@@ -132,8 +135,22 @@ function Marker({ link }: { link: KnowledgeLink }) {
   const { x, y } = markerPoint(link.domain, link.assessmentId)
   return (
     <g aria-hidden className="rise-in">
-      <circle cx={x} cy={y} r="7.5" fill="var(--background)" stroke={threadColor(link)} strokeWidth="1.5" />
-      <text x={x} y={y + 3.5} textAnchor="middle" fontSize="11" fontWeight="600" fill="var(--foreground)">
+      <circle
+        cx={x}
+        cy={y}
+        r="7.5"
+        fill="var(--background)"
+        stroke={threadColor(link)}
+        strokeWidth="1.5"
+      />
+      <text
+        x={x}
+        y={y + 3.5}
+        textAnchor="middle"
+        fontSize="11"
+        fontWeight="600"
+        fill="var(--foreground)"
+      >
         {glyph}
       </text>
     </g>
@@ -176,10 +193,21 @@ function Node({
           transform="rotate(-90)"
         />
       ) : null}
-      <g className={active || node.filled > 0 ? "text-foreground" : "text-muted-foreground"}>
-        <Icon x={-10} y={-10} width={20} height={20} strokeWidth={1.75} />
+      <g
+        className={
+          active || node.filled > 0
+            ? "text-foreground"
+            : "text-muted-foreground"
+        }
+      >
+        <Icon x={-9} y={-9} width={18} height={18} strokeWidth={1.75} />
       </g>
-      <text y={NODE_RADIUS + 13} textAnchor="middle" fontSize="11" fill="var(--muted-foreground)">
+      <text
+        y={NODE_RADIUS + 12}
+        textAnchor="middle"
+        fontSize="11"
+        fill="var(--muted-foreground)"
+      >
         {label}
       </text>
     </g>
@@ -187,7 +215,9 @@ function Node({
 }
 
 function summarize(knowledge: Knowledge) {
-  const settled = knowledge.links.filter(({ state }) => state === "supported" || state === "signal")
+  const settled = knowledge.links.filter(
+    ({ state }) => state === "supported" || state === "signal"
+  )
   const testing = knowledge.links.filter(({ state }) => state === "testing")
   if (settled.length === 0 && testing.length === 0) {
     return "Map of habits and abilities. No connections found yet."
@@ -298,13 +328,34 @@ export function KnowledgeMap({
 /** Keys only for what's on the map right now, with a mark as well as a colour. */
 export function MapLegend({ links }: { links: readonly KnowledgeLink[] }) {
   const has = (test: (link: KnowledgeLink) => boolean) => links.some(test)
-  const settled = (link: KnowledgeLink) => link.state === "supported" || link.state === "signal"
+  const settled = (link: KnowledgeLink) =>
+    link.state === "supported" || link.state === "signal"
   const items = [
-    has((l) => settled(l) && l.helps === true) && { glyph: "+", color: "var(--signal-help)", text: "Helps" },
-    has((l) => settled(l) && l.helps === false) && { glyph: "−", color: "var(--signal-hurt)", text: "Hurts" },
-    has((l) => l.state === "testing") && { glyph: "", color: "var(--primary)", text: "Testing" },
-    has((l) => l.state === "inconclusive") && { glyph: "?", color: "var(--muted-foreground)", text: "Unclear" },
-    has((l) => l.state === "refuted") && { glyph: "×", color: "var(--muted-foreground)", text: "No link" },
+    has((l) => settled(l) && l.helps === true) && {
+      glyph: "+",
+      color: "var(--signal-help)",
+      text: "Helps",
+    },
+    has((l) => settled(l) && l.helps === false) && {
+      glyph: "−",
+      color: "var(--signal-hurt)",
+      text: "Hurts",
+    },
+    has((l) => l.state === "testing") && {
+      glyph: "",
+      color: "var(--primary)",
+      text: "Testing",
+    },
+    has((l) => l.state === "inconclusive") && {
+      glyph: "?",
+      color: "var(--muted-foreground)",
+      text: "Unclear",
+    },
+    has((l) => l.state === "refuted") && {
+      glyph: "×",
+      color: "var(--muted-foreground)",
+      text: "No link",
+    },
   ].filter((item) => item !== false)
   if (items.length === 0) return null
 
@@ -315,7 +366,10 @@ export function MapLegend({ links }: { links: readonly KnowledgeLink[] }) {
           <span
             aria-hidden
             className="flex size-4 items-center justify-center rounded-full border-[1.5px] text-[0.65rem] font-semibold text-foreground"
-            style={{ borderColor: color, borderStyle: glyph ? "solid" : "dashed" }}
+            style={{
+              borderColor: color,
+              borderStyle: glyph ? "solid" : "dashed",
+            }}
           >
             {glyph}
           </span>
