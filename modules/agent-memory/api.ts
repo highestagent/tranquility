@@ -112,6 +112,12 @@ export const memoryApi = {
   connect: async () => {
     await getSession()
   },
+  /** What the account holds, across every device, not just this browser. */
+  count: async () => {
+    const { client, namespace } = await getSession()
+    const { namespaces } = await client.listNamespaces()
+    return namespaces.find(({ name }) => name === namespace)?.memory_count ?? 0
+  },
   remember: async (texts: string[]) => {
     const { client, namespace } = await getSession()
     const { job_ids } = await client.rememberBulkAsync(

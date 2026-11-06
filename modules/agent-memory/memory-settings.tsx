@@ -10,6 +10,7 @@ import { useAccount } from "@/modules/account/account-context"
 import {
   forgetMemories,
   getMemoryState,
+  getSavedCount,
   setMemoryEnabled,
   type MemoryState,
 } from "./sync"
@@ -18,27 +19,38 @@ import {
 export function MemorySettings() {
   const account = useAccount()
   const [state, setState] = useState<MemoryState | null>(null)
+  /** What the account holds. `null` until known, since a new browser has no idea. */
+  const [saved, setSaved] = useState<number | "off" | "failed" | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [forgetFailed, setForgetFailed] = useState(false)
 
   const refresh = useCallback(() => {
     getMemoryState().then(setState, () => setState(null))
+    getSavedCount().then(
+      (count) => setSaved(count ?? "off"),
+      () => setSaved("failed")
+    )
   }, [])
 
-  useEffect(refresh, [refresh])
+  const { authenticated } = account
+  useEffect(() => {
+    if (authenticated) refresh()
+  }, [authenticated, refresh])
 
-  if (!account.available || !account.authenticated || !state) return null
+  if (!account.available || !authenticated || !state) return null
 
-  const count = state.remembered.length
-  const status = !state.enabled
-    ? "Off"
-    : state.failing
-      ? "Can't connect right now. It'll keep trying"
-      : state.pending.length > 0
-        ? "Saving…"
-        : count === 1
-          ? "1 memory saved"
-          : `${count} memories saved`
+  const status =
+    !state.enabled || saved === "off"
+      ? "Off"
+      : state.failing || saved === "failed"
+        ? "Can't connect right now. It'll keep trying"
+        : state.pending.length > 0
+          ? "Saving…"
+          : saved === null
+            ? "Checking…"
+            : saved === 1
+              ? "1 memory saved"
+              : `${saved} memories saved`
 
   async function forget() {
     setForgetFailed(false)

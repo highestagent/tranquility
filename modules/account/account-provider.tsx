@@ -10,7 +10,7 @@ import {
   useCreateWallet,
   useSignRawHash,
 } from "@privy-io/react-auth/extended-chains"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { setMemoryAccount } from "@/modules/agent-memory/api"
 import { syncMemory } from "@/modules/agent-memory/sync"
@@ -53,8 +53,8 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
     privy.current = { user, createWallet, signRawHash }
   }, [user, createWallet, signRawHash])
 
-  // Memory starts by itself as soon as someone is signed in, on any page.
-  useEffect(() => {
+  // A layout effect, so it's set before any screen's own effects can use memory.
+  useLayoutEffect(() => {
     setMemoryAccount(
       userId
         ? {
@@ -83,12 +83,16 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
           }
         : null
     )
+  }, [userId, getAccessToken])
+
+  // Memory starts by itself as soon as someone is signed in, on any page.
+  useEffect(() => {
     if (!userId) return
     void syncMemory()
     const onOnline = () => void syncMemory()
     window.addEventListener("online", onOnline)
     return () => window.removeEventListener("online", onOnline)
-  }, [userId, getAccessToken])
+  }, [userId])
 
   const value = useMemo<Account>(
     () => ({

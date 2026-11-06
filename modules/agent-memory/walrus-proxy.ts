@@ -9,8 +9,8 @@ const TIMEOUT_MS = 30_000
 
 /** The only Walrus Memory routes this app uses. */
 const ROUTES: Record<string, RegExp> = {
-  GET: /^(version|health|config|api\/accounts\/0x[0-9a-fA-F]{64}\/delegate-keys)$/,
-  POST: /^(sponsor|sponsor\/execute|api\/recall|api\/remember\/bulk|api\/remember\/bulk\/status)$/,
+  GET: /^(version|health|config|api\/accounts\/0x[0-9a-fA-F]{64}\/delegate-keys|v1\/owners\/0x[0-9a-fA-F]{64}\/namespaces)$/,
+  POST: /^(sponsor|sponsor\/execute|api\/recall|api\/stats|api\/remember\/bulk|api\/remember\/bulk\/status)$/,
 }
 
 const REQUEST_HEADERS = [

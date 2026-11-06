@@ -150,6 +150,27 @@ describe("proxyToWalrus", () => {
     )
   })
 
+  it("reads how many memories an account holds", async () => {
+    const owner = `0x${"a".repeat(64)}`
+    const stats = deps()
+    const statsResponse = await proxyToWalrus(
+      post("api/stats"),
+      ["api", "stats"],
+      stats
+    )
+    expect(statsResponse.status).toBe(200)
+    expect(forwarded(stats).url).toBe(`${RELAYER}/api/stats`)
+
+    const list = deps()
+    const listResponse = await proxyToWalrus(
+      get(`v1/owners/${owner}/namespaces`),
+      ["v1", "owners", owner, "namespaces"],
+      list
+    )
+    expect(listResponse.status).toBe(200)
+    expect(forwarded(list).url).toBe(`${RELAYER}/v1/owners/${owner}/namespaces`)
+  })
+
   it("refuses other sites", async () => {
     const d = deps()
     const crossPost = await proxyToWalrus(

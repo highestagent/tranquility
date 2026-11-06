@@ -3,11 +3,17 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { setAiConsent } from "@/modules/agent/consent"
 import { closeDb, kv } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
 
-import type { MemoryApi } from "./api"
-import { getMemoryState, runMemorySync, setMemoryEnabled } from "./sync"
+import { NotSignedInError, type MemoryApi } from "./api"
+import {
+  getMemoryState,
+  getSavedCount,
+  runMemorySync,
+  setMemoryEnabled,
+} from "./sync"
 
 function fakeApi(statuses: Record<string, string> = {}) {
   let next = 0
@@ -24,6 +30,7 @@ function fakeApi(statuses: Record<string, string> = {}) {
     recall: vi.fn(),
     forget: vi.fn(),
     connect: vi.fn(async () => undefined),
+    count: vi.fn(async () => 0),
   } satisfies MemoryApi
 }
 
@@ -124,5 +131,25 @@ describe("runMemorySync", () => {
     await kv.set("agentMemory:mainnet", { failing: true })
     await runMemorySync(fakeApi(), "u1", facts(1))
     expect((await getMemoryState()).failing).toBe(false)
+  })
+})
+
+describe("getSavedCount", () => {
+  it("doesn't connect without consent, since that can create an account", async () => {
+    await expect(getSavedCount()).resolves.toBeNull()
+    await setAiConsent(false)
+    await expect(getSavedCount()).resolves.toBeNull()
+  })
+
+  it("doesn't connect while memory is off", async () => {
+    await setAiConsent(true)
+    await setMemoryEnabled(false)
+    await expect(getSavedCount()).resolves.toBeNull()
+  })
+
+  it("asks the account otherwise", async () => {
+    await setAiConsent(true)
+    // No one is signed in here, so reaching the account is the part that fails.
+    await expect(getSavedCount()).rejects.toBeInstanceOf(NotSignedInError)
   })
 })

@@ -158,6 +158,16 @@ export function syncMemory(): Promise<void> {
   return running
 }
 
+/**
+ * How many memories the person's account holds, or null if memory isn't in use.
+ * Connecting can create their account, so it needs the same consent as syncing.
+ */
+export async function getSavedCount(): Promise<number | null> {
+  const [consent, state] = await Promise.all([getAiConsent(), getMemoryState()])
+  if (!consent?.granted || !state.enabled) return null
+  return memoryApi.count()
+}
+
 export async function setMemoryEnabled(enabled: boolean) {
   await saveState({ ...(await getMemoryState()), enabled })
   if (enabled) void syncMemory()
