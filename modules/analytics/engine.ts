@@ -149,7 +149,9 @@ export interface MetricSummary {
 }
 
 /** Compares the latest valid run with the runs before it. */
-export async function summarizeMetric(metric: MetricRef): Promise<MetricSummary> {
+export async function summarizeMetric(
+  metric: MetricRef
+): Promise<MetricSummary> {
   const runs = await measurements.byAssessment(metric.assessmentId)
   const values = runs
     .filter((run) => run.valid)
@@ -160,8 +162,7 @@ export async function summarizeMetric(metric: MetricRef): Promise<MetricSummary>
     metric,
     baseline,
     latest,
-    latestZ:
-      latest !== null && baseline ? robustZ(latest, baseline) : null,
+    latestZ: latest !== null && baseline ? robustZ(latest, baseline) : null,
   }
 }
 

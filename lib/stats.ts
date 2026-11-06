@@ -22,8 +22,8 @@ export function standardDeviation(values: readonly number[]) {
 /** Inverse of the standard normal CDF (Acklam's approximation). */
 export function inverseNormal(p: number) {
   const a = [
-    -39.69683028665376, 220.9460984245205, -275.9285104469687,
-    138.357751867269, -30.66479806614716, 2.506628277459239,
+    -39.69683028665376, 220.9460984245205, -275.9285104469687, 138.357751867269,
+    -30.66479806614716, 2.506628277459239,
   ] as const
   const b = [
     -54.47609879822406, 161.5858368580409, -155.6989798598866,

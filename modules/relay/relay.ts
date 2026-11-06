@@ -25,10 +25,7 @@ export interface RelayDeps {
 }
 
 function reject(status: number, message: string) {
-  return Response.json(
-    { error: { message, type: "relay_error" } },
-    { status }
-  )
+  return Response.json({ error: { message, type: "relay_error" } }, { status })
 }
 
 function isSameOrigin(request: Request) {
@@ -69,7 +66,8 @@ export async function relay(
   path: readonly string[],
   deps: RelayDeps
 ): Promise<Response> {
-  if (!isSameOrigin(request)) return reject(403, "Cross-origin request refused.")
+  if (!isSameOrigin(request))
+    return reject(403, "Cross-origin request refused.")
   if (isRateLimited(request, deps)) {
     return reject(429, "Too many requests. Wait a minute, then try again.")
   }

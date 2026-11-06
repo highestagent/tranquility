@@ -1,10 +1,7 @@
 import { tool } from "ai"
 import { z } from "zod"
 
-import {
-  askedThisSession,
-  resolveQuestions,
-} from "@/modules/questionnaire"
+import { askedThisSession, resolveQuestions } from "@/modules/questionnaire"
 
 import { getPendingTask, setPendingTask } from "../pending-task"
 import { questionIdSchema, reasonSchema } from "./shared"

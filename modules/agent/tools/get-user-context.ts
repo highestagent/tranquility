@@ -29,7 +29,10 @@ export const getUserContext = tool({
       Promise.all(
         ASSESSMENTS.map(async ({ id }) => {
           const runs = await measurements.byAssessment(id)
-          return { assessmentId: id, validRuns: runs.filter((r) => r.valid).length }
+          return {
+            assessmentId: id,
+            validRuns: runs.filter((r) => r.valid).length,
+          }
         })
       ),
       Promise.all(

@@ -16,7 +16,9 @@ const MAX_STEPS = 12
 /** The turn ends once the user has something to do. */
 const awaitingUser: StopCondition<InvestigationTools> = ({ steps }) =>
   steps.at(-1)?.toolResults.some(({ output }) => {
-    return (output as { status?: string } | undefined)?.status === "awaiting-user"
+    return (
+      (output as { status?: string } | undefined)?.status === "awaiting-user"
+    )
   }) ?? false
 
 async function logDecision(toolName: string, input: unknown) {

@@ -38,7 +38,10 @@ export function buildPattern(seed: number, index: number, level: number) {
   return shuffle(tiles, random).slice(0, level)
 }
 
-export function isCorrect(target: readonly number[], response: readonly number[]) {
+export function isCorrect(
+  target: readonly number[],
+  response: readonly number[]
+) {
   return (
     target.length === response.length &&
     target.every((tile) => response.includes(tile))

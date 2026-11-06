@@ -6,11 +6,7 @@
 export const BANK_VERSION = 1
 
 export type QuestionDomain =
-  | "sleep"
-  | "mood"
-  | "stress"
-  | "lifestyle"
-  | "environment"
+  "sleep" | "mood" | "stress" | "lifestyle" | "environment"
 
 export type QuestionKind =
   | { type: "scale"; low: string; high: string }

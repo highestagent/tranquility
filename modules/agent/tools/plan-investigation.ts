@@ -2,7 +2,10 @@ import { tool } from "ai"
 import { z } from "zod"
 
 import { THRESHOLDS } from "@/modules/analytics"
-import { createInvestigation, updateInvestigation } from "@/modules/investigation"
+import {
+  createInvestigation,
+  updateInvestigation,
+} from "@/modules/investigation"
 
 import {
   assessmentIdSchema,

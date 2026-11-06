@@ -17,7 +17,13 @@ export const evaluateEvidence = tool({
     uncertainty: narrativeSchema.describe("What remains uncertain."),
     nextStep: narrativeSchema.describe("What you propose to look at next."),
   }),
-  execute: async ({ hypothesisId, analysisIds, observed, uncertainty, nextStep }) => {
+  execute: async ({
+    hypothesisId,
+    analysisIds,
+    observed,
+    uncertainty,
+    nextStep,
+  }) => {
     const discovery = await evaluateHypothesis({
       hypothesisId,
       analysisIds,

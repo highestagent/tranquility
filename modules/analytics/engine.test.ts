@@ -3,18 +3,32 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import demoData from "@/fixtures/demo-data.json"
 import { createRandom } from "@/lib/random"
-import { closeDb, measurements, responses, sessions } from "@/modules/memory"
+import {
+  closeDb,
+  importAll,
+  measurements,
+  responses,
+  sessions,
+} from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
 
-import { analyzeRelationship, scanRelationships, summarizeMetric } from "./engine"
+import {
+  analyzeRelationship,
+  scanRelationships,
+  summarizeMetric,
+} from "./engine"
 import { pairObservations } from "./pairing"
 
 const METRIC = { assessmentId: "go-no-go", metricId: "medianRt" }
 
 async function seedSessions(
   count: number,
-  build: (index: number, random: () => number) => {
+  build: (
+    index: number,
+    random: () => number
+  ) => {
     answers: Record<string, number | null>
     rt: number
     valid?: boolean
@@ -166,6 +180,24 @@ describe("scanRelationships", () => {
     expect(tested).toBe(2)
     expect(findings[0]?.factorId).toBe("sleep.hours")
     expect(findings[0]?.notes.join(" ")).toMatch(/corrected/)
+  })
+})
+
+describe("demo data", () => {
+  it("reveals the planted pattern and nothing else strong", async () => {
+    await importAll(demoData)
+    const { tested, findings } = await scanRelationships(
+      ["sleep.hours", "stress.level", "mood.valence"],
+      [METRIC, { assessmentId: "visual-search", metricId: "medianRt" }]
+    )
+    expect(tested).toBe(6)
+    expect(findings[0]).toMatchObject({
+      factorId: "sleep.hours",
+      metric: METRIC,
+      grade: "strong",
+      direction: "negative",
+    })
+    expect(findings.slice(1).every((f) => f.grade !== "strong")).toBe(true)
   })
 })
 

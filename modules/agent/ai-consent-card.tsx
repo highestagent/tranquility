@@ -18,9 +18,9 @@ export function AiDisclosure() {
         <li>Your investigations, hypotheses, and any questions you type</li>
       </ul>
       <p>
-        Raw trial data isn&apos;t sent. This app&apos;s server stores nothing
-        and keeps no logs of the content. Everything else stays in this
-        browser.
+        Raw trial data isn&apos;t sent. This app&apos;s server doesn&apos;t
+        store or log the content, but the AI gateway and model provider handle
+        it under their own data policies. Everything else stays in this browser.
       </p>
       <p className="text-muted-foreground">
         Games, questionnaires, statistics, and your data tools all work without

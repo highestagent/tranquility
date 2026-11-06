@@ -19,7 +19,9 @@ export type Stage = "understand" | "investigate" | "evaluate"
  * acts, and can only record a finding after analyzing data in the same turn.
  */
 export function stageFor(toolsCalled: readonly string[]): Stage {
-  if (!toolsCalled.some((name) => READ.includes(name as InvestigationToolName))) {
+  if (
+    !toolsCalled.some((name) => READ.includes(name as InvestigationToolName))
+  ) {
     return "understand"
   }
   return toolsCalled.includes("analyzePerformance") ? "evaluate" : "investigate"

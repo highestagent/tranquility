@@ -36,9 +36,7 @@ type ToolCall = { tool: string; input: unknown }
 
 /** A model that plays a fixed script, recording what it was allowed to do. */
 function scriptedModel(
-  script: (
-    previousResults: Map<string, unknown>
-  ) => (ToolCall | string)[]
+  script: (previousResults: Map<string, unknown>) => (ToolCall | string)[]
 ) {
   const offered: string[][] = []
   const model = new MockLanguageModelV4({

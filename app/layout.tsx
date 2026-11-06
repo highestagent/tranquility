@@ -16,7 +16,7 @@ const fontMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tranquility",
   description:
-    "A personal research agent that investigates what shapes your thinking. Your data stays on your device.",
+    "A personal research agent that investigates what shapes your thinking. Your data is stored on your device.",
 }
 
 export default function RootLayout({

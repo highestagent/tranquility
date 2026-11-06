@@ -48,8 +48,6 @@ export function pairObservations(
   }
 
   return observations
-    .sort(
-      (a, b) => startedAt.get(a.sessionId)! - startedAt.get(b.sessionId)!
-    )
+    .sort((a, b) => startedAt.get(a.sessionId)! - startedAt.get(b.sessionId)!)
     .map((observation, order) => ({ ...observation, order }))
 }

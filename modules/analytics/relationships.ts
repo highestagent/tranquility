@@ -10,7 +10,10 @@ export function ranks(values: readonly number[]) {
   let start = 0
   while (start < order.length) {
     let end = start
-    while (end + 1 < order.length && order[end + 1]!.value === order[start]!.value) {
+    while (
+      end + 1 < order.length &&
+      order[end + 1]!.value === order[start]!.value
+    ) {
       end++
     }
     const rank = (start + end) / 2 + 1
