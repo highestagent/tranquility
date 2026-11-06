@@ -6,7 +6,8 @@ export function AiDisclosure() {
     <div className="flex flex-col gap-3 text-sm text-pretty text-muted-foreground">
       <p>
         <span className="font-medium text-foreground">Your account.</span> Begin
-        signs you in with Google through Privy, which holds your account.
+        signs you in with Google through Privy, which holds your account and a
+        wallet it creates for you. You never need to fund or manage the wallet.
       </p>
       <p>
         <span className="font-medium text-foreground">The agent.</span> It uses
@@ -17,15 +18,17 @@ export function AiDisclosure() {
       </p>
       <p>
         <span className="font-medium text-foreground">Its memory.</span> Its
-        findings and progress notes are saved with Walrus Memory, so it can pick
-        up where it left off. They&apos;re encrypted on Walrus, but the Walrus
-        Memory service reads them while storing and searching them, and this
-        app&apos;s server can access them. Your answers and game results
-        aren&apos;t included.
+        findings and progress notes are saved to your own Walrus Memory account,
+        so it can pick up where it left off on any device. They&apos;re
+        encrypted on Walrus, but the Walrus Memory service reads them while
+        storing and searching them. Your answers and game results aren&apos;t
+        included. Your account&apos;s existence and wallet address are public on
+        the Sui blockchain, though not linked to your email there.
       </p>
       <p>
-        This app&apos;s server doesn&apos;t store or log any of this. The AI
-        gateway, model provider, and Walrus Memory handle it under their own
+        Agent and memory requests pass through this app&apos;s server, which
+        doesn&apos;t store or log them and holds no key to your memories. The AI
+        gateway, model provider, and Walrus Memory handle them under their own
         policies. Everything else stays in this browser. Games, questions,
         statistics, and your data tools all work without any of it.
       </p>

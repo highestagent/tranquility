@@ -38,11 +38,16 @@ pick up where it left off on any device. Add these to `.env.local`:
 |---|---|---|
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy dashboard | Public |
 | `PRIVY_APP_SECRET` | Privy dashboard | Server only |
-| `MEMWAL_ACCOUNT_ID` | [memory.walrus.xyz](https://memory.walrus.xyz) (or dev.memwal.ai for testnet) | Server only |
-| `MEMWAL_PRIVATE_KEY` | Same dashboard: the delegate key | Server only |
-| `MEMWAL_SERVER_URL` | Optional: `https://relayer.dev.memwal.ai` for testnet | Server only |
+| `MEMWAL_SERVER_URL` | Optional: `https://relayer.memory.walrus.xyz` for mainnet. Defaults to testnet | Server only |
 
-Without the Walrus Memory variables, memory stays off and everything else works.
+Each person gets their own Walrus Memory account, with nothing to set up:
+
+1. Their first sync creates a Sui wallet through Privy.
+2. Walrus Memory sponsors the transactions that create their account and register
+   a signing key, so the wallet never needs funding.
+3. That key is derived from a wallet signature, so it's the same on every device.
+   It stays in memory and is never stored or exported.
+
 Raw answers and game trials never leave the device, because the hosted relayer
 reads text in plaintext while storing and searching it. Walrus Memory has no
 delete, so "forget" moves a person to a new namespace, and old encrypted copies
@@ -124,9 +129,14 @@ different `LanguageModel` from there.
 
 ## Known limits
 
-- **The app reads everyone's memories.** One Walrus Memory account holds all
-  users, separated by namespace, so whoever holds its key can read them. Giving
-  each person their own account would need a Sui wallet and gas for each of them.
+- **Memory requests pass through this app's server.** The Walrus Memory relayer
+  only accepts browsers from a list of origins, so `/api/walrus` forwards them.
+  It stores nothing and can't sign, but memory text and a short-lived decryption
+  credential do pass through it, and everyone shares its IP address for the
+  relayer's per-IP limits. Getting this app's origin on that list would remove
+  the hop.
+- **Memory runs on testnet by default,** which can be reset, so treat what's saved
+  there as temporary. Walrus Memory is in beta.
 - **The relay is for personal use.** There are no accounts, so anyone who can reach
   a deployment can use its AI key, within basic same-origin and rate limits. Add
   real abuse protection before deploying publicly.
