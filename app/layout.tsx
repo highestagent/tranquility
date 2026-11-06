@@ -1,12 +1,19 @@
 import type { Metadata } from "next"
-import { Geist_Mono, Inter } from "next/font/google"
+import { Figtree, Geist_Mono, Newsreader } from "next/font/google"
 
 import "./globals.css"
 import { AppNav } from "@/components/app-nav"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const fontSans = Figtree({ subsets: ["latin"], variable: "--font-sans" })
+
+/** The agent's voice. Everything it says to you is set in this face. */
+const fontVoice = Newsreader({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  variable: "--font-voice",
+})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -31,17 +38,15 @@ export default function RootLayout({
       className={cn(
         "antialiased",
         fontMono.variable,
-        "font-sans",
-        inter.variable
+        fontVoice.variable,
+        fontSans.variable,
+        "font-sans"
       )}
     >
       <body>
         <ThemeProvider>
-          <div className="mx-auto flex min-h-svh w-full max-w-3xl flex-col gap-8 px-4 py-6">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">Tranquility</p>
-              <AppNav />
-            </div>
+          <div className="mx-auto flex min-h-svh w-full max-w-xl flex-col px-4 pb-6">
+            <AppNav />
             <main className="flex flex-1 flex-col gap-6">{children}</main>
           </div>
         </ThemeProvider>

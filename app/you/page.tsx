@@ -1,11 +1,13 @@
 import { PageHeader } from "@/components/page-header"
 import { AiSettings } from "@/modules/agent/ai-settings"
+import { DataView } from "@/modules/memory/data-view"
 
-export default function SettingsPage() {
+export default function YouPage() {
   return (
     <>
-      <PageHeader title="Settings" description="Choose how AI is used." />
+      <PageHeader title="You" />
       <AiSettings />
+      <DataView />
     </>
   )
 }

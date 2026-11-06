@@ -1,14 +1,13 @@
 import { PageHeader } from "@/components/page-header"
+import { InsightsView } from "@/modules/insights/insights-view"
 import { InvestigationsView } from "@/modules/investigation/investigations-view"
 
-export default function InvestigationsPage() {
+export default function FindingsPage() {
   return (
     <>
-      <PageHeader
-        title="Investigations"
-        description="What the agent is looking into and the evidence it still needs."
-      />
+      <PageHeader title="Findings" />
       <InvestigationsView />
+      <InsightsView />
     </>
   )
 }

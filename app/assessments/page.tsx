@@ -7,10 +7,7 @@ import { CheckIn } from "@/modules/session/check-in"
 export default function AssessmentsPage() {
   return (
     <>
-      <PageHeader
-        title="Assessments"
-        description="Short games with fixed protocols, so results stay comparable over time. Check in below too, so results can be compared with how you were doing."
-      />
+      <PageHeader title="Games" />
       <ul className="flex flex-col gap-2">
         {ASSESSMENTS.map((assessment) => (
           <li key={assessment.id}>
