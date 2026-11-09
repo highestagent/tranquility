@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   addHypothesis,
   createInvestigation,
+  startTesting,
   updateInvestigation,
 } from "@/modules/investigation"
 import { correctAnswer } from "@/modules/journal/corrections"
@@ -25,7 +26,17 @@ import { searchPastResearch } from "./recall"
 import { getRecalledNote } from "./recalled"
 import { loadResumePoint } from "./resume"
 import { memoryPrefix, readCatalog, SYNC_STATE_KEY, type Fact } from "./records"
-import { getMemoryState, getRestoredHandoffs, runMemorySync } from "./sync"
+import {
+  listPreferences,
+  removePreference,
+  savePreference,
+} from "./preferences"
+import {
+  getMemoryOverview,
+  getMemoryState,
+  getRestoredHandoffs,
+  runMemorySync,
+} from "./sync"
 
 /** One Walrus Memory account, shared by every device in a test. */
 function fakeWalrus(statuses: Record<string, string> = {}) {
@@ -347,6 +358,35 @@ describe("resuming on another device", () => {
     })
   })
 
+  it("syncs the phone's changes even when its clock is behind", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const { api } = fakeWalrus()
+      vi.setSystemTime(10_000_000)
+      const { investigation, hypothesis } = await startInvestigation()
+      await settle(api)
+
+      await onDevice("phone")
+      vi.setSystemTime(5_000_000)
+      await settle(api)
+      await updateInvestigation(investigation.id, {
+        progressNote: "From a slow clock.",
+      })
+      await startTesting(hypothesis.id, "Collecting pairs")
+      await settle(api)
+
+      await onDevice("laptop")
+      vi.setSystemTime(10_000_100)
+      await settle(api)
+      expect((await investigations.get(investigation.id))?.progressNote).toBe(
+        "From a slow clock."
+      )
+      expect((await hypotheses.get(hypothesis.id))?.status).toBe("testing")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("leaves completed investigations it never saw out of the way", async () => {
     const { api } = fakeWalrus()
     const { investigation } = await startInvestigation()
@@ -460,5 +500,102 @@ describe("correcting an answer", () => {
     await discoveries.put(old!)
     await settle(api)
     expect(await discoveries.list()).toEqual([])
+  })
+})
+
+describe("remembered preferences", () => {
+  it("follows the person to every device, edits and removals included", async () => {
+    const { api } = fakeWalrus()
+    const { id } = await savePreference("  Mornings work best for check-ins ")
+    await settle(api)
+
+    await onDevice("phone")
+    await settle(api)
+    expect(await listPreferences()).toMatchObject([
+      { id, text: "Mornings work best for check-ins" },
+    ])
+    await savePreference("Evenings work best for check-ins", id)
+    await settle(api)
+
+    await onDevice("laptop")
+    await settle(api)
+    expect((await listPreferences()).map(({ text }) => text)).toEqual([
+      "Evenings work best for check-ins",
+    ])
+    await removePreference(id)
+    await settle(api)
+
+    await onDevice("phone")
+    await settle(api)
+    expect(await listPreferences()).toEqual([])
+  })
+
+  it("lets the newest edit win, wherever it was made", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const { api } = fakeWalrus()
+      vi.setSystemTime(1_000)
+      const { id } = await savePreference("Mornings")
+      await settle(api)
+      await onDevice("phone")
+      await settle(api)
+
+      // The phone's edit syncs first, but the laptop's is newer.
+      vi.setSystemTime(2_000)
+      await savePreference("Evenings", id)
+      await onDevice("laptop")
+      vi.setSystemTime(3_000)
+      await savePreference("Afternoons", id)
+      await onDevice("phone")
+      await settle(api)
+      await onDevice("laptop")
+      await settle(api)
+      expect((await listPreferences())[0]?.text).toBe("Afternoons")
+
+      await onDevice("phone")
+      await settle(api)
+      expect((await listPreferences())[0]?.text).toBe("Afternoons")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("is kept apart from research", async () => {
+    const { api } = fakeWalrus()
+    await savePreference("Mornings work best for check-ins")
+    await discoveries.put(finding())
+    await settle(api)
+    expect(
+      (await searchPastResearch("mornings", 6, api)).map(
+        ({ observed }) => observed
+      )
+    ).toEqual(["You react faster after more sleep."])
+  })
+
+  it("shows what has synced and what hasn't yet", async () => {
+    const { api } = fakeWalrus()
+    const { investigation } = await startInvestigation()
+    await savePreference("Mornings")
+    expect(await getMemoryOverview(api)).toMatchObject({
+      investigations: [{ id: investigation.id, synced: false }],
+      preferences: [{ text: "Mornings", synced: false }],
+    })
+    await settle(api)
+    expect(await getMemoryOverview(api)).toMatchObject({
+      investigations: [{ synced: true }],
+      preferences: [{ synced: true }],
+      findings: 0,
+    })
+  })
+
+  it("is forgotten with everything else", async () => {
+    const { api } = fakeWalrus()
+    await savePreference("Mornings")
+    await settle(api)
+    await onDevice("phone")
+    await settle(api)
+    await api.forget()
+    await settle(api)
+    expect(await listPreferences()).toEqual([])
   })
 })

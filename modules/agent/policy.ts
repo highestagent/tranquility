@@ -12,6 +12,7 @@ const INVESTIGATE: InvestigationToolName[] = [
   "restSession",
   "selectAssessment",
   "saveInvestigation",
+  "rememberPreference",
 ]
 
 export type Stage = "understand" | "investigate" | "evaluate"

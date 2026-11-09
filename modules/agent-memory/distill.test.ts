@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import type { Discovery, Hypothesis, Investigation } from "@/modules/memory"
 
-import { distillFacts, MAX_FACT_CHARS, type LocalResearch } from "./distill"
+import {
+  distillFacts,
+  MAX_FACT_CHARS,
+  planBasis,
+  type LocalResearch,
+} from "./distill"
 import { findingRecord, handoffRecord, readRecord } from "./records"
 
 const finding: Discovery = {
@@ -62,6 +67,7 @@ const all: LocalResearch = {
   },
   restored: {},
   withdrawals: [],
+  preferences: {},
 }
 
 function handoffOf(input: LocalResearch) {
@@ -112,11 +118,23 @@ describe("distillFacts", () => {
     expect(after).not.toBe(before)
   })
 
-  it("doesn't hand back a revision it took from another device", () => {
-    const revision = handoffOf(all)!.record!.revision
+  it("doesn't hand back a plan it took from another device", () => {
+    const basis = planBasis(investigation, [hypothesis], "d1")
     expect(
-      handoffOf({ ...all, restored: { i1: { revision, evidence: [] } } })
+      handoffOf({
+        ...all,
+        restored: { i1: { revision: 5, basis, evidence: [] } },
+      })
     ).toBeUndefined()
+  })
+
+  it("outranks what it restored, even with a clock that's behind", () => {
+    const ahead = Date.UTC(2027, 0, 1)
+    const { record } = handoffOf({
+      ...all,
+      restored: { i1: { revision: ahead, basis: "before", evidence: [] } },
+    })!
+    expect(record?.revision).toBe(ahead + 1)
   })
 
   it("carries another device's result forward until there's a local one", () => {
@@ -127,6 +145,7 @@ describe("distillFacts", () => {
       restored: {
         i1: {
           revision: Date.UTC(2026, 10, 6),
+          basis: "before",
           evidence: [],
           latestFinding: readRecord(
             findingRecord,

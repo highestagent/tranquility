@@ -1,5 +1,6 @@
 import type { Discovery, Hypothesis, Investigation } from "@/modules/memory"
 
+import type { PreferenceRevisions } from "./preferences"
 import {
   encodeFact,
   type Fact,
@@ -14,6 +15,8 @@ export const MAX_FACT_CHARS = 6000
 /** A handoff this device took from another, and what came with it. */
 export interface RestoredHandoff {
   revision: number
+  /** The local plan right after restoring, to tell when it changes here. */
+  basis: string
   evidence: HandoffRecord["evidence"]
   latestFinding?: FindingRecord
 }
@@ -61,6 +64,23 @@ export function handoffRevision(
   )
 }
 
+/**
+ * What the plan looks like on this device. Comparing this, not timestamps,
+ * tells whether it changed since it was restored, since devices' clocks differ.
+ */
+export function planBasis(
+  investigation: Pick<Investigation, "status" | "updatedAt">,
+  plan: readonly Pick<Hypothesis, "id" | "updatedAt">[],
+  latestLocalFindingId: string | undefined
+) {
+  return JSON.stringify([
+    investigation.status,
+    investigation.updatedAt,
+    plan.map(({ id, updatedAt }) => `${id}:${updatedAt}`).sort(),
+    latestLocalFindingId ?? null,
+  ])
+}
+
 export interface LocalResearch {
   discoveries: readonly Discovery[]
   hypotheses: readonly Hypothesis[]
@@ -70,6 +90,7 @@ export interface LocalResearch {
   restored: Readonly<Record<string, RestoredHandoff>>
   /** Findings this device withdrew. Other devices' are applied before this runs. */
   withdrawals: readonly WithdrawalRecord[]
+  preferences: PreferenceRevisions
 }
 
 function findingRecords(input: LocalResearch) {
@@ -91,29 +112,37 @@ function describe(
     input.hypotheses.filter((row) => row.investigationId === investigation.id),
     (row) => row.updatedAt
   )
+  const restored = input.restored[investigation.id]
+  const latestLocal = byRecent(
+    findings.filter((row) => row.investigationId === investigation.id),
+    (row) => row.createdAt
+  )[0]
   // A result from another device carries forward until this one has its own.
-  const carried = input.restored[investigation.id]?.latestFinding
+  const carried = restored?.latestFinding
   const latestFinding =
-    byRecent(
-      findings.filter((row) => row.investigationId === investigation.id),
-      (row) => row.createdAt
-    )[0] ??
+    latestLocal ??
     (carried && !input.withdrawals.some(({ id }) => id === carried.id)
       ? carried
       : undefined)
-  const revision = handoffRevision(investigation, plan, latestFinding)
-  return { plan, latestFinding, revision }
+  const unchanged =
+    restored?.basis === planBasis(investigation, plan, latestLocal?.id)
+  const own = handoffRevision(investigation, plan, latestFinding)
+  // A change made here always outranks what it was restored from, even if
+  // this device's clock is behind.
+  const revision = !restored
+    ? own
+    : unchanged
+      ? restored.revision
+      : Math.max(own, restored.revision + 1)
+  return { plan, latestFinding, revision, unchanged }
 }
 
-/** The newest revision this device holds, whether made here or restored. */
+/** The revision of the plan this device holds, whether made here or restored. */
 export function localRevision(
   investigation: Investigation,
   input: LocalResearch
 ) {
-  return Math.max(
-    describe(investigation, input, findingRecords(input)).revision,
-    input.restored[investigation.id]?.revision ?? -1
-  )
+  return describe(investigation, input, findingRecords(input)).revision
 }
 
 function handoffFor(
@@ -121,13 +150,13 @@ function handoffFor(
   input: LocalResearch,
   findings: readonly FindingRecord[]
 ): Fact | null {
-  const { plan, latestFinding, revision } = describe(
+  const { plan, latestFinding, revision, unchanged } = describe(
     investigation,
     input,
     findings
   )
-  const restored = input.restored[investigation.id]
-  if (restored && revision <= restored.revision) return null
+  // Taking on another device's plan isn't news to hand back.
+  if (unchanged) return null
 
   // The newest hypotheses matter most, so the oldest go first if it's too long.
   for (let keep = plan.length; keep >= 0; keep--) {
@@ -155,6 +184,9 @@ export function distillFacts(input: LocalResearch): Fact[] {
   // Withdrawals go first: a stale finding is worse than a missing one.
   return [
     ...input.withdrawals.map(encodeFact),
+    ...Object.entries(input.preferences).map(([id, { revision, text }]) =>
+      encodeFact({ kind: "preference", id, revision, text })
+    ),
     ...handoffs,
     ...findings.map(encodeFact),
   ]

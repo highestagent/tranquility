@@ -5,6 +5,7 @@ import {
   withdrawnCheck,
   type FindingRecord,
 } from "./records"
+import { listPreferences } from "./preferences"
 import { keepRecalledNotes, type RecalledNote } from "./recalled"
 import { waitForRestore } from "./sync"
 import { getLocalWithdrawals } from "./withdrawals"
@@ -36,7 +37,10 @@ export interface PastFinding {
 export interface AgentMemory {
   /** False when other devices' work couldn't be loaded this turn. */
   available: boolean
-  pastResearch: PastFinding[]
+  /** What the person asked to have remembered, kept apart from research. */
+  preferences: string[]
+  /** `null` when saved findings couldn't be searched this turn. */
+  pastResearch: PastFinding[] | null
 }
 
 function day(timestamp: number) {
@@ -109,15 +113,18 @@ export async function recallForAgent(
   query: () => Promise<string>
 ): Promise<AgentMemory> {
   const available = await waitForRestore(RESTORE_BUDGET_MS)
+  // Preferences come from this device's copy, which restoring just refreshed.
+  const preferences = (await listPreferences()).map(({ text }) => text)
   try {
     return {
       available,
+      preferences,
       pastResearch: await withBudget(
         query().then((text) => searchPastResearch(text, SEARCH_LIMIT)),
         SEARCH_BUDGET_MS
       ),
     }
   } catch {
-    return { available: false, pastResearch: [] }
+    return { available, preferences, pastResearch: null }
   }
 }

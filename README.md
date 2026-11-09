@@ -36,9 +36,21 @@ domain automatically.
 ### Accounts and memory
 
 Tranquility requires Google sign-in through [Privy](https://www.privy.io). The agent's
-findings and progress notes automatically sync to
-[Walrus Memory](https://docs.wal.app/walrus-memory) in the background, so it can
-pick up where it left off on any device. Add these to `.env.local` and allow
+research syncs to [Walrus Memory](https://docs.wal.app/walrus-memory) in the
+background, so it can pick up where it left off on any device:
+
+- Each investigation is a small handoff: the open question, its hypotheses, the
+  last verified result, the evidence still missing, and when another measurement
+  would help. Every revision has its own namespace, and a new device reads the
+  current one by exact reference before the agent's first turn.
+- Findings share one namespace, so the agent can answer "have we looked at this
+  before?" and show the note it used.
+- Correcting an answer saves a withdrawal for each finding it affected, and every
+  device stops presenting those findings.
+- Preferences people ask it to remember are kept apart from research, and can be
+  reviewed, edited, or removed in **You → Agent memory**.
+
+ Add these to `.env.local` and allow
 your app origin in Privy’s settings:
 
 | Variable | Where it comes from | Exposure |
@@ -58,9 +70,11 @@ up:
 
 MemWal receives agent notes, and the hosted relayer reads their text while storing
 and searching it. Raw answers, game records, and journals live in the account’s
-browser storage. The first sign-in claims previously unowned local history.
-Walrus Memory has no delete, so "forget" moves a person to a new namespace, and old encrypted copies
-remain until they expire. See `modules/agent-memory/`.
+browser storage, so evidence collected on one device isn't pooled with another's.
+The first sign-in claims previously unowned local history. "Forget" moves a person
+to a new namespace, and old encrypted copies remain until they expire. The mainnet
+relayer advertises permanent deletion, but the SDK doesn't wrap it yet, so the app
+doesn't offer it. See `modules/agent-memory/`.
 
 ### Try it with demo data
 

@@ -265,6 +265,7 @@ describe("tool inputs", () => {
         "manageHypotheses",
         "planInvestigation",
         "presentInteraction",
+        "rememberPreference",
         "restSession",
         "saveInvestigation",
         "selectAssessment",

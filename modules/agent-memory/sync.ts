@@ -17,6 +17,7 @@ import {
 import {
   distillFacts,
   localRevision,
+  planBasis,
   type LocalResearch,
   type RestoredHandoff,
 } from "./distill"
@@ -24,6 +25,8 @@ import {
   handoffRecord,
   HANDOFFS_KEY,
   memoryPrefix,
+  preferenceRecord,
+  PREFERENCES_KEY,
   RECALLED_KEY,
   opaqueId,
   readRecord,
@@ -34,6 +37,7 @@ import {
   type HandoffRecord,
   type HandoffReference,
 } from "./records"
+import { getPreferenceRevisions } from "./preferences"
 import { dropRecalledNotes } from "./recalled"
 import { getLocalWithdrawals } from "./withdrawals"
 
@@ -81,12 +85,14 @@ async function loadLocal(): Promise<LocalResearch> {
     investigationRows,
     restored,
     withdrawals,
+    preferences,
   ] = await Promise.all([
     discoveries.list(),
     hypotheses.list(),
     investigations.list(),
     getRestoredHandoffs(),
     getLocalWithdrawals(),
+    getPreferenceRevisions(),
   ])
   const evidence = Object.fromEntries(
     await Promise.all(
@@ -117,6 +123,7 @@ async function loadLocal(): Promise<LocalResearch> {
     evidence,
     restored,
     withdrawals,
+    preferences,
   }
 }
 
@@ -134,16 +141,18 @@ async function inParallel<T, R>(
   return results
 }
 
-/** Keeps the newer side of each hypothesis, with its full local history. */
+/**
+ * The newer handoff wins as a whole, since comparing timestamps across devices
+ * would trust whichever clock runs ahead. Local history is kept.
+ */
 function mergeHypothesis(local: Hypothesis | undefined, remote: Hypothesis) {
   if (!local) return remote
-  if (local.updatedAt >= remote.updatedAt) return null
-  const lastAt = local.history.at(-1)?.at ?? 0
+  const seen = new Set(local.history.map((entry) => JSON.stringify(entry)))
   return {
     ...remote,
     history: [
       ...local.history,
-      ...remote.history.filter((entry) => entry.at > lastAt),
+      ...remote.history.filter((entry) => !seen.has(JSON.stringify(entry))),
     ],
   }
 }
@@ -153,19 +162,31 @@ type IsWithdrawn = (findingId: string) => boolean
 /** One transaction, so a half-applied plan can't be mistaken for current. */
 async function applyHandoff(record: HandoffRecord, isWithdrawn: IsWithdrawn) {
   const db = await getDb()
-  const tx = db.transaction(["investigations", "hypotheses", "kv"], "readwrite")
+  const tx = db.transaction(
+    ["investigations", "hypotheses", "discoveries", "kv"],
+    "readwrite"
+  )
+  const { id } = record.investigation
   await tx.objectStore("investigations").put(record.investigation)
+  const hypothesisStore = tx.objectStore("hypotheses")
   for (const remote of record.hypotheses) {
-    const store = tx.objectStore("hypotheses")
-    const merged = mergeHypothesis(await store.get(remote.id), remote)
-    if (merged) await store.put(merged)
+    await hypothesisStore.put(
+      mergeHypothesis(await hypothesisStore.get(remote.id), remote)
+    )
   }
+  const latestLocal = (
+    await tx.objectStore("discoveries").index("byInvestigation").getAll(id)
+  ).sort((a, b) => b.createdAt - a.createdAt)[0]
+
   const kvStore = tx.objectStore("kv")
   const restored =
     ((await kvStore.get(HANDOFFS_KEY))?.value as
       Record<string, RestoredHandoff> | undefined) ?? {}
-  restored[record.investigation.id] = {
+  restored[id] = {
     revision: record.revision,
+    // From the plan as received: if this device's copy differs after merging,
+    // it has something to add and hands it back.
+    basis: planBasis(record.investigation, record.hypotheses, latestLocal?.id),
     evidence: record.evidence,
     // A device that hasn't heard of a correction yet can still hand it over.
     latestFinding:
@@ -245,10 +266,43 @@ async function applyWithdrawals(workspace: MemoryWorkspace) {
   return changed || dropped
 }
 
+/** Takes on newer preference edits and removals from other devices. */
+async function restorePreferences(workspace: MemoryWorkspace) {
+  const local = await getPreferenceRevisions()
+  const byKey = new Map(Object.keys(local).map((id) => [opaqueId(id), id]))
+  const stale = [...workspace.catalog.preferences].filter(
+    ([key, reference]) => {
+      const id = byKey.get(key)
+      return reference.revision > (id ? local[id]!.revision : -1)
+    }
+  )
+  if (stale.length === 0) return false
+  const records = await inParallel(stale, async ([key, reference]) => {
+    const record = readRecord(preferenceRecord, await workspace.read(reference))
+    return record &&
+      opaqueId(record.id) === key &&
+      record.revision === reference.revision
+      ? record
+      : null
+  })
+  // Re-read, so an edit made here while reading isn't overwritten.
+  const latest = await getPreferenceRevisions()
+  let changed = false
+  for (const record of records) {
+    if (!record || (latest[record.id]?.revision ?? -1) >= record.revision)
+      continue
+    latest[record.id] = { revision: record.revision, text: record.text }
+    changed = true
+  }
+  if (changed) await kv.set(PREFERENCES_KEY, latest)
+  return changed
+}
+
 /** Forgotten, or another person's: this device's caches no longer apply. */
 async function clearAccountCaches() {
   await kv.remove(HANDOFFS_KEY)
   await kv.remove(RECALLED_KEY)
+  await kv.remove(PREFERENCES_KEY)
 }
 
 function isAlreadyStored(fact: Fact, workspace: MemoryWorkspace) {
@@ -312,7 +366,8 @@ export async function runMemorySync(
   )
   const restored = await restoreHandoffs(workspace, isWithdrawn)
   const withdrawn = await applyWithdrawals(workspace)
-  if (restored || withdrawn) options.onChanged?.()
+  const preferred = await restorePreferences(workspace)
+  if (restored || withdrawn || preferred) options.onChanged?.()
   options.onRestored?.()
 
   if (state.pending.length > 0) {
@@ -468,9 +523,55 @@ export async function waitForRestore(timeoutMs: number): Promise<boolean> {
 }
 
 /** What the signed-in account holds across devices. */
-export async function getSavedCount() {
-  const { catalog } = await memoryApi.open()
-  return catalog.findings + catalog.handoffs.size
+export interface MemoryOverview {
+  investigations: {
+    id: string
+    title: string
+    status: string
+    synced: boolean
+  }[]
+  /** Saved findings, counting ones since withdrawn. */
+  findings: number
+  withdrawn: number
+  preferences: { id: string; text: string; synced: boolean }[]
+}
+
+/** What's synced, for review: compares this device's records with the inventory. */
+export async function getMemoryOverview(
+  api: Pick<MemoryApi, "open"> = memoryApi
+): Promise<MemoryOverview> {
+  const [{ catalog }, local] = await Promise.all([api.open(), loadLocal()])
+  return {
+    investigations: [...local.investigations]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .map((row) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        synced:
+          (catalog.handoffs.get(opaqueId(row.id))?.revision ?? -1) >=
+          localRevision(row, local),
+      })),
+    findings: catalog.findings,
+    withdrawn: catalog.withdrawn.size,
+    preferences: Object.entries(local.preferences)
+      .flatMap(([id, { revision, text }]) =>
+        text === null
+          ? []
+          : [
+              {
+                id,
+                text,
+                revision,
+                synced:
+                  (catalog.preferences.get(opaqueId(id))?.revision ?? -1) >=
+                  revision,
+              },
+            ]
+      )
+      .sort((a, b) => b.revision - a.revision)
+      .map(({ id, text, synced }) => ({ id, text, synced })),
+  }
 }
 
 /**

@@ -49,10 +49,22 @@ export const withdrawalRecord = z.object({
   reason: z.string(),
 })
 
+export const MAX_PREFERENCE_CHARS = 280
+
+/** Something the person asked to have remembered. `null` text removes it. */
+export const preferenceRecord = z.object({
+  kind: z.literal("preference"),
+  id: z.string().min(1),
+  revision: timestamp,
+  text: z.string().trim().min(1).max(MAX_PREFERENCE_CHARS).nullable(),
+})
+
 export type FindingRecord = z.infer<typeof findingRecord>
 export type HandoffRecord = z.infer<typeof handoffRecord>
 export type WithdrawalRecord = z.infer<typeof withdrawalRecord>
-export type MemoryRecord = FindingRecord | HandoffRecord | WithdrawalRecord
+export type PreferenceRecord = z.infer<typeof preferenceRecord>
+export type MemoryRecord =
+  FindingRecord | HandoffRecord | WithdrawalRecord | PreferenceRecord
 
 export interface Fact {
   /** Stable per record revision, so nothing is sent twice. */
@@ -71,6 +83,8 @@ export const SYNC_STATE_KEY = "agentMemory:sync"
 export const HANDOFFS_KEY = "agentMemory:handoffs"
 /** Findings withdrawn on this device, until every device has heard. */
 export const WITHDRAWALS_KEY = "agentMemory:withdrawals"
+/** Preferences by ID, kept apart from research so each is found where it helps. */
+export const PREFERENCES_KEY = "agentMemory:preferences"
 /** Findings the agent recalled recently, by Walrus blob. */
 export const RECALLED_KEY = "agentMemory:recalled"
 
@@ -88,6 +102,10 @@ export function encodeFact(record: MemoryRecord): Fact {
   const text = JSON.stringify(record)
   if (record.kind === "finding") {
     return { id: `finding:${record.id}`, namespace: RESEARCH_NAMESPACE, text }
+  }
+  if (record.kind === "preference") {
+    const namespace = `preference:${opaqueId(record.id)}:${record.revision}`
+    return { id: namespace, namespace, text }
   }
   if (record.kind === "withdrawal") {
     // The name alone says it's withdrawn, so no device has to read it.
@@ -122,6 +140,8 @@ export interface HandoffReference extends MemoryReference {
 export interface Catalog {
   /** The newest handoff per investigation, keyed by its opaque ID. */
   handoffs: Map<string, HandoffReference>
+  /** The newest revision of each preference, keyed by its opaque ID. */
+  preferences: Map<string, MemoryReference>
   findings: number
   /** Opaque IDs of findings that no longer stand. */
   withdrawn: Set<string>
@@ -131,6 +151,7 @@ export interface Catalog {
 
 const HANDOFF = /^handoff:([a-f0-9]{64}):(\d+):(active|paused|completed)$/
 const WITHDRAWN = /^withdrawn:([a-f0-9]{64})$/
+const PREFERENCE = /^preference:([a-f0-9]{64}):(\d+)$/
 
 function newer(current: MemoryReference | undefined, next: MemoryReference) {
   if (!current) return true
@@ -147,6 +168,7 @@ export function readCatalog(
   const prefix = memoryPrefix(epoch)
   const catalog: Catalog = {
     handoffs: new Map(),
+    preferences: new Map(),
     findings: 0,
     withdrawn: new Set(),
     namespaces: new Set(),
@@ -162,6 +184,22 @@ export function readCatalog(
     const withdrawn = WITHDRAWN.exec(name)
     if (withdrawn) {
       catalog.withdrawn.add(withdrawn[1]!)
+      continue
+    }
+    const preference = PREFERENCE.exec(name)
+    if (preference) {
+      const reference: MemoryReference = {
+        namespace: row.namespace_id,
+        blobId: row.blob_id,
+        revision: Number(preference[2]),
+      }
+      const key = preference[1]!
+      if (
+        Number.isSafeInteger(reference.revision) &&
+        newer(catalog.preferences.get(key), reference)
+      ) {
+        catalog.preferences.set(key, reference)
+      }
       continue
     }
     const handoff = HANDOFF.exec(name)
