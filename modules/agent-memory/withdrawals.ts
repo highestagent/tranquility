@@ -1,13 +1,8 @@
 import { kv } from "@/modules/memory"
 
 import type { RestoredHandoff } from "./distill"
+import { dropRecalledNotes, type KvStore } from "./recalled"
 import { HANDOFFS_KEY, WITHDRAWALS_KEY, type WithdrawalRecord } from "./records"
-
-/** The key-value store, as open in someone else's transaction. */
-interface KvStore {
-  get(key: string): Promise<{ key: string; value: unknown } | undefined>
-  put(row: { key: string; value: unknown }): Promise<unknown>
-}
 
 export async function getLocalWithdrawals() {
   return (await kv.get<WithdrawalRecord[]>(WITHDRAWALS_KEY)) ?? []
@@ -40,7 +35,8 @@ export async function recordWithdrawals(
       })),
     ],
   })
-  // A result carried over from another device mustn't stand in for it either.
+  // Nor may a recalled copy, or a result carried over from another device.
+  await dropRecalledNotes((id) => ids.has(id), store)
   const handoffs = (await store.get(HANDOFFS_KEY))?.value as
     Record<string, RestoredHandoff> | undefined
   if (!handoffs) return

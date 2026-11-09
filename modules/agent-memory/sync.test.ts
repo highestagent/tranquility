@@ -22,6 +22,7 @@ import { activateAccountDb, DB_NAME } from "@/modules/memory/db"
 
 import type { MemoryApi, MemoryWorkspace } from "./api"
 import { searchPastResearch } from "./recall"
+import { getRecalledNote } from "./recalled"
 import { loadResumePoint } from "./resume"
 import { memoryPrefix, readCatalog, SYNC_STATE_KEY, type Fact } from "./records"
 import { getMemoryState, getRestoredHandoffs, runMemorySync } from "./sync"
@@ -401,11 +402,20 @@ describe("correcting an answer", () => {
   it("stops the old conclusion appearing on both devices", async () => {
     const { api } = fakeWalrus()
     await sharedFinding(api)
+    const [onLaptop] = await searchPastResearch("sleep", 6, api)
+    expect(await getRecalledNote(onLaptop!.reference)).toMatchObject({
+      findingId: "d1",
+      grade: "moderate",
+    })
+    await onDevice("phone")
+    const [onPhone] = await searchPastResearch("sleep", 6, api)
+    await onDevice("laptop")
 
     await correctAnswer("r1", 6)
     // Honored here before Walrus has heard.
     expect(await searchPastResearch("sleep", 6, api)).toEqual([])
     expect((await loadResumePoint())?.lastResult).toBeUndefined()
+    expect(await getRecalledNote(onLaptop!.reference)).toBeNull()
     await settle(api)
 
     await onDevice("phone")
@@ -413,6 +423,7 @@ describe("correcting an answer", () => {
     await runMemorySync(api, "u1", { onChanged: changed })
     expect(changed).toHaveBeenCalled()
     expect((await loadResumePoint())?.lastResult).toBeUndefined()
+    expect(await getRecalledNote(onPhone!.reference)).toBeNull()
     expect(await searchPastResearch("sleep", 6, api)).toEqual([])
     expect((await investigations.list())[0]?.progressNote).toMatch(/corrected/i)
   })

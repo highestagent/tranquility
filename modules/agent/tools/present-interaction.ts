@@ -1,6 +1,7 @@
 import { tool } from "ai"
 import { z } from "zod"
 import { interactionSchema } from "@/modules/interaction/catalog"
+import { getRecalledNote } from "@/modules/agent-memory/recalled"
 import { discoveries } from "@/modules/memory"
 import { getAssessment } from "@/modules/assessments"
 import { getPendingTask, setPendingTask } from "../pending-task"
@@ -23,6 +24,13 @@ export const presentInteraction = tool({
       !(await discoveries.get(interaction.props.discoveryId))
     )
       throw new Error("Finding does not exist.")
+    if (
+      interaction.type === "PastFindingCard" &&
+      !(await getRecalledNote(interaction.props.reference))
+    )
+      throw new Error(
+        "Use a reference from memory.pastResearch in this session's getUserContext."
+      )
     if (
       interaction.type === "ChartView" &&
       !getAssessment(interaction.props.assessmentId)?.metrics.some(

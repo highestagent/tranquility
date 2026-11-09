@@ -91,7 +91,9 @@ export function AgentHome() {
           interaction={pending.interaction}
           onAnswer={session.finishInteraction}
         />
-        {["EvidenceCard", "ChartView"].includes(pending.interaction.type) ? (
+        {["EvidenceCard", "PastFindingCard", "ChartView"].includes(
+          pending.interaction.type
+        ) ? (
           <Button onClick={() => session.finishInteraction(true)}>
             Continue
           </Button>

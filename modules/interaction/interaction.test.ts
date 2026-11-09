@@ -16,6 +16,8 @@ import {
   nextMeasurementAt,
   MIN_MEASUREMENT_INTERVAL_MS,
 } from "@/modules/assessments/interval"
+import { keepRecalledNotes } from "@/modules/agent-memory/recalled"
+import { presentInteraction } from "@/modules/agent/tools/present-interaction"
 import { interactionSchema, validAnswer } from "./catalog"
 beforeEach(async () => {
   await closeDb()
@@ -140,4 +142,31 @@ it("corrects context and recalculates while preserving measured outcomes and obs
   expect(await nextMeasurementAt("go-no-go")).toBe(
     200 + MIN_MEASUREMENT_INTERVAL_MS
   )
+})
+
+it("shows a past finding only by a reference memory returned", async () => {
+  const show = (reference: string) =>
+    presentInteraction.execute!(
+      {
+        message: "We looked at this in November.",
+        reason: "The user asked",
+        interaction: { type: "PastFindingCard", props: { reference } },
+      },
+      { toolCallId: "t", messages: [] } as never
+    )
+  await expect(show("made-up")).rejects.toThrow(/memory/)
+  await keepRecalledNotes([
+    {
+      reference: "blob-1",
+      findingId: "d1",
+      recalledAt: 1,
+      createdAt: 1,
+      statement: "Stress comes with slower focus",
+      observed: "Focus was slower on stressful days.",
+      verdict: "inconclusive",
+      grade: "weak",
+      uncertainty: "Only six sessions.",
+    },
+  ])
+  await expect(show("blob-1")).resolves.toEqual({ status: "awaiting-user" })
 })

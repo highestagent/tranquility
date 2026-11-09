@@ -5,6 +5,7 @@ import {
   withdrawnCheck,
   type FindingRecord,
 } from "./records"
+import { keepRecalledNotes, type RecalledNote } from "./recalled"
 import { waitForRestore } from "./sync"
 import { getLocalWithdrawals } from "./withdrawals"
 
@@ -66,6 +67,8 @@ export async function searchPastResearch(
   const isWithdrawn = withdrawnCheck(workspace.catalog, withdrawals)
   const seen = new Set<string>()
   const findings: PastFinding[] = []
+  const notes: RecalledNote[] = []
+  const recalledAt = Date.now()
   for (const hit of await workspace.search(query, limit)) {
     const record = readRecord(findingRecord, hit.text)
     // Retries can store a finding twice.
@@ -81,7 +84,19 @@ export async function searchPastResearch(
       uncertainty: record.uncertainty,
       distance: hit.distance,
     })
+    notes.push({
+      reference: hit.blobId,
+      findingId: record.id,
+      recalledAt,
+      createdAt: record.createdAt,
+      statement: record.statement,
+      observed: record.observed,
+      verdict: record.verdict,
+      grade: record.grade,
+      uncertainty: record.uncertainty,
+    })
   }
+  await keepRecalledNotes(notes)
   return findings
 }
 

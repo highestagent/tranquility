@@ -11,6 +11,7 @@ import { getAssessment, formatMetric } from "@/modules/assessments"
 import { measurements } from "@/modules/memory"
 import { loadDiscoveryViews } from "@/modules/insights/discovery-data"
 import { DiscoveryCard } from "@/modules/insights/discovery-card"
+import { PastFindingCard } from "@/modules/agent-memory/past-finding-card"
 import {
   catalog,
   interactionSchema,
@@ -260,6 +261,9 @@ const { registry } = defineRegistry(catalog, {
       )
     },
     EvidenceCard: ({ props }) => <Evidence id={props.discoveryId} />,
+    PastFindingCard: ({ props }) => (
+      <PastFindingCard reference={props.reference} />
+    ),
     ChartView: ({ props }) => <History {...props} />,
   },
 })

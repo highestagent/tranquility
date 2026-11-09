@@ -24,6 +24,7 @@ import {
   handoffRecord,
   HANDOFFS_KEY,
   memoryPrefix,
+  RECALLED_KEY,
   opaqueId,
   readRecord,
   RESEARCH_NAMESPACE,
@@ -33,6 +34,7 @@ import {
   type HandoffRecord,
   type HandoffReference,
 } from "./records"
+import { dropRecalledNotes } from "./recalled"
 import { getLocalWithdrawals } from "./withdrawals"
 
 const BATCH_SIZE = 10
@@ -239,12 +241,14 @@ async function applyWithdrawals(workspace: MemoryWorkspace) {
     }
   }
   if (changed) await kv.set(HANDOFFS_KEY, restored)
-  return changed
+  const dropped = await dropRecalledNotes((id) => withdrawn.has(opaqueId(id)))
+  return changed || dropped
 }
 
 /** Forgotten, or another person's: this device's caches no longer apply. */
 async function clearAccountCaches() {
   await kv.remove(HANDOFFS_KEY)
+  await kv.remove(RECALLED_KEY)
 }
 
 function isAlreadyStored(fact: Fact, workspace: MemoryWorkspace) {

@@ -27,6 +27,7 @@ export const componentProps = {
   TextInput: z.object({ label, placeholder: z.string().max(200) }).strict(),
   AssessmentCard: z.object({ assessmentId: label }).strict(),
   EvidenceCard: z.object({ discoveryId: label }).strict(),
+  PastFindingCard: z.object({ reference: label }).strict(),
   ChartView: z.object({ assessmentId: label, metricId: label }).strict(),
   ConsentPrompt: z.object({ label, disclosure: label }).strict(),
 }
@@ -75,6 +76,12 @@ export const interactionSchema = z.discriminatedUnion("type", [
     })
     .strict(),
   z
+    .object({
+      type: z.literal("PastFindingCard"),
+      props: componentProps.PastFindingCard,
+    })
+    .strict(),
+  z
     .object({ type: z.literal("ChartView"), props: componentProps.ChartView })
     .strict(),
   z
@@ -119,6 +126,10 @@ export const catalog = defineCatalog(schema, {
     EvidenceCard: {
       props: componentProps.EvidenceCard,
       description: "A finding loaded from evaluated local evidence.",
+    },
+    PastFindingCard: {
+      props: componentProps.PastFindingCard,
+      description: "A saved finding recalled from Walrus Memory, by reference.",
     },
     ChartView: {
       props: componentProps.ChartView,

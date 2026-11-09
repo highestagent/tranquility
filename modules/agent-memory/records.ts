@@ -71,6 +71,8 @@ export const SYNC_STATE_KEY = "agentMemory:sync"
 export const HANDOFFS_KEY = "agentMemory:handoffs"
 /** Findings withdrawn on this device, until every device has heard. */
 export const WITHDRAWALS_KEY = "agentMemory:withdrawals"
+/** Findings the agent recalled recently, by Walrus blob. */
+export const RECALLED_KEY = "agentMemory:recalled"
 
 /** "Forget" moves to a new prefix, so nothing saved before is found again. */
 export function memoryPrefix(epoch: number) {
