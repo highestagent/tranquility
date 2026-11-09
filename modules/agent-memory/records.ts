@@ -157,6 +157,8 @@ export interface Catalog {
   findings: number
   /** Opaque IDs of findings that no longer stand. */
   withdrawn: Set<string>
+  /** Backup snapshots, complete or not, keyed by device and time. */
+  backups: Map<string, BackupSnapshot>
   /** Every full namespace name, to skip sending what's already there. */
   namespaces: Set<string>
 }
@@ -164,6 +166,37 @@ export interface Catalog {
 const HANDOFF = /^handoff:([a-f0-9]{64}):(\d+):(active|paused|completed)$/
 const WITHDRAWN = /^withdrawn:([a-f0-9]{64})$/
 const PREFERENCE = /^preference:([a-f0-9]{64}):(\d+)$/
+const BACKUP = /^backup:([a-f0-9]{16}):(\d+):(\d+):(\d+):(\d+)$/
+
+export interface BackupSnapshot {
+  device: string
+  createdAt: number
+  parts: number
+  /** Each part's namespace, how many chunks it should hold, and the blobs seen. */
+  part: Map<number, { namespace: string; chunks: number; blobs: Set<string> }>
+}
+
+/** All parts are there, each with every chunk. */
+export function isComplete(snapshot: BackupSnapshot) {
+  if (snapshot.part.size !== snapshot.parts) return false
+  for (const { chunks, blobs } of snapshot.part.values()) {
+    if (blobs.size < chunks) return false
+  }
+  return true
+}
+
+/** Each device's newest complete backup, newest first. */
+export function latestBackups(catalog: Pick<Catalog, "backups">) {
+  const newest = new Map<string, BackupSnapshot>()
+  for (const snapshot of catalog.backups.values()) {
+    if (!isComplete(snapshot)) continue
+    const current = newest.get(snapshot.device)
+    if (!current || current.createdAt < snapshot.createdAt) {
+      newest.set(snapshot.device, snapshot)
+    }
+  }
+  return [...newest.values()].sort((a, b) => b.createdAt - a.createdAt)
+}
 
 function newer(current: MemoryReference | undefined, next: MemoryReference) {
   if (!current) return true
@@ -183,6 +216,7 @@ export function readCatalog(
     preferences: new Map(),
     findings: 0,
     withdrawn: new Set(),
+    backups: new Map(),
     namespaces: new Set(),
   }
   for (const row of rows) {
@@ -196,6 +230,26 @@ export function readCatalog(
     const withdrawn = WITHDRAWN.exec(name)
     if (withdrawn) {
       catalog.withdrawn.add(withdrawn[1]!)
+      continue
+    }
+    const backup = BACKUP.exec(name)
+    if (backup) {
+      const [, device, at, part, parts, chunks] = backup
+      const id = `${device}:${at}`
+      const snapshot = catalog.backups.get(id) ?? {
+        device: device!,
+        createdAt: Number(at),
+        parts: Number(parts),
+        part: new Map(),
+      }
+      const slot = snapshot.part.get(Number(part)) ?? {
+        namespace: row.namespace_id,
+        chunks: Number(chunks),
+        blobs: new Set<string>(),
+      }
+      slot.blobs.add(row.blob_id)
+      snapshot.part.set(Number(part), slot)
+      catalog.backups.set(id, snapshot)
       continue
     }
     const preference = PREFERENCE.exec(name)

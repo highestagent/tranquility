@@ -35,12 +35,18 @@ import {
   Upload,
   type LucideIcon,
 } from "lucide-react"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Section } from "@/components/screen"
 import { LoadingMessage, StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
+import { useAccount } from "@/modules/account/account-context"
+import {
+  getBackupStatus,
+  onMemoryChange,
+  onSyncPass,
+} from "@/modules/agent-memory/sync"
 
 import { getDb, STORE_NAMES, type StoreName } from "./db"
 import {
@@ -79,12 +85,52 @@ function downloadJson(data: unknown, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+/** Where the encrypted backup stands, in a few words. */
+function describeBackup(
+  status: { lastBackupAt: number | null; uploading: boolean },
+  now: number
+) {
+  if (status.uploading) return "Backing up to Walrus, encrypted…"
+  if (status.lastBackupAt === null) {
+    return "Backs up to Walrus, encrypted, once there are answers or game results."
+  }
+  const minutes = Math.round((now - status.lastBackupAt) / 60_000)
+  const format = new Intl.RelativeTimeFormat([], { numeric: "auto" })
+  const ago =
+    minutes < 1
+      ? "just now"
+      : minutes < 60
+        ? format.format(-minutes, "minute")
+        : minutes < 48 * 60
+          ? format.format(-Math.round(minutes / 60), "hour")
+          : format.format(-Math.round(minutes / (24 * 60)), "day")
+  return `Backed up to Walrus, encrypted, ${ago}.`
+}
+
 export function DataView() {
   const { state, reload } = useAsync(countAll)
+  const account = useAccount()
+  const [backup, setBackup] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const load = () =>
+      getBackupStatus().then(
+        (status) => setBackup(describeBackup(status, Date.now())),
+        () => setBackup(null)
+      )
+    void load()
+    const stopPasses = onSyncPass(() => void load())
+    // A backup restored onto this device changes what's here.
+    const stopChanges = onMemoryChange(() => void reload())
+    return () => {
+      stopPasses()
+      stopChanges()
+    }
+  }, [reload])
 
   if (state.status === "loading") return <LoadingMessage />
   if (state.status === "error") {
@@ -123,7 +169,8 @@ export function DataView() {
     setConfirmDelete(false)
     try {
       await deleteAll()
-      window.location.replace("/")
+      // Signed in, a device with nothing on it restores the backup at once.
+      account.signOut()
     } catch {
       setNotice({ kind: "error", text: "The delete failed." })
     }
@@ -145,7 +192,7 @@ export function DataView() {
           ))}
         </dl>
         <p className="text-xs text-pretty text-muted-foreground">
-          Browsers can clear storage, so export a copy regularly.
+          {backup ?? "Browsers can clear storage, so export a copy regularly."}
         </p>
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -246,8 +293,9 @@ export function DataView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm delete</AlertDialogTitle>
             <AlertDialogDescription>
-              Permanently delete everything from this browser? To stop the agent
-              recalling what it saved, use Agent memory above.
+              Delete everything from this browser and sign out? Your encrypted
+              backup stays on Walrus and comes back when you sign in again. To
+              stop the agent recalling what it saved, use Agent memory above.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -34,6 +34,8 @@ const exportSchema = z.object({
 })
 
 export type TranquilityExport = z.infer<typeof exportSchema>
+export const tranquilityDataSchema = exportSchema.shape.data
+export type TranquilityData = TranquilityExport["data"]
 
 /** Which account and sync progress this browser holds. Never exported, imported, or reset. */
 function isAccountMetadata(key: string) {
@@ -42,7 +44,10 @@ function isAccountMetadata(key: string) {
     key === "agentMemory:sync" ||
     // Kept through a local reset, or a withdrawal might never reach other devices.
     key === "agentMemory:withdrawals" ||
-    key === "agentMemoryAccount:mainnet"
+    key === "agentMemoryAccount:mainnet" ||
+    // Which browser wrote a backup. A copy elsewhere would be another device.
+    key === "agentMemory:device" ||
+    key === "agentMemory:backupOutbox"
   )
 }
 
@@ -121,6 +126,29 @@ export async function importAll(input: unknown): Promise<void> {
   }
   work.push(tx.done)
   await Promise.all(work)
+}
+
+/**
+ * Adds what this browser doesn't have yet and leaves everything it has alone,
+ * in one transaction. Returns how many records it added.
+ */
+export async function mergeAll(input: unknown): Promise<number> {
+  const data = tranquilityDataSchema.parse(input)
+  const db = await getDb()
+  const tx = db.transaction(STORE_NAMES, "readwrite")
+  let added = 0
+  for (const name of STORE_NAMES) {
+    const store = tx.objectStore(name)
+    for (const row of data[name]) {
+      const key = "id" in row ? row.id : row.key
+      if (name === "kv" && isAccountMetadata(key)) continue
+      if ((await store.getKey(key as never)) !== undefined) continue
+      await store.put(row as never)
+      added++
+    }
+  }
+  await tx.done
+  return added
 }
 
 export async function deleteAll(): Promise<void> {

@@ -103,7 +103,7 @@ export function JournalView() {
       title="The story so far."
     >
       <p className="text-sm text-muted-foreground">
-        Context, measurements, and research decisions, kept on this device.
+        Context, measurements, and research decisions from every session.
         Contextual answers can be corrected; measured outcomes cannot be edited.
       </p>
       {state.status === "loading" ? (

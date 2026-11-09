@@ -28,6 +28,7 @@ interface MemoryAccount {
 
 let account: MemoryAccount | null = null
 let clientPromise: Promise<MemWal> | null = null
+let backupKeyPromise: Promise<CryptoKey> | null = null
 /** A session is being restored, so an account should arrive shortly. */
 let accountExpected = false
 const accountWaiters = new Set<() => void>()
@@ -38,7 +39,10 @@ function settleAccountWaiters() {
 }
 
 export function setMemoryAccount(next: MemoryAccount | null) {
-  if (account?.userId !== next?.userId) clientPromise = null
+  if (account?.userId !== next?.userId) {
+    clientPromise = null
+    backupKeyPromise = null
+  }
   account = next
   if (next) settleAccountWaiters()
 }
@@ -106,6 +110,18 @@ async function openClient(current: MemoryAccount): Promise<MemWal> {
   return MemWal.create({ key, accountId, serverUrl })
 }
 
+async function deriveBackupKey(current: MemoryAccount) {
+  const { toSuiWallet, deriveBackupSeed } = await import("./wallet")
+  const seed = await deriveBackupSeed(toSuiWallet(await current.getWallet()))
+  return crypto.subtle.importKey(
+    "raw",
+    new Uint8Array(seed),
+    "AES-GCM",
+    false,
+    ["encrypt", "decrypt"]
+  )
+}
+
 async function getClient() {
   if (!account) throw new NotSignedInError()
   const owner = account.userId
@@ -138,6 +154,8 @@ export interface MemoryWorkspace {
   catalog: Catalog
   /** The text of one exact revision. */
   read(reference: MemoryReference): Promise<string>
+  /** Everything in one namespace, up to `limit` memories. */
+  readAll(namespace: string, limit: number): Promise<RecallHit[]>
   /** Saved findings, closest first, with no minimum score. */
   search(query: string, limit: number): Promise<RecallHit[]>
 }
@@ -186,6 +204,8 @@ async function openWorkspace(): Promise<MemoryWorkspace> {
     },
     // No minimum score: a broad question like "what do you remember about me?"
     // scores poorly against every note despite being the one most worth answering.
+    readAll: (namespace, limit) =>
+      recall("Tranquility record", namespace, limit),
     search: (query, limit) =>
       recall(
         query.slice(0, MAX_QUERY_LENGTH),
@@ -203,6 +223,8 @@ export interface MemoryApi {
     jobIds: string[]
   ): Promise<{ jobs: { jobId: string; status: string }[] }>
   forget(): Promise<number>
+  /** The key backups are encrypted with, the same on every device. */
+  backupKey(): Promise<CryptoKey>
 }
 
 export const memoryApi: MemoryApi = {
@@ -225,4 +247,17 @@ export const memoryApi: MemoryApi = {
     }
   },
   forget: () => epochRequest("forget"),
+  backupKey: async () => {
+    if (!account) throw new NotSignedInError()
+    const owner = account.userId
+    const pending = (backupKeyPromise ??= deriveBackupKey(account))
+    try {
+      const key = await pending
+      if (owner !== getMemoryUserId()) throw new NotSignedInError()
+      return key
+    } catch (error) {
+      if (backupKeyPromise === pending) backupKeyPromise = null
+      throw error
+    }
+  },
 }

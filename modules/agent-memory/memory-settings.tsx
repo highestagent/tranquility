@@ -110,8 +110,8 @@ function Disclosure({ onForgot }: { onForgot: () => void }) {
             Your investigations, findings, corrections, and what you ask it to
             remember sync to Walrus Memory on mainnet, so the agent can pick up
             on any device you sign in to. The service can read these notes while
-            storing and searching them. Answers and game results stay in this
-            browser.
+            storing and searching them. Answers and game results are backed up
+            too, encrypted first so only your wallet can read them.
           </p>
           {confirming ? (
             <div className="flex flex-col gap-2">

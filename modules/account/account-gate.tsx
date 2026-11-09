@@ -91,9 +91,10 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
                     searching them.
                   </p>
                   <p>
-                    Your answers and game results are stored in this browser. If
-                    there’s unclaimed research here, it links to the first
-                    account that signs in.
+                    Your answers and game results are stored in this browser and
+                    backed up to Walrus, encrypted first so only your wallet can
+                    read them. If there’s unclaimed research here, it links to
+                    the first account that signs in.
                   </p>
                 </div>
               </Sheet>

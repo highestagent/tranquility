@@ -4,7 +4,8 @@ import { clientAddress, isSameOrigin } from "@/modules/relay/relay"
 export const RELAYER_URL = "https://relayer.memory.walrus.xyz"
 
 const RATE_LIMIT = { requests: 120, windowMs: 60_000 }
-const MAX_BODY_BYTES = 64 * 1024
+/** A full bulk upload: 20 backup chunks of up to 8 KB, with JSON framing. */
+const MAX_BODY_BYTES = 256 * 1024
 const TIMEOUT_MS = 30_000
 
 /** The only Walrus Memory routes this app uses. */

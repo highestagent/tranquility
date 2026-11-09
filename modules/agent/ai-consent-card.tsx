@@ -21,17 +21,17 @@ export function AiDisclosure() {
         Findings and progress notes automatically sync to your own Walrus Memory
         account on mainnet, so it can pick up where it left off on any device.
         They&apos;re encrypted on Walrus, but the Walrus Memory service reads
-        them while storing and searching them. Your answers and game results
-        aren&apos;t included. Your account&apos;s existence and wallet address
+        them while storing and searching them. Your answers and game results are
+        backed up there too, but encrypted in this browser first, so only your
+        wallet can read them. Your account&apos;s existence and wallet address
         are public on the Sui blockchain, though not linked to your email there.
       </p>
       <p>
         Agent and memory requests pass through this app&apos;s server, which
         doesn&apos;t store or log them and holds no key to your memories. The AI
         gateway, model provider, and Walrus Memory handle them under their own
-        policies. Everything else stays in this browser. Games, questions,
-        statistics, and your data tools are available after sign-in even if
-        cloud AI is off.
+        policies. Games, questions, statistics, and your data tools are
+        available after sign-in even if cloud AI is off.
       </p>
     </div>
   )
