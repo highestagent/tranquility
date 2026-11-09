@@ -1,28 +1,23 @@
-import { isCloudAiEnabled } from "@/modules/agent/consent"
 import { discoveries, hypotheses, investigations, kv } from "@/modules/memory"
 
-import {
-  getMemoryUserId,
-  memoryApi,
-  NotSignedInError,
-  type MemoryApi,
-} from "./api"
+import { getMemoryUserId, memoryApi, type MemoryApi } from "./api"
 import { distillFacts, type Fact } from "./distill"
 
 /** Per network, since what's saved on one doesn't exist on another. */
 const STATE_KEY = "agentMemory:mainnet"
 const BATCH_SIZE = 10
 const CHECK_AGAIN_MS = 20_000
+const IDLE_SYNC_MS = 60_000
 const MAX_BACKOFF_MS = 10 * 60_000
 
 export interface MemoryState {
   /** Who these memories belong to. */
   owner?: string
+  epoch?: number
   /** Facts safely stored. Kept so nothing is ever sent twice. */
   remembered: string[]
   /** Facts the service accepted, and whose storage hasn't finished yet. */
   pending: { factId: string; jobId: string }[]
-  enabled: boolean
   lastSavedAt?: number
   /** The last attempt failed, so what's shown may be out of date. */
   failing?: boolean
@@ -32,7 +27,6 @@ export async function getMemoryState(): Promise<MemoryState> {
   return {
     remembered: [],
     pending: [],
-    enabled: false,
     ...(await kv.get<Partial<MemoryState>>(STATE_KEY)),
   }
 }
@@ -65,16 +59,19 @@ export async function runMemorySync(
   facts: readonly Fact[]
 ): Promise<{ more: boolean }> {
   const state = await getMemoryState()
-  if (!state.enabled) return { more: false }
 
-  await api.connect()
+  const epoch = await api.connect()
 
   // Another person signing in on this browser mustn't inherit these facts.
-  if (state.owner && state.owner !== owner) {
+  if (
+    (state.owner && state.owner !== owner) ||
+    (state.epoch !== undefined && state.epoch !== epoch)
+  ) {
     state.remembered = facts.map(({ id }) => id)
     state.pending = []
   }
   state.owner = owner
+  state.epoch = epoch
 
   if (state.pending.length > 0) {
     const { jobs } = await api.status(state.pending.map((job) => job.jobId))
@@ -105,7 +102,10 @@ export async function runMemorySync(
   const unsent = facts.filter(({ id }) => !known.has(id))
   const batch = unsent.slice(0, BATCH_SIZE)
   if (batch.length > 0) {
-    const { jobIds } = await api.remember(batch.map(({ text }) => text))
+    const { jobIds } = await api.remember(
+      batch.map(({ text }) => text),
+      epoch
+    )
     batch.forEach((fact, index) => {
       const jobId = jobIds[index]
       if (jobId) state.pending.push({ factId: fact.id, jobId })
@@ -113,12 +113,20 @@ export async function runMemorySync(
   }
   state.failing = false
   await saveState(state)
+  if (batch.length && state.pending.length === 0)
+    throw new Error("Walrus Memory accepted no jobs")
   return { more: state.pending.length > 0 || unsent.length > batch.length }
 }
 
 let running: Promise<void> | null = null
+let forgetting: Promise<void> | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
 let failures = 0
+
+function withMemoryLock<T>(work: () => Promise<T>) {
+  const locks = typeof navigator === "undefined" ? undefined : navigator.locks
+  return locks ? locks.request("tranquility-memory-sync", work) : work()
+}
 
 function scheduleAgain(delay: number) {
   if (timer) clearTimeout(timer)
@@ -132,18 +140,24 @@ function scheduleAgain(delay: number) {
  * while anything is unreachable.
  */
 export function syncMemory(): Promise<void> {
+  if (forgetting) return forgetting.catch(() => undefined)
   running ??= (async () => {
     const owner = getMemoryUserId()
     if (!owner) return
-    const enabled = await isCloudAiEnabled()
-    if (!enabled) return
 
     try {
-      const { more } = await runMemorySync(memoryApi, owner, await loadFacts())
+      const sync = async () => {
+        if (owner !== getMemoryUserId()) return { more: false }
+        const facts = await loadFacts()
+        if (owner !== getMemoryUserId()) return { more: false }
+        return runMemorySync(memoryApi, owner, facts)
+      }
+      const { more } = await withMemoryLock(sync)
       failures = 0
-      if (more) scheduleAgain(CHECK_AGAIN_MS)
+      if (owner === getMemoryUserId())
+        scheduleAgain(more ? CHECK_AGAIN_MS : IDLE_SYNC_MS)
     } catch (error) {
-      if (!(error instanceof NotSignedInError)) {
+      if (owner === getMemoryUserId()) {
         console.warn("Agent memory couldn't sync:", error)
         failures++
         scheduleAgain(Math.min(CHECK_AGAIN_MS * 2 ** failures, MAX_BACKOFF_MS))
@@ -158,36 +172,32 @@ export function syncMemory(): Promise<void> {
   return running
 }
 
-/**
- * How many memories the person's account holds, or null if memory isn't in use.
- * Connecting can create their account, so it needs the same consent as syncing.
- */
-export async function getSavedCount(): Promise<number | null> {
-  const [enabled, state] = await Promise.all([
-    isCloudAiEnabled(),
-    getMemoryState(),
-  ])
-  if (!enabled || !state.enabled) return null
+/** How many memories the signed-in account holds across devices. */
+export async function getSavedCount() {
   return memoryApi.count()
-}
-
-export async function setMemoryEnabled(enabled: boolean) {
-  await saveState({ ...(await getMemoryState()), enabled })
-  if (enabled) void syncMemory()
 }
 
 /**
  * Stops the agent recalling anything saved so far. Local records stay marked as
  * sent, so they aren't saved again unless they change.
  */
-export async function forgetMemories() {
-  await memoryApi.forget()
-  const state = await getMemoryState()
-  const facts = await loadFacts()
-  await saveState({
-    ...state,
-    remembered: facts.map(({ id }) => id),
-    pending: [],
-    lastSavedAt: undefined,
+export function forgetMemories() {
+  forgetting ??= (async () => {
+    await running
+    await withMemoryLock(async () => {
+      const epoch = await memoryApi.forget()
+      const state = await getMemoryState()
+      const facts = await loadFacts()
+      await saveState({
+        ...state,
+        epoch,
+        remembered: facts.map(({ id }) => id),
+        pending: [],
+        lastSavedAt: undefined,
+      })
+    })
+  })().finally(() => {
+    forgetting = null
   })
+  return forgetting
 }

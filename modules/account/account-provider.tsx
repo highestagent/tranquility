@@ -13,12 +13,13 @@ import {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { setMemoryAccount } from "@/modules/agent-memory/api"
+import { activateAccountDb } from "@/modules/memory/db"
 import { syncMemory } from "@/modules/agent-memory/sync"
 
 import { AccountContext, type Account } from "./account-context"
 
 const APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID
-/** After this, stop waiting on Privy: the app is local-first and still works. */
+/** Show a recovery action if Privy cannot finish loading. */
 const READY_TIMEOUT_MS = 6000
 
 function findSuiWallet(user: User | null) {
@@ -45,7 +46,39 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer)
   }, [ready])
 
-  const userId = authenticated ? (user?.id ?? null) : null
+  const userId = ready && authenticated ? (user?.id ?? null) : null
+  const [storage, setStorage] = useState<{
+    userId: string
+    ready: boolean
+  } | null>(null)
+  const activation = useRef<{ userId: string; promise: Promise<void> } | null>(
+    null
+  )
+
+  useEffect(() => {
+    if (ready && activation.current && activation.current.userId !== userId) {
+      // Clear in-flight work and browser singletons before mounting another user.
+      window.location.reload()
+      return
+    }
+    if (!userId) return
+    activation.current ??= { userId, promise: activateAccountDb(userId) }
+    let active = true
+    activation.current.promise.then(
+      () => {
+        if (active) setStorage({ userId, ready: true })
+      },
+      () => {
+        if (active) setStorage({ userId, ready: false })
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [ready, userId])
+
+  const activeUserId =
+    storage?.userId === userId && storage?.ready ? userId : null
 
   // Privy's latest functions, for memory to use whenever it gets to them.
   const privy = useRef({ user, createWallet, signRawHash })
@@ -56,9 +89,9 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
   // A layout effect, so it's set before any screen's own effects can use memory.
   useLayoutEffect(() => {
     setMemoryAccount(
-      userId
+      activeUserId
         ? {
-            userId,
+            userId: activeUserId,
             getToken: getAccessToken,
             getWallet: async () => {
               const { user, createWallet } = privy.current
@@ -83,22 +116,32 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
           }
         : null
     )
-  }, [userId, getAccessToken])
+  }, [activeUserId, getAccessToken])
 
   // Memory starts by itself as soon as someone is signed in, on any page.
   useEffect(() => {
-    if (!userId) return
+    if (!activeUserId) return
     void syncMemory()
-    const onOnline = () => void syncMemory()
-    window.addEventListener("online", onOnline)
-    return () => window.removeEventListener("online", onOnline)
-  }, [userId])
+    const resumeSync = () => void syncMemory()
+    window.addEventListener("online", resumeSync)
+    window.addEventListener("focus", resumeSync)
+    return () => {
+      window.removeEventListener("online", resumeSync)
+      window.removeEventListener("focus", resumeSync)
+    }
+  }, [activeUserId])
 
   const value = useMemo<Account>(
     () => ({
       available: ready || !timedOut,
       ready: ready || timedOut,
-      authenticated,
+      authenticated: userId !== null,
+      storage:
+        storage && storage.userId === userId
+          ? storage.ready
+            ? "ready"
+            : "error"
+          : "loading",
       email: user?.google?.email ?? user?.email?.address ?? null,
       signingIn: loading,
       signInFailed,
@@ -114,7 +157,8 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
     [
       ready,
       timedOut,
-      authenticated,
+      userId,
+      storage,
       user,
       loading,
       signInFailed,

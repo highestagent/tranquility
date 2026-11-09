@@ -8,6 +8,7 @@ export interface Account {
   /** The sign-in state is known. */
   ready: boolean
   authenticated: boolean
+  storage: "loading" | "ready" | "error"
   email: string | null
   signingIn: boolean
   signInFailed: boolean
@@ -15,11 +16,12 @@ export interface Account {
   signOut: () => void
 }
 
-/** With no accounts available, the app simply runs on this device. */
+/** Used when Privy is not configured. */
 export const NO_ACCOUNT: Account = {
   available: false,
   ready: true,
   authenticated: false,
+  storage: "loading",
   email: null,
   signingIn: false,
   signInFailed: false,

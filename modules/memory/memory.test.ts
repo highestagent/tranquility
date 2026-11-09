@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import demoData from "@/fixtures/demo-data.json"
 
-import { closeDb, DB_NAME } from "./db"
+import { activateAccountDb, closeDb, DB_NAME, LOCAL_OWNER_KEY } from "./db"
 import {
   countAll,
   deleteAll,
@@ -106,4 +106,38 @@ describe("portability", () => {
     const counts = await countAll()
     expect(Object.values(counts).every((count) => count === 0)).toBe(true)
   })
+})
+
+it("preserves the existing owner's history and keeps it separate from another login", async () => {
+  await kv.set("agentMemory:mainnet", { owner: "original" })
+  await measurements.put(measurement({ id: "original-run" }))
+  const secondDb = `${DB_NAME}:second`
+  await deleteDB(secondDb)
+
+  try {
+    await activateAccountDb("second")
+    expect(await measurements.list()).toEqual([])
+    await measurements.put(measurement({ id: "second-run" }))
+
+    await closeDb()
+    await activateAccountDb("original")
+    expect((await measurements.list()).map(({ id }) => id)).toEqual([
+      "original-run",
+    ])
+    const backup = await exportAll()
+    expect(backup.data.kv).toEqual([])
+    await deleteAll()
+    expect(await kv.get(LOCAL_OWNER_KEY)).toBe("original")
+    await importAll(backup)
+    expect(await kv.get(LOCAL_OWNER_KEY)).toBe("original")
+
+    await closeDb()
+    await activateAccountDb("second")
+    expect((await measurements.list()).map(({ id }) => id)).toEqual([
+      "second-run",
+    ])
+  } finally {
+    await closeDb()
+    await deleteDB(secondDb)
+  }
 })

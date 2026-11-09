@@ -6,6 +6,7 @@ import "./globals.css"
 import Link from "next/link"
 import { PoolMark } from "@/components/pool-mark"
 import { AppNav } from "@/components/app-nav"
+import { AccountGate } from "@/modules/account/account-gate"
 import { AccountProvider } from "@/modules/account/account-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
@@ -58,22 +59,24 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <AccountProvider>
-            <div className="app-shell mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
-              <header className="app-brand flex h-16 shrink-0 items-center">
-                <Link
-                  href="/"
-                  className="flex min-h-11 items-center gap-2.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <PoolMark className="size-5" />
-                  <span className="font-voice text-lg">Tranquility</span>
-                </Link>
-              </header>
-              <SessionNotifications />
-              <main className="mx-auto flex w-full max-w-lg min-w-0 flex-1 flex-col">
-                {children}
-              </main>
-              <AppNav />
-            </div>
+            <AccountGate>
+              <div className="app-shell mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
+                <header className="app-brand flex h-16 shrink-0 items-center">
+                  <Link
+                    href="/"
+                    className="flex min-h-11 items-center gap-2.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <PoolMark className="size-5" />
+                    <span className="font-voice text-lg">Tranquility</span>
+                  </Link>
+                </header>
+                <SessionNotifications />
+                <main className="mx-auto flex w-full max-w-lg min-w-0 flex-1 flex-col">
+                  {children}
+                </main>
+                <AppNav />
+              </div>
+            </AccountGate>
           </AccountProvider>
         </ThemeProvider>
       </body>

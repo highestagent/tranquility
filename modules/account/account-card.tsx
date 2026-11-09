@@ -1,9 +1,20 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
 import { LogOut, UserRound } from "lucide-react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 
 import { useAccount } from "./account-context"
 
@@ -25,16 +36,35 @@ export function AccountCard() {
         </p>
       </div>
       {account.authenticated ? (
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label="Sign out"
-          title="Sign out"
-          className="-mr-1"
-          onClick={account.signOut}
-        >
-          <LogOut aria-hidden />
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                aria-label="Sign out"
+                title="Sign out"
+                className="-mr-1"
+              />
+            }
+          >
+            <LogOut aria-hidden />
+          </AlertDialogTrigger>
+          <AlertDialogContent className="w-[calc(100%-2rem)] rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign out of Tranquility?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You’ll need to sign in again to access your research.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel size="lg">Cancel</AlertDialogCancel>
+              <AlertDialogAction size="lg" onClick={account.signOut}>
+                Sign out
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : (
         <Button
           size="lg"

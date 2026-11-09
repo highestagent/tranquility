@@ -3,17 +3,11 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { setAiConsent } from "@/modules/agent/consent"
 import { closeDb, kv } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
 
 import { NotSignedInError, type MemoryApi } from "./api"
-import {
-  getMemoryState,
-  getSavedCount,
-  runMemorySync,
-  setMemoryEnabled,
-} from "./sync"
+import { getMemoryState, getSavedCount, runMemorySync } from "./sync"
 
 function fakeApi(statuses: Record<string, string> = {}) {
   let next = 0
@@ -29,7 +23,7 @@ function fakeApi(statuses: Record<string, string> = {}) {
     })),
     recall: vi.fn(),
     forget: vi.fn(),
-    connect: vi.fn(async () => undefined),
+    connect: vi.fn(async () => 0),
     count: vi.fn(async () => 0),
   } satisfies MemoryApi
 }
@@ -46,13 +40,10 @@ beforeEach(async () => {
 })
 
 describe("runMemorySync", () => {
-  beforeEach(async () => {
-    await setMemoryEnabled(true)
-  })
   it("sends new facts, then marks them saved once stored", async () => {
     const api = fakeApi()
     expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: true })
-    expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"])
+    expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"], 0)
 
     expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
     const state = await getMemoryState()
@@ -115,12 +106,21 @@ describe("runMemorySync", () => {
     expect(api.remember).toHaveBeenCalledTimes(1)
   })
 
-  it("does nothing while turned off", async () => {
+  it("syncs automatically even if an older version left it disabled", async () => {
+    await kv.set("agentMemory:mainnet", { enabled: false })
     const api = fakeApi()
-    await setMemoryEnabled(false)
-    expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
-    expect(api.remember).not.toHaveBeenCalled()
-    expect(api.connect).not.toHaveBeenCalled()
+    await runMemorySync(api, "u1", facts(2))
+    expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"], 0)
+  })
+
+  it("does not re-upload forgotten facts when another device changes the namespace", async () => {
+    const api = fakeApi()
+    await runMemorySync(api, "u1", facts(1))
+    api.connect.mockResolvedValue(1)
+    await runMemorySync(api, "u1", facts(1))
+    expect(api.remember).toHaveBeenCalledTimes(1)
+    await runMemorySync(api, "u1", facts(2))
+    expect(api.remember).toHaveBeenLastCalledWith(["Fact 1"], 1)
   })
 
   it("sets up the account even with nothing to save yet", async () => {
@@ -131,36 +131,12 @@ describe("runMemorySync", () => {
   })
 
   it("stops reporting a failure once it gets through", async () => {
-    await kv.set("agentMemory:mainnet", { failing: true, enabled: true })
+    await kv.set("agentMemory:mainnet", { failing: true })
     await runMemorySync(fakeApi(), "u1", facts(1))
     expect((await getMemoryState()).failing).toBe(false)
   })
 })
 
-describe("getSavedCount", () => {
-  it("doesn't connect when memory is off or cloud AI is disabled", async () => {
-    await expect(getSavedCount()).resolves.toBeNull()
-    await setAiConsent(false)
-    await expect(getSavedCount()).resolves.toBeNull()
-  })
-
-  it("doesn't connect while memory is off", async () => {
-    await setAiConsent(true)
-    await setMemoryEnabled(false)
-    await expect(getSavedCount()).resolves.toBeNull()
-  })
-
-  it("asks the account otherwise", async () => {
-    await setMemoryEnabled(true)
-    await setAiConsent(true)
-    // No one is signed in here, so reaching the account is the part that fails.
-    await expect(getSavedCount()).rejects.toBeInstanceOf(NotSignedInError)
-  })
-})
-
-it("keeps cross-device memory off until explicitly enabled", async () => {
-  expect((await getMemoryState()).enabled).toBe(false)
-  const api = fakeApi()
-  await runMemorySync(api, "u1", facts(1))
-  expect(api.connect).not.toHaveBeenCalled()
+it("requires a signed-in account to count shared memories", async () => {
+  await expect(getSavedCount()).rejects.toBeInstanceOf(NotSignedInError)
 })

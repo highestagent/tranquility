@@ -29,10 +29,11 @@ Games, questionnaires, statistics, and data tools all work without a key.
 
 ### Accounts and memory
 
-Begin signs in with Google through [Privy](https://www.privy.io). The agent's
-findings and progress notes then sync to
+Tranquility requires Google sign-in through [Privy](https://www.privy.io). The agent's
+findings and progress notes automatically sync to
 [Walrus Memory](https://docs.wal.app/walrus-memory) in the background, so it can
-pick up where it left off on any device. Add these to `.env.local`:
+pick up where it left off on any device. Add these to `.env.local` and allow
+your app origin in Privy’s settings:
 
 | Variable | Where it comes from | Exposure |
 |---|---|---|
@@ -49,9 +50,10 @@ up:
 3. That key is derived from a wallet signature, so it's the same on every device.
    It stays in memory and is never stored or exported.
 
-Raw answers and game trials never leave the device, because the hosted relayer
-reads text in plaintext while storing and searching it. Walrus Memory has no
-delete, so "forget" moves a person to a new namespace, and old encrypted copies
+MemWal receives agent notes, and the hosted relayer reads their text while storing
+and searching it. Raw answers, game records, and journals live in the account’s
+browser storage. The first sign-in claims previously unowned local history.
+Walrus Memory has no delete, so "forget" moves a person to a new namespace, and old encrypted copies
 remain until they expire. See `modules/agent-memory/`.
 
 ### Try it with demo data
@@ -63,8 +65,8 @@ in that browser. Regenerate it with `scripts/generate-demo-data.mjs`.
 
 ## How it works
 
-The agent runs in the browser and all data stays in IndexedDB. There's no start
-button: when you open the app, the agent wakes if it has a reason to (first run,
+The agent runs in the browser. Research records stay in IndexedDB and the agent
+recalls synced notes from MemWal. There's no start button: when you open the app, the agent wakes if it has a reason to (first run,
 new data, or a long rest), and the screen follows what it's doing.
 
 | Phase | What you see |

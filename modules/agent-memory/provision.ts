@@ -147,6 +147,9 @@ export async function connectMemoryAccount(
     }
 
     const config = await relayerRequest<RelayerConfig>(`${relayerUrl}/config`)
+    if (config.network !== "mainnet") {
+      throw new Error("Walrus Memory must use Sui mainnet.")
+    }
     const suiClient = new SuiGrpcClient({
       network: config.network,
       baseUrl: config.suiGrpcUrl,

@@ -6,7 +6,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Switch } from "@/components/ui/switch"
 import { Brain } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
@@ -17,7 +16,6 @@ import {
   forgetMemories,
   getMemoryState,
   getSavedCount,
-  setMemoryEnabled,
   type MemoryState,
 } from "./sync"
 
@@ -26,37 +24,35 @@ export function MemorySettings() {
   const account = useAccount()
   const [state, setState] = useState<MemoryState | null>(null)
   /** What the account holds. `null` until known, since a new browser has no idea. */
-  const [saved, setSaved] = useState<number | "off" | "failed" | null>(null)
+  const [saved, setSaved] = useState<number | "failed" | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [forgetFailed, setForgetFailed] = useState(false)
 
   const refresh = useCallback(() => {
     getMemoryState().then(setState, () => setState(null))
-    getSavedCount().then(
-      (count) => setSaved(count ?? "off"),
-      () => setSaved("failed")
-    )
+    getSavedCount().then(setSaved, () => setSaved("failed"))
   }, [])
 
   const { authenticated } = account
   useEffect(() => {
-    if (authenticated) refresh()
+    if (!authenticated) return
+    refresh()
+    const timer = window.setInterval(refresh, 20_000)
+    return () => window.clearInterval(timer)
   }, [authenticated, refresh])
 
   if (!account.available || !authenticated || !state) return null
 
   const status =
-    !state.enabled || saved === "off"
-      ? "Off"
-      : state.failing || saved === "failed"
-        ? "Can't connect right now. It'll keep trying"
-        : state.pending.length > 0
-          ? "Saving…"
-          : saved === null
-            ? "Checking…"
-            : saved === 1
-              ? "1 memory saved"
-              : `${saved} memories saved`
+    state.failing || saved === "failed"
+      ? "Can't connect right now. It'll keep trying"
+      : state.pending.length > 0
+        ? "Saving…"
+        : saved === null
+          ? "Checking…"
+          : saved === 1
+            ? "1 memory saved"
+            : `${saved} memories saved`
 
   async function forget() {
     setForgetFailed(false)
@@ -83,13 +79,6 @@ export function MemorySettings() {
             {status}
           </p>
         </div>
-        <Switch
-          checked={state.enabled}
-          aria-labelledby="agent-memory"
-          onCheckedChange={(checked) =>
-            void setMemoryEnabled(checked).then(refresh)
-          }
-        />
       </div>
       <Collapsible className="text-sm text-muted-foreground">
         <CollapsibleTrigger className="cursor-pointer rounded text-left text-xs underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-2 focus-visible:outline-ring">
@@ -98,11 +87,10 @@ export function MemorySettings() {
         <CollapsibleContent>
           <div className="mt-2 flex flex-col items-start gap-3">
             <p className="text-pretty">
-              Enabling this sends findings and progress notes to Walrus Memory.
-              The service can read them while storing and searching. Encrypted
-              copies cannot be erased before they expire. The agent&apos;s
-              findings and progress notes, so it can pick up where it left off
-              on any device. Your answers and game results stay on this device.
+              Findings and progress notes automatically sync to Walrus Memory on
+              mainnet and are available when you sign in on another device. The
+              service can read notes while storing and searching them. Answers
+              and game results are stored in this browser.
             </p>
             {confirming ? (
               <div className="flex flex-col gap-2">

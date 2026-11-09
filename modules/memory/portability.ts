@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { getDb, STORE_NAMES, type StoreName } from "./db"
+import { getDb, LOCAL_OWNER_KEY, STORE_NAMES, type StoreName } from "./db"
 import {
   analysisSchema,
   decisionSchema,
@@ -34,6 +34,14 @@ const exportSchema = z.object({
 })
 
 export type TranquilityExport = z.infer<typeof exportSchema>
+
+function isAccountMetadata(key: string) {
+  return (
+    key === LOCAL_OWNER_KEY ||
+    key === "agentMemory:mainnet" ||
+    key === "agentMemoryAccount:mainnet"
+  )
+}
 
 export async function exportAll(): Promise<TranquilityExport> {
   const db = await getDb()
@@ -73,7 +81,7 @@ export async function exportAll(): Promise<TranquilityExport> {
       analyses,
       discoveries,
       decisions,
-      kv,
+      kv: kv.filter(({ key }) => !isAccountMetadata(key)),
     },
   }
 }
@@ -95,9 +103,17 @@ export async function importAll(input: unknown): Promise<void> {
   const work: Promise<unknown>[] = []
   for (const name of STORE_NAMES) {
     const store = tx.objectStore(name)
-    work.push(store.clear())
+    if (name === "kv") {
+      for (const key of await tx.objectStore("kv").getAllKeys()) {
+        if (!isAccountMetadata(key)) work.push(tx.objectStore("kv").delete(key))
+      }
+    } else {
+      work.push(store.clear())
+    }
     for (const row of parsed.data.data[name]) {
-      work.push(store.put(row as never))
+      if (name !== "kv" || !("key" in row) || !isAccountMetadata(row.key)) {
+        work.push(store.put(row as never))
+      }
     }
   }
   work.push(tx.done)
@@ -107,8 +123,14 @@ export async function importAll(input: unknown): Promise<void> {
 export async function deleteAll(): Promise<void> {
   const db = await getDb()
   const tx = db.transaction(STORE_NAMES, "readwrite")
+  const keys = await tx.objectStore("kv").getAllKeys()
   await Promise.all([
-    ...STORE_NAMES.map((name) => tx.objectStore(name).clear()),
+    ...STORE_NAMES.filter((name) => name !== "kv").map((name) =>
+      tx.objectStore(name).clear()
+    ),
+    ...keys
+      .filter((key) => !isAccountMetadata(key))
+      .map((key) => tx.objectStore("kv").delete(key)),
     tx.done,
   ])
 }

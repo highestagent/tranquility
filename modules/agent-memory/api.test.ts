@@ -12,13 +12,7 @@ vi.mock("./provision", () => ({
 }))
 vi.mock("./wallet", () => ({ toSuiWallet: () => ({}) }))
 
-beforeEach(() => {
-  recall.mockReset()
-  vi.stubGlobal("window", { location: { origin: "http://app.test" } })
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => Response.json({ epoch: 3 }))
-  )
+function signIn() {
   setMemoryAccount({
     userId: "u1",
     getToken: async () => "token",
@@ -27,6 +21,16 @@ beforeEach(() => {
       signRawHash: async () => "0x00",
     }),
   })
+}
+
+beforeEach(() => {
+  recall.mockReset()
+  vi.stubGlobal("window", { location: { origin: "http://app.test" } })
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ epoch: 3 }))
+  )
+  signIn()
 })
 
 afterEach(() => {
@@ -49,6 +53,24 @@ describe("memoryApi.recall", () => {
       limit: 6,
       namespace: "tranquility-3",
     })
+  })
+
+  it("recalls the same notes after a new login and picks up a namespace change", async () => {
+    recall.mockResolvedValue({ results: [{ text: "Sleep note" }] })
+    await memoryApi.recall("sleep", 6, 1000)
+    setMemoryAccount(null)
+    signIn()
+    await expect(memoryApi.recall("sleep", 6, 1000)).resolves.toEqual({
+      memories: [{ text: "Sleep note", at: null }],
+    })
+    expect(recall.mock.calls[1]?.[1].namespace).toBe("tranquility-3")
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ epoch: 4 }))
+    )
+    await memoryApi.recall("sleep", 6, 1000)
+    expect(recall.mock.calls[2]?.[1].namespace).toBe("tranquility-4")
   })
 
   it("gives up at the budget instead of holding up the agent", async () => {

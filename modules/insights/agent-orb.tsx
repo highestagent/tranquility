@@ -20,9 +20,13 @@ function prefersReducedMotion() {
 export function AgentOrb({
   state,
   size = 64,
+  color,
+  animated = state === "thinking",
 }: {
   state: OrbState
   size?: 20 | 64
+  color?: string
+  animated?: boolean
 }) {
   const reducedMotion = useSyncExternalStore(
     subscribeToMotion,
@@ -39,7 +43,8 @@ export function AgentOrb({
       <ThinkingOrb
         state={state === "thinking" ? "working" : "breathing"}
         size={size}
-        paused={reducedMotion || state !== "thinking"}
+        color={color}
+        paused={reducedMotion || !animated}
       />
     </span>
   )
