@@ -1,3 +1,4 @@
+import { nextMeasurementAt } from "@/modules/assessments/interval"
 import { tool } from "ai"
 import { z } from "zod"
 
@@ -17,6 +18,13 @@ export const selectAssessment = tool({
     if (await getPendingTask()) {
       throw new Error("The user already has a pending task. End your turn.")
     }
+    const nextAt = await nextMeasurementAt(assessmentId)
+    if (nextAt > Date.now())
+      return {
+        status: "rest",
+        nextAt,
+        note: "This measurement was taken recently. Rest or choose a different useful activity.",
+      }
     await setPendingTask({
       kind: "assessment",
       assessmentId,

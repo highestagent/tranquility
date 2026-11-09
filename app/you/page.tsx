@@ -1,3 +1,4 @@
+import { NotificationSettings } from "@/modules/session/notifications"
 import { Screen } from "@/components/screen"
 import { ThemeControl } from "@/components/theme-control"
 import { AccountCard } from "@/modules/account/account-card"
@@ -13,6 +14,7 @@ export default function YouPage() {
         <AiSettings />
         <MemorySettings />
         <ThemeControl />
+        <NotificationSettings />
       </div>
       <DataView />
     </Screen>

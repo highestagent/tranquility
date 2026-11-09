@@ -32,7 +32,7 @@ export async function getMemoryState(): Promise<MemoryState> {
   return {
     remembered: [],
     pending: [],
-    enabled: true,
+    enabled: false,
     ...(await kv.get<Partial<MemoryState>>(STATE_KEY)),
   }
 }

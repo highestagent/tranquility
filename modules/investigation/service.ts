@@ -23,6 +23,13 @@ export async function createInvestigation(input: {
   objectives: string[]
   evidenceRequirements: EvidenceRequirement[]
 }) {
+  const existing = (await investigations.list()).find(
+    (row) =>
+      row.status !== "completed" &&
+      row.question === input.question &&
+      row.origin === input.origin
+  )
+  if (existing) return existing
   const now = Date.now()
   return investigations.put({
     ...input,
@@ -59,6 +66,16 @@ export async function addHypothesis(input: {
   if (!(await investigations.get(input.investigationId))) {
     throw new Error(`Unknown investigation: ${input.investigationId}`)
   }
+  const existing = (
+    await hypotheses.byInvestigation(input.investigationId)
+  ).find(
+    (row) =>
+      row.statement === input.statement &&
+      row.factorId === input.factorId &&
+      row.metric.assessmentId === input.metric.assessmentId &&
+      row.metric.metricId === input.metric.metricId
+  )
+  if (existing) return existing
   const now = Date.now()
   return hypotheses.put({
     ...input,
@@ -172,6 +189,13 @@ export async function evaluateHypothesis(input: {
     )
   }
 
+  const previous = (
+    await discoveries.byInvestigation(hypothesis.investigationId)
+  ).find(
+    (row) =>
+      row.hypothesisId === hypothesis.id && row.analysisIds.includes(latest.id)
+  )
+  if (previous) return previous
   const verdict = decideVerdict(hypothesis.expectedDirection, latest)
   const discovery = await discoveries.put({
     id: newId(),

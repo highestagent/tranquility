@@ -67,7 +67,7 @@ export function SessionView() {
         />
       )
     case "asleep":
-      return <RestingWithoutAi onWake={() => void begin()} />
+      return <RestingWithoutAi onWake={() => setConsent("ask")} />
     case "agent":
       return <AgentHome />
   }

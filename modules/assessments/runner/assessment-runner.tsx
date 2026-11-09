@@ -13,6 +13,7 @@ import {
   type Measurement,
 } from "@/modules/memory"
 
+import { nextMeasurementAt } from "../interval"
 import { getAssessment } from "../registry"
 import { RunResult } from "./run-result"
 
@@ -32,6 +33,7 @@ type Stage =
 
 export interface AssessmentRunnerProps {
   assessmentId: string
+  runId?: string
   /** Why this game, shown only before it starts. */
   eyebrow?: React.ReactNode
   /** Called with the saved run, or `null` if the user stopped before the end. */
@@ -43,6 +45,7 @@ type InputType = Measurement["inputType"]
 
 export function AssessmentRunner({
   assessmentId,
+  runId,
   eyebrow,
   onFinish,
   doneLabel = "Done",
@@ -51,6 +54,35 @@ export function AssessmentRunner({
   if (!assessment) throw new Error(`Unknown assessment: ${assessmentId}`)
 
   const [stage, setStage] = useState<Stage>({ name: "intro" })
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (stage.name !== "intro") return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [stage.name])
+  const [availableAt, setAvailableAt] = useState<number | null>(null)
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      nextMeasurementAt(assessmentId),
+      runId ? measurements.get(runId) : Promise.resolve(undefined),
+    ]).then(
+      ([at, saved]) => {
+        if (!active) return
+        setAvailableAt(at)
+        if (saved) setStage({ name: "result", measurement: saved })
+      },
+      () => {
+        if (active) setStage({ name: "error" })
+      }
+    )
+    return () => {
+      active = false
+    }
+  }, [assessmentId, runId])
+  const retrySave = useRef<(() => Promise<void>) | null>(null)
+  const saveId = useRef<{ startedAt: number; id: string } | null>(null)
+  const saving = useRef(false)
   const inputTypeRef = useRef<InputType>("unknown")
 
   async function save(
@@ -58,16 +90,23 @@ export function AssessmentRunner({
     trials: unknown[],
     invalidReason?: string
   ) {
+    if (saving.current) return
+    saving.current = true
+    retrySave.current = () => save(test, trials, invalidReason)
+    if (saveId.current?.startedAt !== test.startedAt)
+      saveId.current = { startedAt: test.startedAt, id: runId ?? newId() }
     setStage({ name: "saving" })
     try {
       const session = await getCurrentSession()
       const measurement = await measurements.put({
-        id: newId(),
+        id: saveId.current.id,
         sessionId: session.id,
         assessmentId: assessment!.id,
         protocolVersion: assessment!.protocolVersion,
         seed: test.seed,
         startedAt: test.startedAt,
+        // Captured in the game-completion callback, never during rendering.
+        // eslint-disable-next-line react-hooks/purity
         completedAt: Date.now(),
         inputType: inputTypeRef.current,
         valid: !invalidReason,
@@ -75,11 +114,29 @@ export function AssessmentRunner({
         trials,
         metrics: invalidReason ? {} : assessment!.score(trials as never[]),
       })
+      retrySave.current = null
+      setAvailableAt(
+        measurement.valid ? measurement.completedAt + 30 * 60 * 1000 : 0
+      )
       setStage({ name: "result", measurement })
     } catch {
       setStage({ name: "error" })
+    } finally {
+      saving.current = false
     }
   }
+
+  useEffect(() => {
+    const immersive = [
+      "practice",
+      "ready",
+      "countdown",
+      "test",
+      "saving",
+    ].includes(stage.name)
+    document.body.toggleAttribute("data-assessment-active", immersive)
+    return () => document.body.removeAttribute("data-assessment-active")
+  }, [stage.name])
 
   const test = stage.name === "test" ? stage : null
   useRunGuards(test !== null, inputTypeRef, () => {
@@ -101,9 +158,15 @@ export function AssessmentRunner({
           title={assessment.tagline}
           dock={
             <>
-              <Button size="cta" onClick={() => setStage({ name: "practice" })}>
+              <Button
+                size="cta"
+                disabled={availableAt === null || availableAt > now}
+                onClick={() => setStage({ name: "practice" })}
+              >
                 <Play aria-hidden data-icon="inline-start" />
-                Try it
+                {availableAt && availableAt > now
+                  ? `Available after ${new Date(availableAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+                  : "Try it"}
               </Button>
               {onFinish ? (
                 <Button
@@ -151,6 +214,7 @@ export function AssessmentRunner({
       // being measured.
       return (
         <section
+          data-assessment-immersive="true"
           aria-label={assessment.name}
           className="mx-auto flex w-full max-w-lg flex-1 flex-col pb-6"
         >
@@ -230,7 +294,13 @@ export function AssessmentRunner({
           <Screen
             title="I couldn't save this run."
             dock={
-              <Button size="cta" onClick={() => setStage({ name: "intro" })}>
+              <Button
+                size="cta"
+                onClick={() => {
+                  if (retrySave.current) void retrySave.current()
+                  else window.location.reload()
+                }}
+              >
                 Try again
               </Button>
             }
@@ -244,7 +314,10 @@ export function AssessmentRunner({
           assessment={assessment}
           measurement={stage.measurement}
           doneLabel={doneLabel}
-          onRetry={() => setStage({ name: "ready" })}
+          onRetry={() => {
+            if (runId && onFinish) onFinish(stage.measurement)
+            else setStage({ name: "intro" })
+          }}
           onDone={() => {
             if (onFinish) onFinish(stage.measurement)
             else setStage({ name: "intro" })

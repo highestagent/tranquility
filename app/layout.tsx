@@ -1,3 +1,4 @@
+import { SessionNotifications } from "@/modules/session/notifications"
 import type { Metadata, Viewport } from "next"
 import { Geist_Mono, Instrument_Sans, Newsreader } from "next/font/google"
 
@@ -57,6 +58,7 @@ export default function RootLayout({
           <AccountProvider>
             <div className="mx-auto flex min-h-svh w-full max-w-6xl flex-col px-5 lg:px-10">
               <AppNav />
+              <SessionNotifications />
               <main className="flex flex-1 flex-col">{children}</main>
             </div>
           </AccountProvider>

@@ -1,3 +1,5 @@
+import { restSession } from "./rest-session"
+import { presentInteraction } from "./present-interaction"
 import { analyzePerformance } from "./analyze-performance"
 import { evaluateEvidence } from "./evaluate-evidence"
 import { getMeasurements } from "./get-measurements"
@@ -9,6 +11,8 @@ import { selectAssessment } from "./select-assessment"
 import { selectQuestions } from "./select-questions"
 
 export const investigationTools = {
+  presentInteraction,
+  restSession,
   getUserContext,
   getMeasurements,
   analyzePerformance,

@@ -8,6 +8,8 @@ const INVESTIGATE: InvestigationToolName[] = [
   "manageHypotheses",
   "planInvestigation",
   "selectQuestions",
+  "presentInteraction",
+  "restSession",
   "selectAssessment",
   "saveInvestigation",
 ]

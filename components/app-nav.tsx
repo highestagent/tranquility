@@ -1,21 +1,21 @@
 "use client"
 
-import { Fingerprint, Gamepad2, Telescope } from "lucide-react"
+import { Menu } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-
 import { PoolMark } from "@/components/pool-mark"
-import { cn } from "@/lib/utils"
+import { Sheet } from "@/components/sheet"
+import { Button } from "@/components/ui/button"
 
 const LINKS = [
-  { href: "/findings", label: "Findings", Icon: Telescope },
-  { href: "/assessments", label: "Games", Icon: Gamepad2 },
-  { href: "/you", label: "You", Icon: Fingerprint },
-]
-
+  ["/", "Home"],
+  ["/findings", "Findings"],
+  ["/assessments", "Games"],
+  ["/journal", "Journal"],
+  ["/you", "You"],
+] as const
 export function AppNav() {
   const pathname = usePathname()
-
   return (
     <nav
       aria-label="Main"
@@ -23,35 +23,40 @@ export function AppNav() {
     >
       <Link
         href="/"
-        aria-current={pathname === "/" ? "page" : undefined}
-        className="flex h-11 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-11 items-center gap-2.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <PoolMark className="size-6" />
-        <span className="font-voice text-lg tracking-[-0.01em]">
-          Tranquility
-        </span>
+        <PoolMark className="size-5" />
+        <span className="font-voice text-lg">Tranquility</span>
       </Link>
-      <div className="flex items-center gap-0.5 rounded-full p-1 surface">
-        {LINKS.map(({ href, label, Icon }) => {
-          const active = pathname.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              aria-label={label}
-              title={label}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex h-9 min-w-10 items-center justify-center gap-2 rounded-full px-2.5 text-sm text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring lg:px-4",
-                active && "bg-foreground/10 text-foreground"
-              )}
-            >
-              <Icon aria-hidden className="size-[1.0625rem]" />
-              <span className="hidden lg:inline">{label}</span>
-            </Link>
-          )
-        })}
-      </div>
+      <Sheet
+        title="Explore"
+        trigger={(open) => (
+          <Button variant="ghost" aria-label="Open navigation" onClick={open}>
+            <Menu aria-hidden className="size-4" />
+            Menu
+          </Button>
+        )}
+      >
+        {(close) => (
+          <div className="flex flex-col gap-2">
+            {LINKS.map(([href, label]) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={close}
+                aria-current={
+                  (href === "/" ? pathname === href : pathname.startsWith(href))
+                    ? "page"
+                    : undefined
+                }
+                className="rounded-lg px-3 py-3 text-lg hover:bg-muted aria-[current=page]:bg-muted"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </Sheet>
     </nav>
   )
 }

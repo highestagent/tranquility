@@ -1,3 +1,4 @@
+import { resumeRecalculation } from "@/modules/journal/corrections"
 import { getPendingTask } from "@/modules/agent/pending-task"
 import {
   loadDiscoveryViews,
@@ -13,6 +14,7 @@ const LOGGED_DECISIONS = 30
 
 /** Everything the home screen shows, restored from this device. */
 export async function loadSnapshot() {
+  await resumeRecalculation()
   const [pending, knowledge, state, log, rest, views, seenAt, runs, answers] =
     await Promise.all([
       getPendingTask(),

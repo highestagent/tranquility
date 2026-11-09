@@ -1,9 +1,10 @@
+import { resumeRecalculation } from "@/modules/journal/corrections"
 import { tool } from "ai"
 import { z } from "zod"
 
 import { recallMemories } from "@/modules/agent-memory/recall"
 import { getInvestigationState } from "@/modules/investigation"
-import { measurements, responses, sessions } from "@/modules/memory"
+import { measurements, responses, sessions, kv } from "@/modules/memory"
 import { ASSESSMENTS } from "@/modules/assessments"
 import { askedThisSession } from "@/modules/questionnaire"
 
@@ -31,6 +32,7 @@ export const getUserContext = tool({
       .describe("What to look up in your long-term memory of past sessions."),
   }),
   execute: async ({ questionIds = [], memoryQuery }) => {
+    await resumeRecalculation()
     const [state, sessionRows, asked, responseRows, runCounts, answers] =
       await Promise.all([
         getInvestigationState(),
@@ -63,6 +65,12 @@ export const getUserContext = tool({
       memoryQuery ?? state.open[0]?.question ?? DEFAULT_MEMORY_QUERY
     )
     return {
+      personalContext:
+        (
+          await kv.get<import("@/modules/session/checkpoint").ContextAnswer[]>(
+            "contextAnswers"
+          )
+        )?.slice(-20) ?? [],
       memories,
       sessions: sessionRows.length,
       askedThisSession: [...asked],

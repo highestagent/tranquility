@@ -17,7 +17,7 @@ export function AiDisclosure() {
         questions you type. Raw trial data isn&apos;t sent.
       </p>
       <p>
-        <span className="font-medium text-foreground">Its memory.</span> Its
+        <span className="font-medium text-foreground">Its memory.</span> If you enable cross-device memory in You, its
         findings and progress notes are saved to your own Walrus Memory account,
         so it can pick up where it left off on any device. They&apos;re
         encrypted on Walrus, but the Walrus Memory service reads them while

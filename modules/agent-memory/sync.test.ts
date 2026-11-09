@@ -46,6 +46,9 @@ beforeEach(async () => {
 })
 
 describe("runMemorySync", () => {
+  beforeEach(async () => {
+    await setMemoryEnabled(true)
+  })
   it("sends new facts, then marks them saved once stored", async () => {
     const api = fakeApi()
     expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: true })
@@ -128,7 +131,7 @@ describe("runMemorySync", () => {
   })
 
   it("stops reporting a failure once it gets through", async () => {
-    await kv.set("agentMemory:mainnet", { failing: true })
+    await kv.set("agentMemory:mainnet", { failing: true, enabled: true })
     await runMemorySync(fakeApi(), "u1", facts(1))
     expect((await getMemoryState()).failing).toBe(false)
   })
@@ -148,8 +151,16 @@ describe("getSavedCount", () => {
   })
 
   it("asks the account otherwise", async () => {
+    await setMemoryEnabled(true)
     await setAiConsent(true)
     // No one is signed in here, so reaching the account is the part that fails.
     await expect(getSavedCount()).rejects.toBeInstanceOf(NotSignedInError)
   })
+})
+
+it("keeps cross-device memory off until explicitly enabled", async () => {
+  expect((await getMemoryState()).enabled).toBe(false)
+  const api = fakeApi()
+  await runMemorySync(api, "u1", facts(1))
+  expect(api.connect).not.toHaveBeenCalled()
 })

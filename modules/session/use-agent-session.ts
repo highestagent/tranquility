@@ -10,7 +10,9 @@ import {
   useState,
 } from "react"
 
-import { clearPendingTask } from "@/modules/agent/pending-task"
+import { kv } from "@/modules/memory"
+import { commitTask, getContinuation, CONTINUATION_KEY } from "./checkpoint"
+import type { Answer } from "@/modules/interaction/catalog"
 import { loadKnowledge } from "@/modules/insights/knowledge"
 import type { Measurement } from "@/modules/memory"
 
@@ -28,6 +30,7 @@ export type Phase =
   | "reveal"
   | "asking"
   | "playing"
+  | "interaction"
   | "resting"
 
 function describeError(error: unknown) {
@@ -72,25 +75,44 @@ export function useAgentSession() {
   }, [])
 
   /** `line` is what the screen says until the agent has something to say. */
-  async function runTurn(line: string, send: () => Promise<void>) {
+  const activeTurn = useRef<Promise<void> | null>(null)
+  const turning = useRef(false)
+  async function runTurn(
+    line: string,
+    send: () => Promise<void>,
+    interrupt = false
+  ) {
+    if (turning.current || (busy && !interrupt)) return
+    turning.current = true
     setStarting(line)
     try {
-      await runAgentTurn(send)
+      activeTurn.current = runAgentTurn(send)
+      await activeTurn.current
+    } catch {
+      setLoadFailed(true)
     } finally {
+      activeTurn.current = null
+      turning.current = false
       setStarting(null)
     }
   }
 
   function sendHidden(line: string, text: string) {
-    return runTurn(line, () =>
-      sendMessage({ text, metadata: { hidden: true } })
-    )
+    return runTurn(line, async () => {
+      await kv.set(CONTINUATION_KEY, text)
+      await sendMessage({ text, metadata: { hidden: true } })
+    })
   }
 
   const boot = useEffectEvent(async () => {
     try {
       const restored = await loadSnapshot()
       setSnapshot(restored)
+      const continuation = await getContinuation()
+      if (continuation && !busy && !restored.pending) {
+        void sendHidden("Picking up where we left off…", continuation)
+        return
+      }
       if (
         !busy &&
         !restored.pending &&
@@ -135,11 +157,19 @@ export function useAgentSession() {
     wasBusy.current = busy
   }, [busy])
 
-  async function finishTask(text: string) {
-    setStarting("Taking that in…")
-    await clearPendingTask()
-    setSnapshot((old) => (old ? { ...old, pending: null } : old))
-    await sendHidden("Taking that in…", text)
+  const finishing = useRef(false)
+  async function finishTask(text: string, value?: Answer) {
+    if (!snapshot?.pending || finishing.current) return
+    finishing.current = true
+    try {
+      await commitTask(snapshot.pending, text, value)
+      setSnapshot((old) => (old ? { ...old, pending: null } : old))
+      await sendHidden("Taking that in…", text)
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      finishing.current = false
+    }
   }
 
   const pending = snapshot?.pending ?? null
@@ -152,6 +182,7 @@ export function useAgentSession() {
   else if (snapshot.unseen.length > 0) phase = "reveal"
   else if (pending?.kind === "questions") phase = "asking"
   else if (pending?.kind === "assessment") phase = "playing"
+  else if (pending?.kind === "interaction") phase = "interaction"
   else phase = "resting"
 
   return {
@@ -167,11 +198,26 @@ export function useAgentSession() {
     reload: () => void refresh(),
     stop: () => void stop(),
     keepGoing: () => void sendHidden("Picking up the thread…", auto.CONTINUE),
-    ask: (text: string) =>
-      void runTurn("Thinking about that…", () => sendMessage({ text })),
+    ask: async (text: string) => {
+      await stop()
+      await activeTurn.current?.catch(() => undefined)
+      await runTurn(
+        "Thinking about that…",
+        async () => {
+          await kv.set(CONTINUATION_KEY, text)
+          await sendMessage({ text })
+        },
+        true
+      )
+    },
+    finishInteraction: (value: Answer) =>
+      void finishTask(
+        "The user completed the current interaction. Read their saved personal context before continuing.",
+        value
+      ),
     finishQuestions: (answered: number) => {
       if (pending?.kind !== "questions") return
-      void finishTask(
+      return finishTask(
         auto.questionsFinished(answered, pending.questionIds.length)
       )
     },
@@ -183,10 +229,15 @@ export function useAgentSession() {
           : auto.assessmentDeclined(pending)
       )
     },
-    dismissDiscovery: () => {
+    dismissDiscovery: async () => {
       const seen = snapshot?.unseen[0]
       if (!seen) return
-      void setSeenDiscoveriesAt(seen.discovery.createdAt)
+      try {
+        await setSeenDiscoveriesAt(seen.discovery.createdAt)
+      } catch {
+        setLoadFailed(true)
+        return
+      }
       setSnapshot((old) =>
         old ? { ...old, unseen: old.unseen.slice(1) } : old
       )

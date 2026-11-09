@@ -9,8 +9,12 @@ export type Answers = Partial<Record<QuestionId, number | null>>
  * closes. The ID is stable per session and question, which makes repeats and
  * changed answers overwrite rather than add a row. `null` records a decline.
  */
-export async function saveAnswer(questionId: QuestionId, value: number | null) {
-  const session = await getCurrentSession()
+export async function saveAnswer(
+  questionId: QuestionId,
+  value: number | null,
+  sessionId?: string
+) {
+  const session = sessionId ? { id: sessionId } : await getCurrentSession()
   await responses.put({
     id: `${session.id}:${questionId}`,
     sessionId: session.id,
@@ -23,9 +27,10 @@ export async function saveAnswer(questionId: QuestionId, value: number | null) {
 
 /** What's already been answered this session, for resuming a set of questions. */
 export async function loadSessionAnswers(
-  questionIds: readonly QuestionId[]
+  questionIds: readonly QuestionId[],
+  sessionId?: string
 ): Promise<Answers> {
-  const session = await getCurrentSession()
+  const session = sessionId ? { id: sessionId } : await getCurrentSession()
   const rows = await responses.bySession(session.id)
   const answers: Answers = {}
   for (const row of rows) {

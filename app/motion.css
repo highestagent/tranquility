@@ -54,7 +54,7 @@
 
 /* Reveals */
 .rise-in {
-  animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rise-in 200ms ease-out both;
 }
 .dot-in {
   transform-box: fill-box;
@@ -71,7 +71,7 @@
   from {
     opacity: 0;
     transform: translateY(0.625rem);
-    filter: blur(6px);
+
   }
   to {
     opacity: 1;

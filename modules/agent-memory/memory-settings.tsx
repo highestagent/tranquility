@@ -103,9 +103,11 @@ export function MemorySettings() {
         </summary>
         <div className="mt-2 flex flex-col items-start gap-3">
           <p className="text-pretty">
-            The agent&apos;s findings and progress notes, so it can pick up
-            where it left off on any device. Your answers and game results stay
-            on this device.
+            Enabling this sends findings and progress notes to Walrus Memory.
+            The service can read them while storing and searching. Encrypted
+            copies cannot be erased before they expire. The agent&apos;s
+            findings and progress notes, so it can pick up where it left off on
+            any device. Your answers and game results stay on this device.
           </p>
           {confirming ? (
             <div className="flex flex-col gap-2">

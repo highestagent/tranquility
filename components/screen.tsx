@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 
 const dockStyle =
-  "sticky bottom-0 z-10 -mx-5 flex flex-col gap-2 bg-linear-to-t from-background from-70% to-transparent px-5 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+  "sticky bottom-0 z-10 -mx-5 flex flex-col gap-2 bg-background px-5 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
 
 /**
  * Every screen has the same anatomy, so the eye always knows where to look:
@@ -150,6 +150,61 @@ export function Section({
     <section className="flex flex-col gap-4">
       <h2 className="eyebrow">{label}</h2>
       {children}
+    </section>
+  )
+}
+
+/** A stable reading column shared by all conversational states. */
+export function ConversationCanvas({
+  message,
+  stage = "Tranquility",
+  busy = false,
+  children,
+  controls,
+  why,
+}: {
+  message: React.ReactNode
+  stage?: string
+  busy?: boolean
+  children?: React.ReactNode
+  controls?: React.ReactNode
+  why?: string
+}) {
+  return (
+    <section
+      className="mx-auto flex w-full max-w-xl flex-1 flex-col pt-[clamp(2rem,10svh,7rem)] pb-6"
+      aria-label="Conversation"
+    >
+      <div
+        className="mb-7 flex items-center gap-3 text-xs text-muted-foreground"
+        role="status"
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "size-2 rounded-full bg-glow",
+            busy && "motion-safe:animate-pulse"
+          )}
+        />
+        {stage}
+      </div>
+      <div className="min-h-28">
+        <h1 className="rise-in voice-title text-pretty" aria-live="polite">
+          {message}
+        </h1>
+      </div>
+      <div className="mt-7 flex flex-col gap-5">{children}</div>
+      {why ? (
+        <details className="mt-6 text-sm text-muted-foreground">
+          <summary className="cursor-pointer">Why I’m asking</summary>
+          <p className="mt-3 leading-relaxed">{why}</p>
+        </details>
+      ) : null}
+      {controls ? (
+        <div className="mt-auto flex flex-wrap items-center gap-3 pt-12">
+          {controls}
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -9,6 +9,7 @@ const SEEN_KEY = "seenDiscoveriesAt"
 export interface AgentRest {
   at: number
   spoken: string | null
+  nextAt?: number
 }
 
 /**
@@ -22,7 +23,9 @@ export function shouldWake(input: {
 }) {
   if (!input.rest) return true
   if (input.latestDataAt > input.rest.at) return true
-  return input.now - input.rest.at >= REST_WINDOW_MS
+  return input.rest.nextAt !== undefined
+    ? input.now >= input.rest.nextAt
+    : input.now - input.rest.at >= REST_WINDOW_MS
 }
 
 export async function getAgentRest() {

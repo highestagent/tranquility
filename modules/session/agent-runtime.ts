@@ -1,3 +1,5 @@
+import { kv } from "@/modules/memory"
+import { CONTINUATION_KEY } from "./checkpoint"
 import { Chat } from "@ai-sdk/react"
 import { DirectChatTransport, type ChatTransport, type UIMessage } from "ai"
 
@@ -7,7 +9,7 @@ import { createBrowserModel } from "@/modules/agent/model"
 import { syncMemory } from "@/modules/agent-memory/sync"
 
 import { deriveActivity } from "./activity"
-import { setAgentRest } from "./wake"
+import { getAgentRest, setAgentRest } from "./wake"
 
 let chat: Chat<UIMessage> | null = null
 
@@ -32,9 +34,12 @@ export async function runAgentTurn(send: () => Promise<void>) {
   const current = getAgentChat()
   await send()
   if (!current.error) {
+    await kv.remove(CONTINUATION_KEY)
+    const rest = await getAgentRest()
     await setAgentRest({
+      nextAt: rest?.nextAt,
       at: Date.now(),
-      spoken: deriveActivity(current.messages).spoken,
+      spoken: deriveActivity(current.messages).spoken ?? rest?.spoken ?? null,
     })
   }
   // What this turn concluded is saved in the background.
