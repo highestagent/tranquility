@@ -16,6 +16,7 @@ import {
 } from "@/modules/investigation"
 
 import { DiscoveryCard } from "./discovery-card"
+import { ReportButton } from "./report-button"
 import { byImportance, loadDiscoveryViews } from "./discovery-data"
 import { ThreadCard } from "./thread-card"
 
@@ -52,6 +53,7 @@ export function FindingsView() {
 
   return (
     <div className="flex flex-col gap-8">
+      <ReportButton />
       <div className="flex flex-col gap-4">
         {discoveries.length > 0 ? (
           discoveries.map((view) => (
