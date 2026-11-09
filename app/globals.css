@@ -180,10 +180,10 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply overflow-x-clip bg-background wrap-anywhere text-foreground;
     }
   html {
-    @apply font-sans;
+    @apply overflow-x-clip overscroll-x-none font-sans;
     }
 }
 

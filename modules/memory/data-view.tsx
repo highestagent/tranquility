@@ -280,7 +280,7 @@ function StoreRow({ name, count }: { name: StoreName; count: number }) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         {rows ? (
-          <pre className="mb-3 max-h-72 overflow-auto rounded-2xl bg-muted p-3 font-mono text-xs">
+          <pre className="mb-3 max-h-72 overflow-y-auto rounded-2xl bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
             {JSON.stringify(rows, null, 2)}
           </pre>
         ) : null}
