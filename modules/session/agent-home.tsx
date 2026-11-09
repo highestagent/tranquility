@@ -9,6 +9,7 @@ import { QuestionFlow } from "@/modules/questionnaire/question-flow"
 import { InteractionRenderer } from "@/modules/interaction/renderer"
 import { Composer } from "./composer"
 import { ResumeNote } from "./resume-note"
+import { TaskInvitation } from "./task-invitation"
 import { useAgentSession } from "./use-agent-session"
 
 export function HomeLoading() {
@@ -42,6 +43,23 @@ export function AgentHome() {
       )}
     </Sheet>
   )
+  // The visit's first task waits to be opened, so a return starts with a hello.
+  if (phase === "invited" && pending)
+    return (
+      <ConversationCanvas
+        stage="Ready when you are"
+        message={session.greeting}
+        controls={
+          <>
+            <Button onClick={session.start}>Start</Button>
+            {ask}
+          </>
+        }
+      >
+        {snapshot.resume ? <ResumeNote resume={snapshot.resume} /> : null}
+        <TaskInvitation task={pending} />
+      </ConversationCanvas>
+    )
   if (
     phase === "playing" &&
     pending?.kind === "assessment" &&

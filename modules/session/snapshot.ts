@@ -1,5 +1,5 @@
 import { resumeRecalculation } from "@/modules/journal/corrections"
-import { getPendingTask } from "@/modules/agent/pending-task"
+import { expireStaleTask, getPendingTask } from "@/modules/agent/pending-task"
 import { loadResumePoint } from "@/modules/agent-memory/resume"
 import { discoveries, measurements, responses } from "@/modules/memory"
 
@@ -8,6 +8,8 @@ import { getAgentRest, getSeenDiscoveriesAt } from "./wake"
 /** Everything the home screen shows, restored from this device. */
 export async function loadSnapshot() {
   await resumeRecalculation()
+  // An old question would be answered for a session that's already over.
+  const taskExpired = await expireStaleTask()
   const [pending, rest, findings, seenAt, runs, answers, resume] =
     await Promise.all([
       getPendingTask(),
@@ -24,6 +26,7 @@ export async function loadSnapshot() {
 
   return {
     pending,
+    taskExpired,
     rest,
     resume,
     unseen,

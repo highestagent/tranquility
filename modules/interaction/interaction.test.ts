@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
-import { beforeEach, expect, it } from "vitest"
+import { beforeEach, expect, it, vi } from "vitest"
 import {
   closeDb,
   kv,
@@ -9,7 +9,12 @@ import {
   analyses,
 } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
-import { setPendingTask, getPendingTask } from "@/modules/agent/pending-task"
+import {
+  expireStaleTask,
+  getPendingTask,
+  isStale,
+  setPendingTask,
+} from "@/modules/agent/pending-task"
 import { commitTask, getContinuation } from "@/modules/session/checkpoint"
 import { correctAnswer } from "@/modules/journal/corrections"
 import {
@@ -169,4 +174,31 @@ it("shows a past finding only by a reference memory returned", async () => {
     },
   ])
   await expect(show("blob-1")).resolves.toEqual({ status: "awaiting-user" })
+})
+
+it("lets a pending task go once its session is over or the day has turned", async () => {
+  const HOUR = 60 * 60 * 1000
+  const evening = new Date(2026, 10, 10, 22, 30).getTime()
+  expect(isStale({ createdAt: evening }, evening + HOUR)).toBe(false)
+  expect(isStale({ createdAt: evening }, evening + 3 * HOUR)).toBe(true)
+  // Past midnight, "last night" means another night.
+  expect(isStale({ createdAt: evening }, evening + 2 * HOUR)).toBe(true)
+  expect(isStale({ createdAt: 0 }, evening)).toBe(true)
+
+  vi.useFakeTimers({ toFake: ["Date"] })
+  try {
+    const noon = new Date(2026, 10, 10, 12).getTime()
+    vi.setSystemTime(noon)
+    await setPendingTask({
+      kind: "questions",
+      reason: "Log core context",
+      questionIds: ["sleep.hours"],
+    })
+    expect(await expireStaleTask(noon + HOUR)).toBe(false)
+    expect(await getPendingTask(noon + HOUR)).not.toBeNull()
+    expect(await getPendingTask(noon + 4 * HOUR)).toBeNull()
+    expect(await getPendingTask(noon)).toBeNull()
+  } finally {
+    vi.useRealTimers()
+  }
 })
