@@ -46,7 +46,12 @@ export async function updateInvestigation(
   changes: Partial<
     Pick<
       Investigation,
-      "status" | "progressNote" | "objectives" | "evidenceRequirements"
+      | "status"
+      | "progressNote"
+      | "objectives"
+      | "evidenceRequirements"
+      | "nextStep"
+      | "nextMeasurementAt"
     >
   >
 ) {

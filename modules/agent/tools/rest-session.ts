@@ -1,6 +1,12 @@
 import { tool } from "ai"
 import { z } from "zod"
-import { getCurrentSession, kv, sessions } from "@/modules/memory"
+import {
+  getCurrentSession,
+  investigations,
+  kv,
+  sessions,
+} from "@/modules/memory"
+import { updateInvestigation } from "@/modules/investigation"
 import { setAgentRest } from "@/modules/session/wake"
 import { getPendingTask } from "../pending-task"
 export const restSession = tool({
@@ -23,6 +29,15 @@ export const restSession = tool({
       nextAt,
     })
     await sessions.put({ ...session, endedAt: at })
+    const active = (await investigations.list())
+      .filter((row) => row.status === "active")
+      .sort((a, b) => b.updatedAt - a.updatedAt)[0]
+    if (active) {
+      await updateInvestigation(active.id, {
+        nextStep,
+        nextMeasurementAt: nextAt,
+      })
+    }
     await setAgentRest({ at, spoken: reason, nextAt })
     return {
       status: "awaiting-user" as const,

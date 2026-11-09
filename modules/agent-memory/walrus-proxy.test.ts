@@ -163,12 +163,28 @@ describe("proxyToWalrus", () => {
 
     const list = deps()
     const listResponse = await proxyToWalrus(
-      get(`v1/owners/${owner}/namespaces`),
-      ["v1", "owners", owner, "namespaces"],
+      get(`v1/owners/${owner}/memories?updated_after=eyJ1IjoxfQ&limit=500`),
+      ["v1", "owners", owner, "memories"],
       list
     )
     expect(listResponse.status).toBe(200)
-    expect(forwarded(list).url).toBe(`${RELAYER}/v1/owners/${owner}/namespaces`)
+    expect(forwarded(list).url).toBe(
+      `${RELAYER}/v1/owners/${owner}/memories?updated_after=eyJ1IjoxfQ&limit=500`
+    )
+  })
+
+  it("passes on a query string only to page the inventory", async () => {
+    const owner = `0x${"a".repeat(64)}`
+    const d = deps()
+    for (const path of [
+      `v1/owners/${owner}/memories?namespace=x`,
+      `v1/owners/${owner}/memories?limit=1;drop`,
+      `api/accounts/${owner}/delegate-keys?limit=5`,
+    ]) {
+      const route = path.split("?")[0]!.split("/")
+      expect((await proxyToWalrus(get(path), route, d)).status).toBe(404)
+    }
+    expect(d.fetch).not.toHaveBeenCalled()
   })
 
   it("refuses other sites", async () => {

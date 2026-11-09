@@ -8,6 +8,7 @@ import { AssessmentRunner } from "@/modules/assessments/runner/assessment-runner
 import { QuestionFlow } from "@/modules/questionnaire/question-flow"
 import { InteractionRenderer } from "@/modules/interaction/renderer"
 import { Composer } from "./composer"
+import { ResumeNote } from "./resume-note"
 import { useAgentSession } from "./use-agent-session"
 
 export function HomeLoading() {
@@ -199,10 +200,14 @@ export function AgentHome() {
         </>
       }
     >
-      <p className="text-sm text-muted-foreground">
-        Your research is saved. There’s no need to measure again until it would
-        add useful evidence.
-      </p>
+      {snapshot.resume ? (
+        <ResumeNote resume={snapshot.resume} />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Your research is saved. There’s no need to measure again until it
+          would add useful evidence.
+        </p>
+      )}
     </ConversationCanvas>
   )
 }

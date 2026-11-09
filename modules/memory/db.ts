@@ -119,10 +119,7 @@ export async function activateAccountDb(userId: string) {
   const legacy = await getDb()
   const tx = legacy.transaction("kv", "readwrite")
   const storedOwner = (await tx.store.get(LOCAL_OWNER_KEY))?.value
-  const priorSync = (await tx.store.get("agentMemory:mainnet"))?.value as
-    { owner?: string } | undefined
-  const owner =
-    typeof storedOwner === "string" ? storedOwner : (priorSync?.owner ?? userId)
+  const owner = typeof storedOwner === "string" ? storedOwner : userId
   if (storedOwner !== owner) {
     await tx.store.put({ key: LOCAL_OWNER_KEY, value: owner })
   }

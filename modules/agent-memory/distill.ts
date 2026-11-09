@@ -1,79 +1,149 @@
 import type { Discovery, Hypothesis, Investigation } from "@/modules/memory"
 
-export interface Fact {
-  /** Stable per fact, so nothing is saved twice. */
-  id: string
-  text: string
-}
+import {
+  encodeFact,
+  type Fact,
+  type FindingRecord,
+  type HandoffRecord,
+} from "./records"
 
-const MAX_FACT_CHARS = 1200
+/** Keeps a bulk request under the proxy's body limit. */
+export const MAX_FACT_CHARS = 6000
 
-function day(timestamp: number) {
-  return new Date(timestamp).toISOString().slice(0, 10)
-}
-
-/** A short stable hash, so a changed note becomes a new fact. */
-function shortHash(text: string) {
-  let hash = 2166136261
-  for (let i = 0; i < text.length; i++) {
-    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
-  }
-  return (hash >>> 0).toString(36)
+/** A handoff this device took from another, and what came with it. */
+export interface RestoredHandoff {
+  revision: number
+  evidence: HandoffRecord["evidence"]
+  latestFinding?: FindingRecord
 }
 
 /**
- * Turns the agent's conclusions into facts worth carrying between sessions and
- * devices. This is code rather than the model's summary, and it uses conclusions
- * only: raw answers and game trials stay on the device, because the memory
- * service reads text in plaintext while it stores and searches it.
+ * A finding's conclusions only. Raw answers and game trials stay on the device,
+ * because Walrus Memory reads text in plaintext while it stores and searches it.
  */
-export function distillFacts(input: {
+export function toFindingRecord(
+  finding: Discovery,
+  statement = ""
+): FindingRecord {
+  return {
+    kind: "finding",
+    statement: statement.slice(0, 300),
+    observed: finding.observed.slice(0, 500),
+    verdict: finding.verdict,
+    grade: finding.grade,
+    uncertainty: finding.uncertainty.slice(0, 400),
+    evidence: finding.evidence.slice(0, 700),
+    reliability: finding.reliability.slice(0, 300),
+    nextStep: finding.nextStep.slice(0, 400),
+    createdAt: finding.createdAt,
+    id: finding.id,
+    investigationId: finding.investigationId,
+    hypothesisId: finding.hypothesisId,
+  }
+}
+
+/** Newest first. */
+function byRecent<T>(rows: readonly T[], at: (row: T) => number) {
+  return [...rows].sort((a, b) => at(b) - at(a))
+}
+
+/** Any change to the plan or its latest result makes a new revision. */
+export function handoffRevision(
+  investigation: Investigation,
+  plan: readonly Hypothesis[],
+  latestFinding: FindingRecord | undefined
+) {
+  return Math.max(
+    investigation.updatedAt,
+    latestFinding?.createdAt ?? 0,
+    ...plan.map((row) => row.updatedAt)
+  )
+}
+
+export interface LocalResearch {
   discoveries: readonly Discovery[]
   hypotheses: readonly Hypothesis[]
   investigations: readonly Investigation[]
-}): Fact[] {
+  /** Paired sessions per investigation, as counted on this device. */
+  evidence: Readonly<Record<string, HandoffRecord["evidence"]>>
+  restored: Readonly<Record<string, RestoredHandoff>>
+}
+
+function findingRecords(input: LocalResearch) {
   const statements = new Map(
-    input.hypotheses.map((hypothesis) => [hypothesis.id, hypothesis.statement])
+    input.hypotheses.map((row) => [row.id, row.statement])
   )
-  const facts: Fact[] = []
+  return input.discoveries.map((finding) =>
+    toFindingRecord(finding, statements.get(finding.hypothesisId))
+  )
+}
 
-  for (const finding of input.discoveries) {
-    const statement = statements.get(finding.hypothesisId)
-    facts.push({
-      id: `finding:${finding.id}`,
-      text: [
-        `Finding from ${day(finding.createdAt)}.`,
-        statement ? `Hypothesis: ${statement}.` : null,
-        `Verdict: ${finding.verdict}, on ${finding.grade} evidence.`,
-        finding.observed,
-        finding.evidence,
-        `Still uncertain: ${finding.uncertainty}`,
-        `Next: ${finding.nextStep}`,
-      ]
-        .filter(Boolean)
-        .join(" "),
+/** The investigation as this device would hand it off now. */
+function describe(
+  investigation: Investigation,
+  input: LocalResearch,
+  findings: readonly FindingRecord[]
+) {
+  const plan = byRecent(
+    input.hypotheses.filter((row) => row.investigationId === investigation.id),
+    (row) => row.updatedAt
+  )
+  // A result from another device carries forward until this one has its own.
+  const latestFinding =
+    byRecent(
+      findings.filter((row) => row.investigationId === investigation.id),
+      (row) => row.createdAt
+    )[0] ?? input.restored[investigation.id]?.latestFinding
+  const revision = handoffRevision(investigation, plan, latestFinding)
+  return { plan, latestFinding, revision }
+}
+
+/** The newest revision this device holds, whether made here or restored. */
+export function localRevision(
+  investigation: Investigation,
+  input: LocalResearch
+) {
+  return Math.max(
+    describe(investigation, input, findingRecords(input)).revision,
+    input.restored[investigation.id]?.revision ?? -1
+  )
+}
+
+function handoffFor(
+  investigation: Investigation,
+  input: LocalResearch,
+  findings: readonly FindingRecord[]
+): Fact | null {
+  const { plan, latestFinding, revision } = describe(
+    investigation,
+    input,
+    findings
+  )
+  const restored = input.restored[investigation.id]
+  if (restored && revision <= restored.revision) return null
+
+  // The newest hypotheses matter most, so the oldest go first if it's too long.
+  for (let keep = plan.length; keep >= 0; keep--) {
+    const fact = encodeFact({
+      kind: "handoff",
+      revision,
+      investigation,
+      hypotheses: plan
+        .slice(0, keep)
+        .map((row) => ({ ...row, history: row.history.slice(-1) })),
+      evidence: input.evidence[investigation.id] ?? [],
+      latestFinding,
     })
+    if (fact.text.length <= MAX_FACT_CHARS) return fact
   }
+  return null
+}
 
-  for (const investigation of input.investigations) {
-    if (!investigation.progressNote) continue
-    facts.push({
-      id: `progress:${investigation.id}:${shortHash(investigation.progressNote)}`,
-      text: `Investigation "${investigation.title}" (${investigation.question}), ${investigation.status}, as of ${day(investigation.updatedAt)}: ${investigation.progressNote}`,
-    })
-  }
-
-  for (const hypothesis of input.hypotheses) {
-    if (hypothesis.status !== "rejected") continue
-    const note = hypothesis.history.at(-1)?.note
-    facts.push({
-      id: `dropped:${hypothesis.id}`,
-      text: `Dropped the hypothesis "${hypothesis.statement}" on ${day(hypothesis.updatedAt)}.${note ? ` Reason: ${note}` : ""}`,
-    })
-  }
-
-  return facts.map((fact) => ({
-    ...fact,
-    text: fact.text.slice(0, MAX_FACT_CHARS),
-  }))
+/** What this device has to contribute to the account's memory. */
+export function distillFacts(input: LocalResearch): Fact[] {
+  const findings = findingRecords(input)
+  const handoffs = input.investigations.flatMap(
+    (investigation) => handoffFor(investigation, input, findings) ?? []
+  )
+  return [...handoffs, ...findings.map(encodeFact)]
 }

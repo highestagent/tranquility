@@ -3,17 +3,73 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { closeDb, kv } from "@/modules/memory"
-import { DB_NAME } from "@/modules/memory/db"
+import {
+  addHypothesis,
+  createInvestigation,
+  updateInvestigation,
+} from "@/modules/investigation"
+import {
+  closeDb,
+  discoveries,
+  hypotheses,
+  investigations,
+  kv,
+  type Discovery,
+} from "@/modules/memory"
+import { activateAccountDb, DB_NAME } from "@/modules/memory/db"
 
-import { NotSignedInError, type MemoryApi } from "./api"
-import { getMemoryState, getSavedCount, runMemorySync } from "./sync"
+import type { MemoryApi, MemoryWorkspace } from "./api"
+import { loadResumePoint } from "./resume"
+import { memoryPrefix, readCatalog, SYNC_STATE_KEY, type Fact } from "./records"
+import { getMemoryState, getRestoredHandoffs, runMemorySync } from "./sync"
 
-function fakeApi(statuses: Record<string, string> = {}) {
+/** One Walrus Memory account, shared by every device in a test. */
+function fakeWalrus(statuses: Record<string, string> = {}) {
+  let epoch = 0
   let next = 0
-  return {
-    remember: vi.fn(async (texts: string[]) => ({
-      jobIds: texts.map(() => `job-${next++}`),
+  const rows: { namespace: string; blobId: string; text: string }[] = []
+  const api = {
+    open: vi.fn(async (): Promise<MemoryWorkspace> => {
+      const current = epoch
+      return {
+        epoch: current,
+        catalog: readCatalog(
+          rows.map(({ namespace, blobId }) => ({
+            namespace_id: namespace,
+            blob_id: blobId,
+          })),
+          current
+        ),
+        read: async (reference) => {
+          const row = rows.find(
+            ({ namespace, blobId }) =>
+              namespace === reference.namespace && blobId === reference.blobId
+          )
+          if (!row) throw new Error("missing")
+          return row.text
+        },
+        search: async (_query, limit) =>
+          rows
+            .filter(
+              ({ namespace }) =>
+                namespace === `${memoryPrefix(current)}research`
+            )
+            .slice(0, limit)
+            .map(({ blobId, text }) => ({ blobId, text, distance: 0.4 })),
+      }
+    }),
+    remember: vi.fn(async (facts: readonly Fact[], at: number) => ({
+      jobIds: facts.map(({ namespace, text }) => {
+        const id = next++
+        if ((statuses[`job-${id}`] ?? "done") === "done") {
+          rows.push({
+            namespace: `${memoryPrefix(at)}${namespace}`,
+            blobId: `blob-${id}`,
+            text,
+          })
+        }
+        return `job-${id}`
+      }),
     })),
     status: vi.fn(async (jobIds: string[]) => ({
       jobs: jobIds.map((jobId) => ({
@@ -21,111 +77,294 @@ function fakeApi(statuses: Record<string, string> = {}) {
         status: statuses[jobId] ?? "done",
       })),
     })),
-    recall: vi.fn(),
-    forget: vi.fn(),
-    connect: vi.fn(async () => 0),
-    count: vi.fn(async () => 0),
+    forget: vi.fn(async () => ++epoch),
   } satisfies MemoryApi
+  return { api, rows }
 }
 
-const facts = (count: number) =>
-  Array.from({ length: count }, (_, index) => ({
-    id: `fact-${index}`,
-    text: `Fact ${index}`,
-  }))
+/** Each device keeps its own browser storage. */
+async function onDevice(name: "laptop" | "phone") {
+  await closeDb()
+  await activateAccountDb(name)
+}
+
+/** Runs passes until there's nothing left to send. */
+async function settle(api: MemoryApi) {
+  for (let pass = 0; pass < 10; pass++) {
+    if (!(await runMemorySync(api, "u1")).more) return
+  }
+  throw new Error("Sync never settled")
+}
+
+const METRIC = { assessmentId: "go-no-go", metricId: "medianRt" }
+
+async function startInvestigation() {
+  const investigation = await createInvestigation({
+    title: "Sleep and speed",
+    question: "Does sleep affect my reaction time?",
+    origin: "user",
+    objectives: ["Pair sleep with a reaction game"],
+    evidenceRequirements: [
+      { factorId: "sleep.hours", metric: METRIC, minPairs: 8 },
+    ],
+  })
+  const hypothesis = await addHypothesis({
+    investigationId: investigation.id,
+    statement: "More sleep comes with faster reactions",
+    factorId: "sleep.hours",
+    metric: METRIC,
+    expectedDirection: "negative",
+    rationale: "Early sessions hinted at it",
+  })
+  return { investigation, hypothesis }
+}
+
+function finding(overrides: Partial<Discovery> = {}): Discovery {
+  return {
+    id: "d1",
+    investigationId: "i1",
+    hypothesisId: "h1",
+    analysisIds: ["a1"],
+    grade: "moderate",
+    verdict: "supported",
+    observed: "You react faster after more sleep.",
+    evidence: "12 comparable sessions.",
+    reliability: "Moderate evidence.",
+    uncertainty: "Stress could also play a part.",
+    nextStep: "Check stress.",
+    createdAt: Date.now(),
+    ...overrides,
+  }
+}
 
 beforeEach(async () => {
   await closeDb()
   await deleteDB(DB_NAME)
+  await deleteDB(`${DB_NAME}:phone`)
+  await onDevice("laptop")
 })
 
 describe("runMemorySync", () => {
-  it("sends new facts once and marks them saved after storage", async () => {
-    const api = fakeApi()
-    expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: true })
-    expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"], 0)
+  it("sends new records once and marks them saved after storage", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await discoveries.put(finding({ id: "d2" }))
+    expect(await runMemorySync(api, "u1")).toEqual({ more: true })
+    expect(api.remember.mock.calls[0]?.[0].map(({ id }) => id)).toEqual([
+      "finding:d1",
+      "finding:d2",
+    ])
 
-    expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
-    const state = await getMemoryState()
-    expect(state.remembered).toEqual(["fact-0", "fact-1"])
-    expect(state.pending).toEqual([])
-
-    expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
+    expect(await runMemorySync(api, "u1")).toEqual({ more: false })
+    expect((await getMemoryState()).remembered.sort()).toEqual([
+      "finding:d1",
+      "finding:d2",
+    ])
+    await runMemorySync(api, "u1")
     expect(api.remember).toHaveBeenCalledOnce()
   })
 
   it("waits on running jobs without resending them", async () => {
-    const api = fakeApi({ "job-0": "running" })
-    await runMemorySync(api, "u1", facts(1))
-    expect(await runMemorySync(api, "u1", facts(1))).toEqual({ more: true })
-    expect(api.remember).toHaveBeenCalledTimes(1)
+    const { api } = fakeWalrus({ "job-0": "running" })
+    await discoveries.put(finding())
+    await runMemorySync(api, "u1")
+    expect(await runMemorySync(api, "u1")).toEqual({ more: true })
+    expect(api.remember).toHaveBeenCalledOnce()
   })
 
-  it("sends a fact again if its job failed", async () => {
-    const api = fakeApi({ "job-0": "failed" })
-    await runMemorySync(api, "u1", facts(1))
-    await runMemorySync(api, "u1", facts(1))
+  it("sends a record again if its job failed", async () => {
+    const { api } = fakeWalrus({ "job-0": "failed" })
+    await discoveries.put(finding())
+    await runMemorySync(api, "u1")
+    await runMemorySync(api, "u1")
     expect(api.remember).toHaveBeenCalledTimes(2)
-    expect((await getMemoryState()).remembered).toEqual([])
   })
 
   it("keeps its place when the service is down, then carries on", async () => {
-    const api = fakeApi()
+    const { api } = fakeWalrus()
+    await discoveries.put(finding())
     api.remember.mockRejectedValueOnce(new Error("down"))
-    await expect(runMemorySync(api, "u1", facts(1))).rejects.toThrow("down")
-
-    await runMemorySync(api, "u1", facts(1))
-    await runMemorySync(api, "u1", facts(1))
-    expect((await getMemoryState()).remembered).toEqual(["fact-0"])
+    await expect(runMemorySync(api, "u1")).rejects.toThrow("down")
+    await settle(api)
+    expect((await getMemoryState()).remembered).toEqual(["finding:d1"])
   })
 
-  it("sends a long backlog in batches", async () => {
-    const api = fakeApi()
-    expect(await runMemorySync(api, "u1", facts(13))).toEqual({ more: true })
-    expect(api.remember.mock.calls[0]?.[0]).toHaveLength(10)
-    await runMemorySync(api, "u1", facts(13))
-    expect(api.remember.mock.calls[1]?.[0]).toHaveLength(3)
+  it("sends a long backlog in batches the proxy accepts", async () => {
+    const { api } = fakeWalrus()
+    for (let i = 0; i < 13; i++) await discoveries.put(finding({ id: `d${i}` }))
+    await settle(api)
+    const sizes = api.remember.mock.calls.map(([facts]) => facts.length)
+    expect(sizes).toEqual([10, 3])
+    for (const [facts] of api.remember.mock.calls) {
+      const chars = facts.reduce((sum, { text }) => sum + text.length, 0)
+      expect(chars).toBeLessThanOrEqual(40_000)
+    }
   })
 
-  it("doesn't save one person's local facts into another's account", async () => {
-    const api = fakeApi()
-    await runMemorySync(api, "u1", facts(1))
-    await runMemorySync(api, "u2", facts(3))
-    expect(api.remember).toHaveBeenCalledTimes(1)
+  it("doesn't save one person's local records into another's account", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await settle(api)
+    await discoveries.put(finding({ id: "d2" }))
+    await runMemorySync(api, "u2")
+    expect(api.remember).toHaveBeenCalledOnce()
     expect((await getMemoryState()).owner).toBe("u2")
   })
 
-  it("syncs automatically even if an older version left it disabled", async () => {
-    await kv.set("agentMemory:mainnet", { enabled: false })
-    const api = fakeApi()
-    await runMemorySync(api, "u1", facts(2))
-    expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"], 0)
-  })
-
-  it("does not re-upload forgotten facts when another device changes the namespace", async () => {
-    const api = fakeApi()
-    await runMemorySync(api, "u1", facts(1))
-    api.connect.mockResolvedValue(1)
-    await runMemorySync(api, "u1", facts(1))
-    expect(api.remember).toHaveBeenCalledTimes(1)
-    await runMemorySync(api, "u1", facts(2))
-    expect(api.remember).toHaveBeenLastCalledWith(["Fact 1"], 1)
+  it("doesn't re-upload forgotten records after another device forgets", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await settle(api)
+    await api.forget()
+    await settle(api)
+    expect(api.remember).toHaveBeenCalledOnce()
+    await discoveries.put(finding({ id: "d2" }))
+    await settle(api)
+    expect(api.remember.mock.lastCall?.[0].map(({ id }) => id)).toEqual([
+      "finding:d2",
+    ])
+    expect(api.remember.mock.lastCall?.[1]).toBe(1)
   })
 
   it("sets up the account even with nothing to save yet", async () => {
-    const api = fakeApi()
-    await runMemorySync(api, "u1", [])
-    expect(api.connect).toHaveBeenCalledOnce()
+    const { api } = fakeWalrus()
+    await runMemorySync(api, "u1")
+    expect(api.open).toHaveBeenCalledOnce()
     expect(api.remember).not.toHaveBeenCalled()
   })
 
   it("stops reporting a failure once it gets through", async () => {
-    await kv.set("agentMemory:mainnet", { failing: true })
-    await runMemorySync(fakeApi(), "u1", facts(1))
+    await kv.set(SYNC_STATE_KEY, { failing: true })
+    await runMemorySync(fakeWalrus().api, "u1")
     expect((await getMemoryState()).failing).toBe(false)
   })
 })
 
-it("requires a signed-in account to count shared memories", async () => {
-  await expect(getSavedCount()).rejects.toBeInstanceOf(NotSignedInError)
+describe("resuming on another device", () => {
+  it("picks up an investigation on a fresh phone without repeating setup", async () => {
+    const { api } = fakeWalrus()
+    const { investigation, hypothesis } = await startInvestigation()
+    await discoveries.put(
+      finding({
+        investigationId: investigation.id,
+        hypothesisId: hypothesis.id,
+      })
+    )
+    const nextMeasurementAt = Date.now() + 3 * 24 * 60 * 60 * 1000
+    await updateInvestigation(investigation.id, {
+      nextStep: "One more reaction game after a short night.",
+      nextMeasurementAt,
+    })
+    await settle(api)
+
+    await onDevice("phone")
+    expect(await investigations.list()).toEqual([])
+    await settle(api)
+
+    const [restored] = await investigations.list()
+    expect(restored).toMatchObject({
+      id: investigation.id,
+      question: "Does sleep affect my reaction time?",
+      nextStep: "One more reaction game after a short night.",
+      nextMeasurementAt,
+    })
+    expect((await hypotheses.list()).map(({ id }) => id)).toEqual([
+      hypothesis.id,
+    ])
+    expect(await loadResumePoint()).toMatchObject({
+      question: "Does sleep affect my reaction time?",
+      lastResult: {
+        observed: "You react faster after more sleep.",
+        grade: "moderate",
+      },
+    })
+    // Planning the same question again finds the restored one.
+    expect(
+      (
+        await createInvestigation({
+          title: "Sleep and speed",
+          question: "Does sleep affect my reaction time?",
+          origin: "user",
+          objectives: [],
+          evidenceRequirements: [],
+        })
+      ).id
+    ).toBe(investigation.id)
+    // Taking it on isn't news, so the phone sends nothing back.
+    const sent = api.remember.mock.calls.length
+    await settle(api)
+    expect(api.remember.mock.calls.length).toBe(sent)
+  })
+
+  it("carries what the phone learns back to the laptop", async () => {
+    const { api } = fakeWalrus()
+    const { investigation } = await startInvestigation()
+    await settle(api)
+
+    await onDevice("phone")
+    await settle(api)
+    await updateInvestigation(investigation.id, {
+      progressNote: "Two more short nights would settle it.",
+    })
+    await settle(api)
+
+    await onDevice("laptop")
+    await settle(api)
+    expect((await investigations.get(investigation.id))?.progressNote).toBe(
+      "Two more short nights would settle it."
+    )
+    expect(Object.keys(await getRestoredHandoffs())).toEqual([investigation.id])
+  })
+
+  it("keeps the last verified result when the phone moves the plan on", async () => {
+    const { api } = fakeWalrus()
+    const { investigation, hypothesis } = await startInvestigation()
+    await discoveries.put(
+      finding({
+        investigationId: investigation.id,
+        hypothesisId: hypothesis.id,
+      })
+    )
+    await settle(api)
+
+    await onDevice("phone")
+    await settle(api)
+    await updateInvestigation(investigation.id, {
+      progressNote: "Next: stress.",
+    })
+    await settle(api)
+
+    await closeDb()
+    await deleteDB(`${DB_NAME}:phone`)
+    await onDevice("phone")
+    await settle(api)
+    expect(await loadResumePoint()).toMatchObject({
+      lastResult: { observed: "You react faster after more sleep." },
+    })
+  })
+
+  it("leaves completed investigations it never saw out of the way", async () => {
+    const { api } = fakeWalrus()
+    const { investigation } = await startInvestigation()
+    await updateInvestigation(investigation.id, { status: "completed" })
+    await settle(api)
+
+    await onDevice("phone")
+    await settle(api)
+    expect(await investigations.list()).toEqual([])
+  })
+
+  it("ignores a handoff that isn't the record its name says", async () => {
+    const { api, rows } = fakeWalrus()
+    const { investigation } = await startInvestigation()
+    await settle(api)
+    const handoff = rows.find(({ namespace }) =>
+      namespace.includes(":handoff:")
+    )!
+    handoff.text = handoff.text.replace(investigation.id, "someone-else")
+
+    await onDevice("phone")
+    await settle(api)
+    expect(await investigations.list()).toEqual([])
+  })
 })

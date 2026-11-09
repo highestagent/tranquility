@@ -3,7 +3,6 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it } from "vitest"
 
-
 import { activateAccountDb, closeDb, DB_NAME, LOCAL_OWNER_KEY } from "./db"
 import {
   countAll,
@@ -103,7 +102,7 @@ describe("portability", () => {
 })
 
 it("preserves the existing owner's history and keeps it separate from another login", async () => {
-  await kv.set("agentMemory:mainnet", { owner: "original" })
+  await activateAccountDb("original")
   await measurements.put(measurement({ id: "original-run" }))
   const secondDb = `${DB_NAME}:second`
   await deleteDB(secondDb)

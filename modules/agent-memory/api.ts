@@ -1,4 +1,13 @@
-import type { MemWal } from "@mysten-incubation/memwal"
+import type { MemWal, MemorySummary } from "@mysten-incubation/memwal"
+
+import {
+  memoryPrefix,
+  readCatalog,
+  RESEARCH_NAMESPACE,
+  type Catalog,
+  type Fact,
+  type MemoryReference,
+} from "./records"
 
 const PROXY_PATH = "/api/walrus"
 const MAX_QUERY_LENGTH = 300
@@ -80,87 +89,109 @@ async function getClient() {
   }
 }
 
-// Refresh the namespace before reading or starting a sync pass so a forget
-// on another device is honored even when this browser is already open.
-async function getMemoryContext() {
-  const owner = getMemoryUserId()
-  const [client, epoch] = await Promise.all([getClient(), epochRequest("info")])
-  if (owner !== getMemoryUserId()) throw new NotSignedInError()
-  return { client, epoch, namespace: namespaceFor(epoch) }
-}
-
-function namespaceFor(epoch: number) {
-  return `tranquility-${epoch}`
-}
-
-export interface RecalledMemory {
+/** One recalled note, with where it's stored. */
+export interface RecallHit {
+  blobId: string
   text: string
-  at: string | null
+  /** Lower is closer. */
+  distance: number
 }
 
 /**
- * Takes the closest matches with no minimum score. Everything in here is this
- * person's own notes, and a broad question like "what do you remember about me?"
- * scores poorly against all of them despite being the one they most need to hear.
+ * What the account holds right now. The inventory is listed when it opens, so
+ * a forget or a correction on another device is honored even when this
+ * browser was already open.
  */
-async function recall(query: string, limit: number) {
-  const { client, namespace } = await getMemoryContext()
-  const { results } = await client.recall(query.slice(0, MAX_QUERY_LENGTH), {
-    limit,
-    namespace,
-  })
-  return {
-    memories: results.map(({ text, created_at }): RecalledMemory => ({
+export interface MemoryWorkspace {
+  epoch: number
+  catalog: Catalog
+  /** The text of one exact revision. */
+  read(reference: MemoryReference): Promise<string>
+  /** Saved findings, closest first, with no minimum score. */
+  search(query: string, limit: number): Promise<RecallHit[]>
+}
+
+async function openWorkspace(): Promise<MemoryWorkspace> {
+  const owner = getMemoryUserId()
+  const [client, epoch] = await Promise.all([getClient(), epochRequest("info")])
+  const assertAccount = () => {
+    if (owner !== getMemoryUserId()) throw new NotSignedInError()
+  }
+  assertAccount()
+
+  const rows: MemorySummary[] = []
+  let cursor: string | undefined
+  for (;;) {
+    const page = await client.listMemories({ cursor, limit: 500 })
+    assertAccount()
+    rows.push(...page.memories)
+    if (!page.has_more) break
+    if (!page.next_cursor || page.next_cursor === cursor) {
+      throw new Error("The memory inventory stopped advancing")
+    }
+    cursor = page.next_cursor
+  }
+
+  const recall = async (query: string, namespace: string, limit: number) => {
+    const { results } = await client.recall({ query, namespace, limit })
+    assertAccount()
+    return results.map(({ blob_id, text, distance }): RecallHit => ({
+      blobId: blob_id,
       text,
-      at: created_at ?? null,
-    })),
+      distance,
+    }))
+  }
+
+  return {
+    epoch,
+    catalog: readCatalog(rows, epoch),
+    async read(reference) {
+      // The namespace holds this one revision, so any query finds it. Retries
+      // can leave more than one copy, so match the exact blob.
+      const hits = await recall("Tranquility record", reference.namespace, 10)
+      const match = hits.find(({ blobId }) => blobId === reference.blobId)
+      if (!match) throw new Error("A saved memory is unavailable")
+      return match.text
+    },
+    // No minimum score: a broad question like "what do you remember about me?"
+    // scores poorly against every note despite being the one most worth answering.
+    search: (query, limit) =>
+      recall(
+        query.slice(0, MAX_QUERY_LENGTH),
+        `${memoryPrefix(epoch)}${RESEARCH_NAMESPACE}`,
+        limit
+      ),
   }
 }
 
-export const memoryApi = {
+export interface MemoryApi {
   /** Creates the wallet and Walrus Memory account if they don't exist yet. */
-  connect: async () => {
-    return (await getMemoryContext()).epoch
-  },
-  /** What the account holds, across every device, not just this browser. */
-  count: async () => {
-    const { client, namespace } = await getMemoryContext()
-    const { namespaces } = await client.listNamespaces()
-    return namespaces.find(({ name }) => name === namespace)?.memory_count ?? 0
-  },
-  remember: async (texts: string[], epoch: number) => {
+  open(): Promise<MemoryWorkspace>
+  remember(facts: readonly Fact[], epoch: number): Promise<{ jobIds: string[] }>
+  status(
+    jobIds: string[]
+  ): Promise<{ jobs: { jobId: string; status: string }[] }>
+  forget(): Promise<number>
+}
+
+export const memoryApi: MemoryApi = {
+  open: openWorkspace,
+  remember: async (facts, epoch) => {
     const client = await getClient()
-    const namespace = namespaceFor(epoch)
     const { job_ids } = await client.rememberBulkAsync(
-      texts.map((text) => ({ text, namespace }))
+      facts.map(({ text, namespace }) => ({
+        text,
+        namespace: `${memoryPrefix(epoch)}${namespace}`,
+      }))
     )
     return { jobIds: job_ids }
   },
-  status: async (jobIds: string[]) => {
+  status: async (jobIds) => {
     const client = await getClient()
     const { results } = await client.getRememberBulkStatus(jobIds)
     return {
-      jobs: results.map(({ job_id, status }) => ({
-        jobId: job_id,
-        status: status as string,
-      })),
-    }
-  },
-  /** The budget covers everything, including connecting for the first time. */
-  recall: async (query: string, limit: number, timeoutMs: number) => {
-    let timer: ReturnType<typeof setTimeout> | undefined
-    try {
-      return await Promise.race([
-        recall(query, limit),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("Timed out")), timeoutMs)
-        }),
-      ])
-    } finally {
-      clearTimeout(timer)
+      jobs: results.map(({ job_id, status }) => ({ jobId: job_id, status })),
     }
   },
   forget: () => epochRequest("forget"),
 }
-
-export type MemoryApi = typeof memoryApi

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import type { Discovery, Hypothesis, Investigation } from "@/modules/memory"
 
-import { distillFacts } from "./distill"
+import { distillFacts, MAX_FACT_CHARS, type LocalResearch } from "./distill"
+import { findingRecord, handoffRecord, readRecord } from "./records"
 
 const finding: Discovery = {
   id: "d1",
@@ -30,7 +31,10 @@ const hypothesis: Hypothesis = {
   rationale: "r",
   createdAt: 1,
   updatedAt: 1,
-  history: [],
+  history: [
+    { at: 1, status: "proposed", note: "r" },
+    { at: 2, status: "supported", note: "Evaluated" },
+  ],
 }
 
 const investigation: Investigation = {
@@ -42,69 +46,107 @@ const investigation: Investigation = {
   objectives: [],
   evidenceRequirements: [],
   progressNote: "Stress is next.",
+  nextStep: "One more game this week.",
   createdAt: 1,
-  updatedAt: Date.UTC(2026, 10, 6),
+  updatedAt: Date.UTC(2026, 10, 5),
 }
 
-const all = {
+const all: LocalResearch = {
   discoveries: [finding],
   hypotheses: [hypothesis],
   investigations: [investigation],
+  evidence: {
+    i1: [
+      { factorId: "sleep.hours", metric: hypothesis.metric, have: 6, need: 8 },
+    ],
+  },
+  restored: {},
+}
+
+function handoffOf(input: LocalResearch) {
+  const fact = distillFacts(input).find(({ id }) => id.startsWith("handoff:"))
+  return fact && { fact, record: readRecord(handoffRecord, fact.text) }
 }
 
 describe("distillFacts", () => {
-  it("captures a finding with its verdict and evidence", () => {
-    const [fact] = distillFacts(all)
-    expect(fact?.id).toBe("finding:d1")
-    expect(fact?.text).toContain("Finding from 2026-11-06")
-    expect(fact?.text).toContain("supported, on strong evidence")
-    expect(fact?.text).toContain("More sleep comes with faster reactions")
+  it("saves a finding's conclusions, searchable with the others", () => {
+    const fact = distillFacts(all).find(({ id }) => id === "finding:d1")!
+    expect(fact.namespace).toBe("research")
+    expect(readRecord(findingRecord, fact.text)).toMatchObject({
+      statement: "More sleep comes with faster reactions",
+      verdict: "supported",
+      grade: "strong",
+      uncertainty: "Stress could also play a part.",
+    })
+    expect(fact.text).not.toContain("a1")
   })
 
-  it("gives the same facts the same IDs, so nothing is sent twice", () => {
+  it("hands off the plan, the last result, and what's missing", () => {
+    const { fact, record } = handoffOf(all)!
+    expect(fact.namespace).toBe(fact.id)
+    expect(record).toMatchObject({
+      revision: finding.createdAt,
+      investigation: {
+        question: "Does sleep matter?",
+        nextStep: "One more game this week.",
+      },
+      evidence: [{ have: 6, need: 8 }],
+      latestFinding: { id: "d1" },
+    })
+    expect(record?.hypotheses[0]?.history).toHaveLength(1)
+  })
+
+  it("gives the same records the same IDs, so nothing is sent twice", () => {
     expect(distillFacts(all).map(({ id }) => id)).toEqual(
       distillFacts(all).map(({ id }) => id)
     )
   })
 
-  it("makes a changed progress note into a new fact", () => {
-    const before = distillFacts(all)[1]?.id
-    const after = distillFacts({
+  it("makes any change to the plan a new revision", () => {
+    const before = handoffOf(all)!.fact.id
+    const after = handoffOf({
       ...all,
-      investigations: [{ ...investigation, progressNote: "Caffeine is next." }],
-    })[1]?.id
+      hypotheses: [{ ...hypothesis, updatedAt: Date.UTC(2026, 10, 7) }],
+    })!.fact.id
     expect(after).not.toBe(before)
   })
 
-  it("skips investigations with nothing to report yet", () => {
-    const facts = distillFacts({
-      ...all,
-      discoveries: [],
-      investigations: [{ ...investigation, progressNote: "" }],
-    })
-    expect(facts).toEqual([])
+  it("doesn't hand back a revision it took from another device", () => {
+    const revision = handoffOf(all)!.record!.revision
+    expect(
+      handoffOf({ ...all, restored: { i1: { revision, evidence: [] } } })
+    ).toBeUndefined()
   })
 
-  it("records a dropped hypothesis with its reason", () => {
-    const facts = distillFacts({
+  it("carries another device's result forward until there's a local one", () => {
+    const { record } = handoffOf({
+      ...all,
       discoveries: [],
-      investigations: [],
-      hypotheses: [
-        {
-          ...hypothesis,
-          status: "rejected",
-          history: [{ at: 1, status: "rejected", note: "No longer relevant" }],
+      investigations: [{ ...investigation, updatedAt: Date.UTC(2026, 10, 8) }],
+      restored: {
+        i1: {
+          revision: Date.UTC(2026, 10, 6),
+          evidence: [],
+          latestFinding: readRecord(
+            findingRecord,
+            distillFacts(all).find(({ id }) => id === "finding:d1")!.text
+          )!,
         },
-      ],
-    })
-    expect(facts[0]?.text).toContain("Reason: No longer relevant")
+      },
+    })!
+    expect(record?.latestFinding?.id).toBe("d1")
   })
 
-  it("keeps facts within what the service accepts", () => {
-    const [fact] = distillFacts({
-      ...all,
-      discoveries: [{ ...finding, observed: "x".repeat(5000) }],
-    })
-    expect(fact?.text.length).toBeLessThanOrEqual(1200)
+  it("keeps a handoff within what one request carries", () => {
+    const many = Array.from({ length: 40 }, (_, index) => ({
+      ...hypothesis,
+      id: `h${index}`,
+      statement: "x".repeat(300),
+      rationale: "y".repeat(300),
+      updatedAt: index,
+    }))
+    const { fact, record } = handoffOf({ ...all, hypotheses: many })!
+    expect(fact.text.length).toBeLessThanOrEqual(MAX_FACT_CHARS)
+    expect(record?.hypotheses[0]?.id).toBe("h39")
   })
 })

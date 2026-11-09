@@ -2,7 +2,8 @@ import { resumeRecalculation } from "@/modules/journal/corrections"
 import { tool } from "ai"
 import { z } from "zod"
 
-import { recallMemories } from "@/modules/agent-memory/recall"
+import { recallForAgent } from "@/modules/agent-memory/recall"
+import { getRestoredHandoffs } from "@/modules/agent-memory/sync"
 import { getInvestigationState } from "@/modules/investigation"
 import { measurements, responses, sessions, kv } from "@/modules/memory"
 import { ASSESSMENTS } from "@/modules/assessments"
@@ -29,41 +30,53 @@ export const getUserContext = tool({
       .string()
       .max(300)
       .optional()
-      .describe("What to look up in your long-term memory of past sessions."),
+      .describe(
+        "What to look up in past findings, in plain language, such as the user's own question."
+      ),
   }),
   execute: async ({ questionIds = [], memoryQuery }) => {
     await resumeRecalculation()
-    const [state, sessionRows, asked, responseRows, runCounts, answers] =
-      await Promise.all([
-        getInvestigationState(),
-        sessions.list(),
-        askedThisSession(),
-        responses.list(),
-        Promise.all(
-          ASSESSMENTS.map(async ({ id }) => {
-            const runs = await measurements.byAssessment(id)
-            return {
-              assessmentId: id,
-              validRuns: runs.filter((r) => r.valid).length,
-            }
-          })
-        ),
-        Promise.all(
-          questionIds.map(async (questionId) => {
-            const rows = await responses.byQuestion(questionId)
-            const answered = rows.filter((row) => row.value !== null)
-            return {
-              questionId,
-              answered: answered.length,
-              declined: rows.length - answered.length,
-              recent: answered.slice(-RECENT_VALUES).map((row) => row.value),
-            }
-          })
-        ),
-      ])
-    const memories = await recallMemories(
-      memoryQuery ?? state.open[0]?.question ?? DEFAULT_MEMORY_QUERY
-    )
+    // Restoring can add investigations from another device, so it comes first.
+    const memory = await recallForAgent(async () => {
+      const open = (await getInvestigationState()).open
+      return memoryQuery ?? open[0]?.question ?? DEFAULT_MEMORY_QUERY
+    })
+    const [
+      state,
+      handoffs,
+      sessionRows,
+      asked,
+      responseRows,
+      runCounts,
+      answers,
+    ] = await Promise.all([
+      getInvestigationState(),
+      getRestoredHandoffs(),
+      sessions.list(),
+      askedThisSession(),
+      responses.list(),
+      Promise.all(
+        ASSESSMENTS.map(async ({ id }) => {
+          const runs = await measurements.byAssessment(id)
+          return {
+            assessmentId: id,
+            validRuns: runs.filter((r) => r.valid).length,
+          }
+        })
+      ),
+      Promise.all(
+        questionIds.map(async (questionId) => {
+          const rows = await responses.byQuestion(questionId)
+          const answered = rows.filter((row) => row.value !== null)
+          return {
+            questionId,
+            answered: answered.length,
+            declined: rows.length - answered.length,
+            recent: answered.slice(-RECENT_VALUES).map((row) => row.value),
+          }
+        })
+      ),
+    ])
     return {
       personalContext:
         (
@@ -71,12 +84,30 @@ export const getUserContext = tool({
             "contextAnswers"
           )
         )?.slice(-20) ?? [],
-      memories,
+      memory,
       sessions: sessionRows.length,
       askedThisSession: [...asked],
       runs: runCounts,
       coverage: summarizeCoverage(responseRows),
-      investigations: state.open,
+      investigations: state.open.map((investigation) => {
+        const handoff = handoffs[investigation.id]
+        return handoff
+          ? {
+              ...investigation,
+              fromAnotherDevice: {
+                evidenceThere: handoff.evidence,
+                lastVerifiedResult: handoff.latestFinding
+                  ? {
+                      observed: handoff.latestFinding.observed,
+                      verdict: handoff.latestFinding.verdict,
+                      grade: handoff.latestFinding.grade,
+                      uncertainty: handoff.latestFinding.uncertainty,
+                    }
+                  : null,
+              },
+            }
+          : investigation
+      }),
       completedInvestigations: state.completedCount,
       answers,
     }

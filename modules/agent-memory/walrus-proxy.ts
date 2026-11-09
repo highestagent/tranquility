@@ -9,8 +9,28 @@ const TIMEOUT_MS = 30_000
 
 /** The only Walrus Memory routes this app uses. */
 const ROUTES: Record<string, RegExp> = {
-  GET: /^(version|health|config|api\/accounts\/0x[0-9a-fA-F]{64}\/delegate-keys|v1\/owners\/0x[0-9a-fA-F]{64}\/namespaces)$/,
+  GET: /^(version|health|config|api\/accounts\/0x[0-9a-fA-F]{64}\/delegate-keys|v1\/owners\/0x[0-9a-fA-F]{64}\/memories)$/,
   POST: /^(sponsor|sponsor\/execute|api\/recall|api\/stats|api\/remember\/bulk|api\/remember\/bulk\/status)$/,
+}
+
+/**
+ * Paging through the inventory is the one use of a query string. The relayer
+ * signs it with the path, so it's passed on exactly as sent.
+ */
+const QUERY_PARAMS: Record<string, RegExp> = {
+  limit: /^\d{1,4}$/,
+  /** URL-safe base64 of a JSON watermark. */
+  updated_after: /^[\w-]{1,2048}$/,
+}
+
+function allowedQuery(route: string, search: string) {
+  if (!search) return ""
+  if (!route.endsWith("/memories")) return null
+  const params = new URLSearchParams(search)
+  for (const [name, value] of params) {
+    if (!QUERY_PARAMS[name]?.test(value)) return null
+  }
+  return search
 }
 
 const REQUEST_HEADERS = [
@@ -62,7 +82,8 @@ export async function proxyToWalrus(
     return new Response(null, { status: 403 })
   }
   const route = path.join("/")
-  if (!ROUTES[request.method]?.test(route)) {
+  const query = allowedQuery(route, new URL(request.url).search)
+  if (!ROUTES[request.method]?.test(route) || query === null) {
     return new Response(null, { status: 404 })
   }
   if (
@@ -82,7 +103,7 @@ export async function proxyToWalrus(
   }
 
   try {
-    const upstream = await deps.fetch(`${deps.relayerUrl}/${route}`, {
+    const upstream = await deps.fetch(`${deps.relayerUrl}/${route}${query}`, {
       method: request.method,
       headers: pick(request.headers, REQUEST_HEADERS),
       body,

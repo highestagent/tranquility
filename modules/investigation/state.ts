@@ -13,6 +13,9 @@ export interface InvestigationSummary {
   question: string
   status: Investigation["status"]
   progressNote: string
+  /** What would help next, and when, as the agent left it at rest. */
+  nextStep?: string
+  nextMeasurementAt?: number
   objectives: string[]
   evidence: {
     factorId: string
@@ -56,6 +59,8 @@ async function summarize(
     question: investigation.question,
     status: investigation.status,
     progressNote: investigation.progressNote,
+    nextStep: investigation.nextStep,
+    nextMeasurementAt: investigation.nextMeasurementAt,
     objectives: investigation.objectives,
     evidence,
     hypotheses: hypothesisRows.map((row) => ({

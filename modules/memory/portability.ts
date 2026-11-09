@@ -35,10 +35,11 @@ const exportSchema = z.object({
 
 export type TranquilityExport = z.infer<typeof exportSchema>
 
+/** Which account and sync progress this browser holds. Never exported or imported. */
 function isAccountMetadata(key: string) {
   return (
     key === LOCAL_OWNER_KEY ||
-    key === "agentMemory:mainnet" ||
+    key === "agentMemory:sync" ||
     key === "agentMemoryAccount:mainnet"
   )
 }

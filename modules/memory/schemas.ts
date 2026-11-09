@@ -83,6 +83,8 @@ export const investigationSchema = z.object({
   objectives: z.array(z.string()),
   evidenceRequirements: z.array(evidenceRequirementSchema),
   progressNote: z.string(),
+  nextStep: z.string().optional(),
+  nextMeasurementAt: timestamp.optional(),
   createdAt: timestamp,
   updatedAt: timestamp,
 })

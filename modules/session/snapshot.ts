@@ -1,5 +1,6 @@
 import { resumeRecalculation } from "@/modules/journal/corrections"
 import { getPendingTask } from "@/modules/agent/pending-task"
+import { loadResumePoint } from "@/modules/agent-memory/resume"
 import { discoveries, measurements, responses } from "@/modules/memory"
 
 import { getAgentRest, getSeenDiscoveriesAt } from "./wake"
@@ -7,14 +8,16 @@ import { getAgentRest, getSeenDiscoveriesAt } from "./wake"
 /** Everything the home screen shows, restored from this device. */
 export async function loadSnapshot() {
   await resumeRecalculation()
-  const [pending, rest, findings, seenAt, runs, answers] = await Promise.all([
-    getPendingTask(),
-    getAgentRest(),
-    discoveries.list(),
-    getSeenDiscoveriesAt(),
-    measurements.list(),
-    responses.list(),
-  ])
+  const [pending, rest, findings, seenAt, runs, answers, resume] =
+    await Promise.all([
+      getPendingTask(),
+      getAgentRest(),
+      discoveries.list(),
+      getSeenDiscoveriesAt(),
+      measurements.list(),
+      responses.list(),
+      loadResumePoint(),
+    ])
   const unseen = findings
     .filter((finding) => finding.createdAt > seenAt)
     .sort((a, b) => a.createdAt - b.createdAt)
@@ -22,6 +25,7 @@ export async function loadSnapshot() {
   return {
     pending,
     rest,
+    resume,
     unseen,
     latestDataAt: Math.max(
       0,
