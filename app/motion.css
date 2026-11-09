@@ -3,6 +3,12 @@
  * has a static form: see the reduced-motion block at the end.
  */
 
+@keyframes brand-breathe {
+  50% {
+    transform: scale(1.065);
+  }
+}
+
 /* Threads between habits and abilities */
 .thread-draw {
   stroke-dasharray: 1;

@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Sheet } from "@/components/sheet"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { AgentOrb } from "@/modules/insights/agent-orb"
 
 import { useAccount } from "./account-context"
 
@@ -20,11 +19,13 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
   return (
     <main className="dark flex min-h-svh w-full items-center justify-center bg-background bg-[url('/signal-atlas.webp')] bg-cover bg-center px-6 py-12 text-center text-foreground">
       <div className="flex w-full max-w-lg flex-col items-center">
-        <div className="mb-6 flex size-24 items-center justify-center motion-safe:animate-[spin_24s_linear_infinite]">
-          <div className="flex scale-150">
-            <AgentOrb state="resting" color="#429f91" animated />
-          </div>
-        </div>
+        <Image
+          src="/tranquility.svg"
+          alt=""
+          width={88}
+          height={88}
+          className="mb-6 motion-safe:animate-[brand-breathe_6s_ease-in-out_infinite]"
+        />
         <h1 className="voice-display">Tranquility</h1>
         <p className="mt-4 max-w-xs text-base leading-relaxed text-pretty text-muted-foreground">
           Notice what shapes your focus, memory, and attention.

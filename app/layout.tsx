@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from "next"
 import { Geist_Mono, Instrument_Sans, Newsreader } from "next/font/google"
 
 import "./globals.css"
+import Image from "next/image"
 import Link from "next/link"
-import { PoolMark } from "@/components/pool-mark"
 import { AppNav } from "@/components/app-nav"
 import { AccountGate } from "@/modules/account/account-gate"
 import { AccountProvider } from "@/modules/account/account-provider"
@@ -28,10 +28,20 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+const title = "Tranquility"
+const description =
+  "Explore how sleep, mood, and stress relate to your focus and memory."
+const siteUrl = process.env.SITE_URL
+
 export const metadata: Metadata = {
-  title: "Tranquility",
-  description:
-    "A personal research agent that investigates what shapes your thinking. Your data is stored on your device.",
+  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  title,
+  description,
+  icons: {
+    icon: { url: "/tranquility.svg", type: "image/svg+xml", sizes: "any" },
+  },
+  openGraph: { type: "website", siteName: title, title, description },
+  twitter: { card: "summary_large_image" },
 }
 
 export const viewport: Viewport = {
@@ -66,7 +76,12 @@ export default function RootLayout({
                     href="/"
                     className="flex min-h-11 items-center gap-2.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <PoolMark className="size-5" />
+                    <Image
+                      src="/tranquility.svg"
+                      alt=""
+                      width={24}
+                      height={24}
+                    />
                     <span className="font-voice text-lg">Tranquility</span>
                   </Link>
                 </header>

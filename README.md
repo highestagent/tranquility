@@ -1,3 +1,5 @@
+<img src="public/tranquility.svg" width="72" height="72" alt="Tranquility logo">
+
 # Tranquility
 
 A personal cognitive research agent. It investigates how sleep, stress, mood,
@@ -26,6 +28,10 @@ pnpm dev
 ```
 
 Games, questionnaires, statistics, and data tools all work without a key.
+
+For self-hosted deployments, set `SITE_URL` to the public app origin at build time
+so social previews can load the share image. Vercel supplies its deployment
+domain automatically.
 
 ### Accounts and memory
 
