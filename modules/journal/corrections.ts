@@ -1,3 +1,4 @@
+import { syncMemory } from "@/modules/agent-memory/sync"
 import { recordWithdrawals } from "@/modules/agent-memory/withdrawals"
 import { analyzeRelationship, scanRelationships } from "@/modules/analytics"
 import { ASSESSMENTS } from "@/modules/assessments"
@@ -115,5 +116,7 @@ export async function correctAnswer(id: string, value: number | null) {
   })
   await tx.objectStore("kv").delete("agentRest")
   await tx.done
+  // Other devices should stop showing the withdrawn findings without waiting.
+  void syncMemory()
   await resumeRecalculation()
 }

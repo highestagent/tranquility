@@ -7,6 +7,7 @@ import {
   sessions,
 } from "@/modules/memory"
 import { updateInvestigation } from "@/modules/investigation"
+import { syncMemory } from "@/modules/agent-memory/sync"
 import { setAgentRest } from "@/modules/session/wake"
 import { getPendingTask } from "../pending-task"
 export const restSession = tool({
@@ -39,6 +40,8 @@ export const restSession = tool({
       })
     }
     await setAgentRest({ at, spoken: reason, nextAt })
+    // Resting is where another device would pick up, so send the plan now.
+    void syncMemory({ flush: true })
     return {
       status: "awaiting-user" as const,
       nextAt,

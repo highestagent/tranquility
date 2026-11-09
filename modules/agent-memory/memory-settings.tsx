@@ -26,6 +26,7 @@ import {
   getMemoryOverview,
   getMemoryState,
   onMemoryChange,
+  onSyncPass,
   type MemoryOverview,
   type MemoryState,
 } from "./sync"
@@ -56,11 +57,12 @@ export function MemorySettings() {
   useEffect(() => {
     if (!authenticated) return
     refresh()
-    const timer = window.setInterval(refresh, 20_000)
-    const stop = onMemoryChange(refresh)
+    // Refreshes when sync has news, rather than asking the relayer itself.
+    const stopPasses = onSyncPass(refresh)
+    const stopChanges = onMemoryChange(refresh)
     return () => {
-      window.clearInterval(timer)
-      stop()
+      stopPasses()
+      stopChanges()
     }
   }, [authenticated, refresh])
 

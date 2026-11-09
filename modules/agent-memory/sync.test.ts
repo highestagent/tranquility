@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto"
 
 import { deleteDB } from "idb"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   addHypothesis,
@@ -35,6 +35,7 @@ import {
   getMemoryOverview,
   getMemoryState,
   getRestoredHandoffs,
+  ROUTINE_UPLOAD_GAP_MS,
   runMemorySync,
 } from "./sync"
 
@@ -103,10 +104,13 @@ async function onDevice(name: "laptop" | "phone") {
   await activateAccountDb(name)
 }
 
-/** Runs passes until there's nothing left to send. */
+/**
+ * Runs passes until there's nothing left to send. These tests are about what
+ * syncs, so each pass sends right away, as leaving the page does.
+ */
 async function settle(api: MemoryApi) {
   for (let pass = 0; pass < 10; pass++) {
-    if (!(await runMemorySync(api, "u1")).more) return
+    if (!(await runMemorySync(api, "u1", { flush: true })).more) return
   }
   throw new Error("Sync never settled")
 }
@@ -191,7 +195,7 @@ describe("runMemorySync", () => {
     const { api } = fakeWalrus({ "job-0": "failed" })
     await discoveries.put(finding())
     await runMemorySync(api, "u1")
-    await runMemorySync(api, "u1")
+    await runMemorySync(api, "u1", { flush: true })
     expect(api.remember).toHaveBeenCalledTimes(2)
   })
 
@@ -624,3 +628,97 @@ describe("remembered preferences", () => {
     expect(await listPreferences()).toEqual([])
   })
 })
+
+describe("staying within the relayer's hourly budget", () => {
+  const MINUTE = 60_000
+
+  async function at<T>(time: number, work: () => Promise<T>) {
+    vi.setSystemTime(time)
+    return work()
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(0)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("holds routine changes until the gap has passed", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await at(MINUTE, () => settleWithout(api))
+    expect(api.remember).toHaveBeenCalledOnce()
+
+    await discoveries.put(finding({ id: "d2" }))
+    const held = await at(2 * MINUTE, () => runMemorySync(api, "u1"))
+    expect(api.remember).toHaveBeenCalledOnce()
+    expect(held.deferredMs).toBe(ROUTINE_UPLOAD_GAP_MS - MINUTE)
+
+    await at(MINUTE + ROUTINE_UPLOAD_GAP_MS, () => runMemorySync(api, "u1"))
+    expect(api.remember.mock.lastCall?.[0].map(({ id }) => id)).toEqual([
+      "finding:d2",
+    ])
+  })
+
+  it("sends one revision of a plan that changed many times meanwhile", async () => {
+    const { api } = fakeWalrus()
+    const { investigation } = await at(MINUTE, () => startInvestigation())
+    await at(MINUTE, () => settleWithout(api))
+    for (let turn = 2; turn <= 4; turn++) {
+      await at(turn * MINUTE, async () => {
+        await updateInvestigation(investigation.id, {
+          progressNote: `Turn ${turn}`,
+        })
+        await runMemorySync(api, "u1")
+      })
+    }
+    expect(api.remember).toHaveBeenCalledOnce()
+
+    await at(MINUTE + ROUTINE_UPLOAD_GAP_MS, () => runMemorySync(api, "u1"))
+    const [sent] = api.remember.mock.lastCall!
+    expect(sent).toHaveLength(1)
+    expect(sent[0]?.text).toContain("Turn 4")
+  })
+
+  it("sends a withdrawal or preference at once, with what was waiting", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await at(MINUTE, () => settleWithout(api))
+    await discoveries.put(finding({ id: "d2" }))
+    await at(2 * MINUTE, () => savePreference("Mornings"))
+    await at(2 * MINUTE, () => runMemorySync(api, "u1"))
+    expect(api.remember).toHaveBeenCalledTimes(2)
+    expect(
+      api.remember.mock.lastCall?.[0].map(
+        ({ namespace }) => namespace.split(":")[0]
+      )
+    ).toEqual(["preference", "research"])
+  })
+
+  it("sends what's waiting right away when flushed", async () => {
+    const { api } = fakeWalrus()
+    await discoveries.put(finding({ id: "d1" }))
+    await at(MINUTE, () => settleWithout(api))
+    await discoveries.put(finding({ id: "d2" }))
+    await at(2 * MINUTE, () => runMemorySync(api, "u1", { flush: true }))
+    expect(api.remember).toHaveBeenCalledTimes(2)
+  })
+
+  it("drains a long backlog without waiting between batches", async () => {
+    const { api } = fakeWalrus()
+    for (let i = 0; i < 13; i++) await discoveries.put(finding({ id: `d${i}` }))
+    await at(MINUTE, () => settleWithout(api))
+    expect(api.remember).toHaveBeenCalledTimes(2)
+  })
+})
+
+/** Passes as the timer runs them, without flushing. */
+async function settleWithout(api: MemoryApi) {
+  for (let pass = 0; pass < 10; pass++) {
+    if (!(await runMemorySync(api, "u1")).more) return
+  }
+  throw new Error("Sync never settled")
+}

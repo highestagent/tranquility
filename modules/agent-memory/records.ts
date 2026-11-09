@@ -98,13 +98,25 @@ export function opaqueId(id: string) {
   return bytesToHex(sha256(new TextEncoder().encode(id)))
 }
 
+export function handoffNamespace(
+  investigationId: string,
+  revision: number,
+  status: HandoffRecord["investigation"]["status"]
+) {
+  return `handoff:${opaqueId(investigationId)}:${revision}:${status}`
+}
+
+export function preferenceNamespace(id: string, revision: number) {
+  return `preference:${opaqueId(id)}:${revision}`
+}
+
 export function encodeFact(record: MemoryRecord): Fact {
   const text = JSON.stringify(record)
   if (record.kind === "finding") {
     return { id: `finding:${record.id}`, namespace: RESEARCH_NAMESPACE, text }
   }
   if (record.kind === "preference") {
-    const namespace = `preference:${opaqueId(record.id)}:${record.revision}`
+    const namespace = preferenceNamespace(record.id, record.revision)
     return { id: namespace, namespace, text }
   }
   if (record.kind === "withdrawal") {
@@ -113,7 +125,7 @@ export function encodeFact(record: MemoryRecord): Fact {
     return { id: namespace, namespace, text }
   }
   const { id, status } = record.investigation
-  const namespace = `handoff:${opaqueId(id)}:${record.revision}:${status}`
+  const namespace = handoffNamespace(id, record.revision, status)
   return { id: namespace, namespace, text }
 }
 

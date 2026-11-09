@@ -122,12 +122,20 @@ function AccountBridge({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!activeUserId) return
     void syncMemory()
-    const resumeSync = () => void syncMemory()
-    window.addEventListener("online", resumeSync)
-    window.addEventListener("focus", resumeSync)
+    const resume = () => void syncMemory({ opportunistic: true })
+    // Leaving sends what's waiting, so another device can pick up from it.
+    const leave = () => void syncMemory({ flush: true })
+    const visibility = () =>
+      document.visibilityState === "hidden" ? leave() : resume()
+    window.addEventListener("online", resume)
+    window.addEventListener("focus", resume)
+    window.addEventListener("pagehide", leave)
+    document.addEventListener("visibilitychange", visibility)
     return () => {
-      window.removeEventListener("online", resumeSync)
-      window.removeEventListener("focus", resumeSync)
+      window.removeEventListener("online", resume)
+      window.removeEventListener("focus", resume)
+      window.removeEventListener("pagehide", leave)
+      document.removeEventListener("visibilitychange", visibility)
     }
   }, [activeUserId])
 

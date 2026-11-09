@@ -68,6 +68,8 @@ export async function searchPastResearch(
   ])
   // Checked against a fresh inventory, so a correction made on another device
   // is honored as soon as it's saved.
+  // Nothing saved means nothing to search, and no relayer call for it.
+  if (workspace.catalog.findings === 0) return []
   const isWithdrawn = withdrawnCheck(workspace.catalog, withdrawals)
   const seen = new Set<string>()
   const findings: PastFinding[] = []

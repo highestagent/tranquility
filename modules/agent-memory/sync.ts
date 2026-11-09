@@ -25,8 +25,10 @@ import {
 } from "./distill"
 import {
   handoffRecord,
+  handoffNamespace,
   HANDOFFS_KEY,
   memoryPrefix,
+  preferenceNamespace,
   preferenceRecord,
   PREFERENCES_KEY,
   RECALLED_KEY,
@@ -48,8 +50,22 @@ const BATCH_SIZE = 10
 /** The proxy accepts 64 KB per request, and JSON escaping adds some. */
 const BATCH_CHARS = 40_000
 const READ_CONCURRENCY = 4
-const CHECK_AGAIN_MS = 20_000
-const IDLE_SYNC_MS = 60_000
+/**
+ * The relayer allows each account 500 points an hour: 10 per upload and 1 for
+ * anything else. The agent changes its plan almost every turn, so syncing
+ * every change as it happens would spend that within a busy hour.
+ */
+/** How often running uploads are checked on. */
+const CHECK_AGAIN_MS = 30_000
+/** How often other devices' work is looked for while the app is in view. */
+const IDLE_SYNC_MS = 5 * 60_000
+/**
+ * Routine changes wait this long after the last upload, so one upload carries
+ * several plan revisions. Leaving the page or the agent resting sends them now.
+ */
+export const ROUTINE_UPLOAD_GAP_MS = 5 * 60_000
+/** Focusing the window doesn't start another pass if one just ran. */
+const OPPORTUNISTIC_GAP_MS = 30_000
 const MAX_BACKOFF_MS = 10 * 60_000
 
 export interface MemoryState {
@@ -61,6 +77,10 @@ export interface MemoryState {
   /** Facts the service accepted, and whose storage hasn't finished yet. */
   pending: { factId: string; jobId: string }[]
   lastSavedAt?: number
+  /** When the last upload was sent, to space routine ones out. */
+  lastUploadAt?: number
+  /** More is waiting from the last upload's backlog, so it goes without a gap. */
+  backlog?: boolean
   /** The last attempt failed, so what's shown may be out of date. */
   failing?: boolean
 }
@@ -335,6 +355,17 @@ function isAlreadyStored(fact: Fact, workspace: MemoryWorkspace) {
   )
 }
 
+/**
+ * Withdrawals can't wait, since a stale finding is worse than a slow one, and
+ * preferences are something the person just asked for. Anything else rides
+ * along with them.
+ */
+function isUrgent({ namespace }: Fact) {
+  return (
+    namespace.startsWith("withdrawn:") || namespace.startsWith("preference:")
+  )
+}
+
 function nextBatch(facts: readonly Fact[]) {
   const batch: Fact[] = []
   let chars = 0
@@ -360,10 +391,15 @@ export async function runMemorySync(
     onRestored?: () => void
     /** What this device shows, or what's synced, changed. */
     onChanged?: () => void
+    /** What the account held when the pass began. */
+    onOpened?: (workspace: MemoryWorkspace) => void
+    /** Send routine changes now instead of waiting out the gap. */
+    flush?: boolean
   } = {}
-): Promise<{ more: boolean }> {
+): Promise<{ more: boolean; deferredMs?: number }> {
   const state = await getMemoryState()
   const workspace = await api.open()
+  options.onOpened?.(workspace)
   const { epoch } = workspace
 
   // After a forget, or for someone else's account, nothing here goes up again
@@ -430,19 +466,40 @@ export async function runMemorySync(
   for (const job of state.pending) known.add(job.factId)
 
   const unsent = facts.filter(({ id }) => !known.has(id))
-  const batch = nextBatch(unsent)
+  const now = Date.now()
+  const nextRoutineAt =
+    state.lastUploadAt === undefined
+      ? now
+      : state.lastUploadAt + ROUTINE_UPLOAD_GAP_MS
+  const due =
+    options.flush ||
+    state.backlog ||
+    now >= nextRoutineAt ||
+    unsent.some(isUrgent)
+  const batch = due
+    ? nextBatch([
+        ...unsent.filter(isUrgent),
+        ...unsent.filter((fact) => !isUrgent(fact)),
+      ])
+    : []
   if (batch.length > 0) {
     const { jobIds } = await api.remember(batch, epoch)
     batch.forEach((fact, index) => {
       const jobId = jobIds[index]
       if (jobId) state.pending.push({ factId: fact.id, jobId })
     })
+    state.lastUploadAt = now
+    state.backlog = unsent.length > batch.length
   }
   state.failing = false
   await saveState(state)
   if (batch.length && state.pending.length === 0)
     throw new Error("Walrus Memory accepted no jobs")
-  return { more: state.pending.length > 0 || unsent.length > batch.length }
+  return {
+    more: state.pending.length > 0 || Boolean(state.backlog),
+    deferredMs:
+      !due && unsent.length > 0 ? Math.max(0, nextRoutineAt - now) : undefined,
+  }
 }
 
 let running: Promise<void> | null = null
@@ -450,14 +507,28 @@ let forgetting: Promise<void> | null = null
 let timer: ReturnType<typeof setTimeout> | null = null
 let failures = 0
 let restored = false
+let lastPassAt = 0
+/** Asked for while a pass was running, so another one follows it. */
+let queued: { flush: boolean } | null = null
+/** What the account held at the latest pass, so a view needn't ask again. */
+let lastOpened: { workspace: MemoryWorkspace; at: number } | null = null
 const restoreWaiters = new Set<() => void>()
 const changeListeners = new Set<() => void>()
+const passListeners = new Set<() => void>()
 
 /** Calls `listener` when another device's work arrives or a save finishes. */
 export function onMemoryChange(listener: () => void) {
   changeListeners.add(listener)
   return () => {
     changeListeners.delete(listener)
+  }
+}
+
+/** Calls `listener` after every pass, whatever it did. */
+export function onSyncPass(listener: () => void) {
+  passListeners.add(listener)
+  return () => {
+    passListeners.delete(listener)
   }
 }
 
@@ -476,9 +547,24 @@ function withMemoryLock<T>(work: () => Promise<T>) {
   return locks ? locks.request("tranquility-memory-sync", work) : work()
 }
 
+function isHidden() {
+  return (
+    typeof document !== "undefined" && document.visibilityState === "hidden"
+  )
+}
+
+/** Nothing runs on a timer while the page is hidden. Coming back syncs. */
 function scheduleAgain(delay: number) {
   if (timer) clearTimeout(timer)
-  timer = setTimeout(() => void syncMemory(), delay)
+  timer = null
+  if (!isHidden()) timer = setTimeout(() => void syncMemory(), delay)
+}
+
+export interface SyncRequest {
+  /** Send routine changes now: the person is leaving, or the agent rested. */
+  flush?: boolean
+  /** Prompted by focus or reconnecting rather than by a change. */
+  opportunistic?: boolean
 }
 
 /**
@@ -487,24 +573,47 @@ function scheduleAgain(delay: number) {
  * Memory account if they don't have them, and it retries by itself, backing off
  * while anything is unreachable.
  */
-export function syncMemory(): Promise<void> {
+export function syncMemory(request: SyncRequest = {}): Promise<void> {
   if (forgetting) return forgetting.catch(() => undefined)
-  running ??= (async () => {
+  if (running) {
+    // It may have read this device's records before the change that prompted
+    // this, so run once more after it.
+    if (!request.opportunistic) {
+      queued = { flush: Boolean(queued?.flush || request.flush) }
+    }
+    return running
+  }
+  if (
+    request.opportunistic &&
+    !request.flush &&
+    Date.now() - lastPassAt < OPPORTUNISTIC_GAP_MS
+  ) {
+    return Promise.resolve()
+  }
+  running = (async () => {
     const owner = getMemoryUserId()
     if (!owner) return
 
     try {
-      const { more } = await withMemoryLock(async () =>
+      const { more, deferredMs } = await withMemoryLock(async () =>
         owner === getMemoryUserId()
           ? runMemorySync(memoryApi, owner, {
               onRestored: markRestored,
               onChanged: notifyChanged,
+              onOpened: (workspace) => {
+                lastOpened = { workspace, at: Date.now() }
+              },
+              flush: request.flush,
             })
-          : { more: false }
+          : { more: false, deferredMs: undefined }
       )
       failures = 0
       if (owner === getMemoryUserId())
-        scheduleAgain(more ? CHECK_AGAIN_MS : IDLE_SYNC_MS)
+        scheduleAgain(
+          more
+            ? CHECK_AGAIN_MS
+            : Math.min(deferredMs ?? IDLE_SYNC_MS, IDLE_SYNC_MS)
+        )
     } catch (error) {
       if (owner === getMemoryUserId()) {
         console.warn("Agent memory couldn't sync:", error)
@@ -517,6 +626,11 @@ export function syncMemory(): Promise<void> {
     .catch(() => undefined)
     .finally(() => {
       running = null
+      lastPassAt = Date.now()
+      for (const listener of passListeners) listener()
+      const next = queued
+      queued = null
+      if (next) void syncMemory(next)
     })
   return running
 }
@@ -561,22 +675,43 @@ export interface MemoryOverview {
   preferences: { id: string; text: string; synced: boolean }[]
 }
 
-/** What's synced, for review: compares this device's records with the inventory. */
+/** The latest pass's listing is recent enough to show without asking again. */
+const OVERVIEW_MAX_AGE_MS = 2 * 60_000
+
+/**
+ * What's synced, for review. Compares this device's records with what the
+ * account held at the latest pass, and with uploads finished since.
+ */
 export async function getMemoryOverview(
   api: Pick<MemoryApi, "open"> = memoryApi
 ): Promise<MemoryOverview> {
-  const [{ catalog }, local] = await Promise.all([api.open(), loadLocal()])
+  // A pass that's already running lists the account anyway, so wait for it.
+  if (running) await running
+  const fresh =
+    lastOpened && Date.now() - lastOpened.at < OVERVIEW_MAX_AGE_MS
+      ? lastOpened.workspace
+      : null
+  const [{ catalog }, local, state] = await Promise.all([
+    fresh ?? api.open(),
+    loadLocal(),
+    getMemoryState(),
+  ])
+  const stored = new Set(state.remembered)
   return {
     investigations: [...local.investigations]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((row) => ({
-        id: row.id,
-        title: row.title,
-        status: row.status,
-        synced:
-          (catalog.handoffs.get(opaqueId(row.id))?.revision ?? -1) >=
-          localRevision(row, local),
-      })),
+      .map((row) => {
+        const revision = localRevision(row, local)
+        return {
+          id: row.id,
+          title: row.title,
+          status: row.status,
+          synced:
+            (catalog.handoffs.get(opaqueId(row.id))?.revision ?? -1) >=
+              revision ||
+            stored.has(handoffNamespace(row.id, revision, row.status)),
+        }
+      }),
     findings: catalog.findings,
     withdrawn: catalog.withdrawn.size,
     preferences: Object.entries(local.preferences)
@@ -590,7 +725,7 @@ export async function getMemoryOverview(
                 revision,
                 synced:
                   (catalog.preferences.get(opaqueId(id))?.revision ?? -1) >=
-                  revision,
+                    revision || stored.has(preferenceNamespace(id, revision)),
               },
             ]
       )

@@ -50,6 +50,12 @@ background, so it can pick up where it left off on any device:
 - Preferences people ask it to remember are kept apart from research, and can be
   reviewed, edited, or removed in **You → Agent memory**.
 
+The relayer allows each account 500 points an hour, and an upload costs 10, so
+routine changes go up at most every five minutes, carrying every plan revision
+since. Corrections and preferences go at once, and leaving the page or the agent
+resting sends whatever is waiting. While the page is hidden, nothing syncs on a
+timer.
+
  Add these to `.env.local` and allow
 your app origin in Privy’s settings:
 
