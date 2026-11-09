@@ -88,12 +88,9 @@ export const PREFERENCES_KEY = "agentMemory:preferences"
 /** Findings the agent recalled recently, by Walrus blob. */
 export const RECALLED_KEY = "agentMemory:recalled"
 
-/** What every namespace this app writes starts with, whatever the epoch. */
-export const APP_PREFIX = "tranquility-"
-
 /** "Forget" moves to a new prefix, so nothing saved before is found again. */
 export function memoryPrefix(epoch: number) {
-  return `${APP_PREFIX}${epoch}:`
+  return `tranquility-${epoch}:`
 }
 
 /** Namespace names are visible metadata, so record IDs appear only hashed. */

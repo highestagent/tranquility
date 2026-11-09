@@ -1,7 +1,6 @@
 import type { MemWal, MemorySummary } from "@mysten-incubation/memwal"
 
 import {
-  APP_PREFIX,
   memoryPrefix,
   readCatalog,
   RESEARCH_NAMESPACE,
@@ -112,34 +111,26 @@ export interface MemoryWorkspace {
   search(query: string, limit: number): Promise<RecallHit[]>
 }
 
-function accountCheck() {
+async function openWorkspace(): Promise<MemoryWorkspace> {
   const owner = getMemoryUserId()
-  return () => {
+  const [client, epoch] = await Promise.all([getClient(), epochRequest("info")])
+  const assertAccount = () => {
     if (owner !== getMemoryUserId()) throw new NotSignedInError()
   }
-}
+  assertAccount()
 
-/** Every memory the account holds, from every epoch, without reading any. */
-async function listInventory(client: MemWal, assertAccount: () => void) {
   const rows: MemorySummary[] = []
   let cursor: string | undefined
   for (;;) {
     const page = await client.listMemories({ cursor, limit: 500 })
     assertAccount()
     rows.push(...page.memories)
-    if (!page.has_more) return rows
+    if (!page.has_more) break
     if (!page.next_cursor || page.next_cursor === cursor) {
       throw new Error("The memory inventory stopped advancing")
     }
     cursor = page.next_cursor
   }
-}
-
-async function openWorkspace(): Promise<MemoryWorkspace> {
-  const assertAccount = accountCheck()
-  const [client, epoch] = await Promise.all([getClient(), epochRequest("info")])
-  assertAccount()
-  const rows = await listInventory(client, assertAccount)
 
   const recall = async (query: string, namespace: string, limit: number) => {
     const { results } = await client.recall({ query, namespace, limit })
@@ -171,30 +162,6 @@ async function openWorkspace(): Promise<MemoryWorkspace> {
         limit
       ),
   }
-}
-
-/** The blob behind every memory Tranquility saved, forgotten ones included. */
-export async function listSavedBlobIds() {
-  const assertAccount = accountCheck()
-  const client = await getClient()
-  assertAccount()
-  return new Set(
-    (await listInventory(client, assertAccount))
-      .filter(({ namespace_id }) => namespace_id.startsWith(APP_PREFIX))
-      .map(({ blob_id }) => blob_id)
-  )
-}
-
-/** The signed-in person's Sui wallet, which owns the blobs their memories are in. */
-export async function getSuiWallet() {
-  const assertAccount = accountCheck()
-  if (!account) throw new NotSignedInError()
-  const [{ toSuiWallet }, wallet] = await Promise.all([
-    import("./wallet"),
-    account.getWallet(),
-  ])
-  assertAccount()
-  return toSuiWallet(wallet)
 }
 
 export interface MemoryApi {

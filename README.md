@@ -72,15 +72,11 @@ MemWal receives agent notes, and the hosted relayer reads their text while stori
 and searching it. Raw answers, game records, and journals live in the account’s
 browser storage, so evidence collected on one device isn't pooled with another's.
 The first sign-in claims previously unowned local history. "Forget" moves a person
-to a new namespace, so nothing saved before is recalled, but encrypted copies remain
-until they expire. "Delete it permanently" also removes them, through Walrus
-Memory's [Security Delete API](https://docs.wal.app/walrus-memory/guides/delete-memories-programmatically):
-the wallet signs in with a challenge, and the relayer prepares and pays for a Sui
-transaction deleting the blobs, which the wallet signs. The browser calls those
-routes directly, since they accept any origin, so the deletion token never reaches
-this app's server. Walrus only deletes blobs it tracks as deletable, so the app
-first asks which of the account's blobs qualify and offers exactly those. See
-`modules/agent-memory/`.
+to a new namespace, and old encrypted copies remain until they expire. Walrus
+Memory's [Security Delete API](https://docs.wal.app/walrus-memory/guides/delete-memories-programmatically)
+only deletes blobs it tracked under its earlier version, and a signed-in check on
+mainnet found none of this app's memories among them, so the app doesn't offer
+permanent deletion. See `modules/agent-memory/`.
 
 ### Try it with demo data
 
