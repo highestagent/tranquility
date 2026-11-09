@@ -13,7 +13,6 @@ import {
 import { kv } from "@/modules/memory"
 import { commitTask, getContinuation, CONTINUATION_KEY } from "./checkpoint"
 import type { Answer } from "@/modules/interaction/catalog"
-import { loadKnowledge } from "@/modules/insights/knowledge"
 import type { Measurement } from "@/modules/memory"
 
 import { deriveActivity } from "./activity"
@@ -97,10 +96,10 @@ export function useAgentSession() {
     }
   }
 
-  function sendHidden(line: string, text: string) {
+  function sendContinuation(line: string, text: string) {
     return runTurn(line, async () => {
       await kv.set(CONTINUATION_KEY, text)
-      await sendMessage({ text, metadata: { hidden: true } })
+      await sendMessage({ text })
     })
   }
 
@@ -110,7 +109,7 @@ export function useAgentSession() {
       setSnapshot(restored)
       const continuation = await getContinuation()
       if (continuation && !busy && !restored.pending) {
-        void sendHidden("Picking up where we left off…", continuation)
+        void sendContinuation("Picking up where we left off…", continuation)
         return
       }
       if (
@@ -123,7 +122,7 @@ export function useAgentSession() {
           now: Date.now(),
         })
       ) {
-        void sendHidden("Waking up…", auto.SESSION_START)
+        void sendContinuation("Waking up…", auto.SESSION_START)
       }
     } catch {
       setLoadFailed(true)
@@ -136,16 +135,6 @@ export function useAgentSession() {
     booted.current = true
     void boot()
   }, [])
-
-  // Threads appear on the map as the agent works, not only when it's done.
-  const { completedTools } = activity
-  useEffect(() => {
-    if (completedTools === 0) return
-    loadKnowledge().then(
-      (knowledge) => setSnapshot((old) => (old ? { ...old, knowledge } : old)),
-      () => undefined
-    )
-  }, [completedTools])
 
   // Storage is the source of truth, so re-read it whenever a turn ends. This
   // includes a turn that began before this screen did.
@@ -164,7 +153,7 @@ export function useAgentSession() {
     try {
       await commitTask(snapshot.pending, text, value)
       setSnapshot((old) => (old ? { ...old, pending: null } : old))
-      await sendHidden("Taking that in…", text)
+      await sendContinuation("Taking that in…", text)
     } catch {
       setLoadFailed(true)
     } finally {
@@ -197,7 +186,8 @@ export function useAgentSession() {
     retry: () => void runTurn("Trying again…", () => regenerate()),
     reload: () => void refresh(),
     stop: () => void stop(),
-    keepGoing: () => void sendHidden("Picking up the thread…", auto.CONTINUE),
+    keepGoing: () =>
+      void sendContinuation("Picking up the thread…", auto.CONTINUE),
     ask: async (text: string) => {
       await stop()
       await activeTurn.current?.catch(() => undefined)
@@ -233,7 +223,7 @@ export function useAgentSession() {
       const seen = snapshot?.unseen[0]
       if (!seen) return
       try {
-        await setSeenDiscoveriesAt(seen.discovery.createdAt)
+        await setSeenDiscoveriesAt(seen.createdAt)
       } catch {
         setLoadFailed(true)
         return

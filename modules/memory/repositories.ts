@@ -102,14 +102,7 @@ export const discoveries = {
   },
 }
 
-export const decisions = {
-  ...createRepository<Decision>("decisions", decisionSchema),
-  async recent(limit = 50): Promise<Decision[]> {
-    const db = await getDb()
-    const rows = await db.getAll("decisions")
-    return rows.sort((a, b) => b.at - a.at).slice(0, limit)
-  },
-}
+export const decisions = createRepository<Decision>("decisions", decisionSchema)
 
 /** Small key-value store for settings and resumable session state. */
 export const kv = {

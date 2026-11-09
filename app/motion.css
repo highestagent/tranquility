@@ -8,19 +8,6 @@
   stroke-dasharray: 1;
   animation: thread-draw 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.thread-march {
-  animation: thread-march 1.2s linear infinite;
-}
-.thread-scan {
-  opacity: 0;
-  animation: thread-scan 2s ease-in-out infinite;
-}
-/* A point of light travelling along the pair being worked on. */
-.thread-pulse {
-  stroke-dasharray: 0.16 0.84;
-  animation: thread-pulse 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-  filter: drop-shadow(0 0 5px var(--glow));
-}
 @keyframes thread-draw {
   from {
     stroke-dashoffset: 1;
@@ -29,29 +16,6 @@
     stroke-dashoffset: 0;
   }
 }
-@keyframes thread-march {
-  to {
-    stroke-dashoffset: -16;
-  }
-}
-@keyframes thread-scan {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-@keyframes thread-pulse {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
 /* Reveals */
 .rise-in {
   animation: rise-in 200ms ease-out both;
@@ -217,47 +181,7 @@
   }
 }
 
-/* Number dial: a neutral track with no fill, and no thumb until touched, so
-   nothing suggests an answer. */
-.dial {
-  appearance: none;
-  background: transparent;
-}
-.dial::-webkit-slider-runnable-track {
-  height: 0.25rem;
-  border-radius: 9999px;
-  background: var(--input);
-}
-.dial::-moz-range-track {
-  height: 0.25rem;
-  border-radius: 9999px;
-  background: var(--input);
-}
-.dial::-webkit-slider-thumb {
-  appearance: none;
-  width: 1.75rem;
-  height: 1.75rem;
-  margin-top: -0.75rem;
-  border-radius: 9999px;
-  background: var(--primary);
-  box-shadow: 0 6px 18px -4px rgb(0 0 0 / 0.5);
-}
-.dial::-moz-range-thumb {
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: 9999px;
-  background: var(--primary);
-}
-.dial:not([data-touched])::-webkit-slider-thumb {
-  opacity: 0;
-}
-.dial:not([data-touched])::-moz-range-thumb {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .thread-march,
   .thread-draw,
   .rise-in,
   .dot-in,
@@ -268,13 +192,6 @@
   }
   .thread-draw {
     stroke-dashoffset: 0;
-  }
-  .thread-pulse {
-    animation: none;
-    stroke-dasharray: none;
-  }
-  .thread-scan {
-    display: none;
   }
   .demo-flash,
   .demo-recall,

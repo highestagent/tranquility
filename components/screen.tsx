@@ -24,41 +24,25 @@ export function Screen({
   eyebrow,
   title,
   titleClassName = "voice-title",
-  titleKey,
-  live = false,
-  action,
   children,
   dock,
 }: {
   eyebrow?: React.ReactNode
   title?: React.ReactNode
   titleClassName?: string
-  /** Replays the entrance when the title changes. */
-  titleKey?: string | null
-  /** Announces title changes, for text that updates by itself. */
-  live?: boolean
-  /** One small control at the top right. */
-  action?: React.ReactNode
   children?: React.ReactNode
   dock?: React.ReactNode
 }) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-      {eyebrow || title || action ? (
-        <header className="flex items-start justify-between gap-3 pt-2 pb-7">
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            {eyebrow}
-            {title ? (
-              <h1
-                key={titleKey ?? undefined}
-                aria-live={live ? "polite" : undefined}
-                className={cn("rise-in text-balance", titleClassName)}
-              >
-                {title}
-              </h1>
-            ) : null}
-          </div>
-          {action ? <div className="-mt-2 -mr-2 shrink-0">{action}</div> : null}
+      {eyebrow || title ? (
+        <header className="flex min-w-0 flex-col gap-3 pt-2 pb-7">
+          {eyebrow}
+          {title ? (
+            <h1 className={cn("rise-in text-balance", titleClassName)}>
+              {title}
+            </h1>
+          ) : null}
         </header>
       ) : null}
       <div className="flex flex-1 flex-col gap-6">{children}</div>
@@ -67,75 +51,6 @@ export function Screen({
       ) : (
         <div className="h-10 shrink-0" />
       )}
-    </div>
-  )
-}
-
-/**
- * The agent's stage: its body and evidence beside what it's saying. Stacked on
- * a phone, with the action in thumb reach. Side by side on a larger screen, so
- * the visual never gets pushed out of view by a long reply.
- */
-export function HeroLayout({
-  visual,
-  eyebrow,
-  title,
-  titleClassName = "voice-title",
-  titleKey,
-  live = false,
-  detail,
-  dock,
-  textFirst = false,
-}: {
-  visual: React.ReactNode
-  eyebrow?: React.ReactNode
-  title?: React.ReactNode
-  titleClassName?: string
-  titleKey?: string | null
-  live?: boolean
-  detail?: React.ReactNode
-  dock?: React.ReactNode
-  /** Puts the words above the visual on a phone, for results to read first. */
-  textFirst?: boolean
-}) {
-  return (
-    <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:grid-rows-[1fr_auto_auto_1fr] lg:gap-x-20 lg:pb-10">
-      <div
-        className={cn(
-          "flex w-full justify-center lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:items-center",
-          textFirst ? "order-2 pb-2" : "order-1"
-        )}
-      >
-        {visual}
-      </div>
-      <div
-        className={cn(
-          "flex flex-col gap-3 lg:col-start-1 lg:row-start-2",
-          textFirst ? "order-1 pt-2 pb-6" : "order-2 pt-5"
-        )}
-      >
-        {eyebrow}
-        {title ? (
-          <h1
-            key={titleKey ?? undefined}
-            aria-live={live ? "polite" : undefined}
-            className={cn("rise-in text-pretty", titleClassName)}
-          >
-            {title}
-          </h1>
-        ) : null}
-        {detail}
-      </div>
-      {dock ? (
-        <div
-          className={cn(
-            dockStyle,
-            "order-3 mt-auto lg:static lg:col-start-1 lg:row-start-3 lg:mx-0 lg:mt-0 lg:bg-none lg:px-0 lg:pt-8 lg:pb-0"
-          )}
-        >
-          {dock}
-        </div>
-      ) : null}
     </div>
   )
 }

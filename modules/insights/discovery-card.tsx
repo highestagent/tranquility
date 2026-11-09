@@ -19,13 +19,21 @@ import {
 import { ScatterPlot } from "@/components/charts/scatter-plot"
 import { cn } from "@/lib/utils"
 import { formatMetric, formatTick, getAssessment } from "@/modules/assessments"
-import type { Discovery } from "@/modules/memory"
+import type { Analysis, Discovery } from "@/modules/memory"
 import { getDomain, getQuestion } from "@/modules/questionnaire"
 
 import type { DiscoveryView } from "./discovery-data"
-import { helpsFrom } from "./knowledge"
 import { StrengthMeter } from "./strength-meter"
 import { ThreadGlyph } from "./thread-glyph"
+
+function helpsFrom(metric: Analysis["metric"], effect: number | null) {
+  if (effect === null || effect === 0) return null
+  const definition = getAssessment(metric.assessmentId)?.metrics.find(
+    ({ id }) => id === metric.metricId
+  )
+  if (!definition) return null
+  return effect > 0 === definition.higherIsBetter
+}
 
 const VERDICTS: Record<
   Discovery["verdict"],

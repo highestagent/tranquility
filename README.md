@@ -71,7 +71,7 @@ new data, or a long rest), and the screen follows what it's doing.
 
 | Phase | What you see |
 |---|---|
-| Thinking | The evidence map, with the orb rippling and threads forming live |
+| Thinking | A short description of the current task and the agent’s reply |
 | Asking | One tap-to-answer question at a time |
 | Playing | A game with an animated preview, then a visual result |
 | Reveal | A new finding, with its chart and evidence strength |
@@ -97,7 +97,7 @@ modules/
   agent-memory/   Background sync to Walrus Memory, and recall
   relay/          Forwards model requests, keeping the key on the server
   session/        The home screen and its phases
-  insights/       The evidence map and findings
+  insights/       Findings and evidence displays
 ```
 
 Dependencies run one way: `agent → investigation → analytics → memory`.

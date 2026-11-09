@@ -125,7 +125,7 @@ export function AgentHome() {
       </ConversationCanvas>
     )
   if (phase === "reveal") {
-    const view = snapshot.unseen[0]!
+    const finding = snapshot.unseen[0]!
     return (
       <ConversationCanvas
         stage="An observation"
@@ -142,7 +142,7 @@ export function AgentHome() {
         <InteractionRenderer
           interaction={{
             type: "EvidenceCard",
-            props: { discoveryId: view.discovery.id },
+            props: { discoveryId: finding.id },
           }}
           onAnswer={() => {}}
         />

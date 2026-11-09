@@ -2,160 +2,34 @@ import type { UIMessage } from "ai"
 import { describe, expect, it } from "vitest"
 
 import { deriveActivity } from "./activity"
-import { splitSpeech } from "./speech"
 import { REST_WINDOW_MS, shouldWake } from "./wake"
 
 function assistant(parts: unknown[]): UIMessage {
   return { id: "a", role: "assistant", parts: parts as UIMessage["parts"] }
 }
 
-function user(text: string, hidden = false): UIMessage {
-  return {
-    id: "u",
-    role: "user",
-    metadata: hidden ? { hidden: true } : undefined,
-    parts: [{ type: "text", text }],
-  }
-}
-
-const tool = (name: string, input: object, state = "output-available") => ({
-  type: `tool-${name}`,
-  toolCallId: name,
-  state,
-  input,
-})
-
 describe("deriveActivity", () => {
-  it("starts empty until the agent replies", () => {
-    const activity = deriveActivity([user("Start", true)])
-    expect(activity.stage).toBeNull()
-    expect(activity.asked).toBeNull()
-    expect(activity.completedTools).toBe(0)
-  })
-
-  it("follows the cycle from the agent's tool calls", () => {
-    const activity = deriveActivity([
-      user("Start", true),
-      assistant([
-        tool("getUserContext", { reason: "Reviewing" }),
-        tool(
-          "analyzePerformance",
-          { reason: "Testing", mode: "relationship" },
-          "input-available"
-        ),
-      ]),
-    ])
-    expect(activity.stage).toBe("analyze")
-    expect(activity.visited).toEqual(["understand", "analyze"])
-    expect(activity.caption).toBe("Testing")
-    expect(activity.completedTools).toBe(1)
-  })
-
-  it("maps the pair being tested onto the map", () => {
+  it("keeps the latest available tool reason while the agent works", () => {
     const activity = deriveActivity([
       assistant([
-        tool("analyzePerformance", {
-          reason: "Testing",
-          mode: "relationship",
-          factorId: "sleep.hours",
-          assessmentId: "go-no-go",
-          metricId: "medianRt",
-        }),
-        tool("saveInvestigation", { reason: "Saving" }),
+        { type: "tool-getUserContext", input: { reason: "Reviewing" } },
+        { type: "tool-analyzePerformance", input: { reason: "Analyzing" } },
+        { type: "tool-saveInvestigation" },
       ]),
     ])
-    expect(activity.focus).toEqual({
-      domain: "sleep",
-      assessmentId: "go-no-go",
-    })
-    expect(activity.stage).toBe("adapt")
-  })
-
-  it("only reports scanning while the scan is running", () => {
-    const scan = { reason: "Scanning", mode: "scan" }
-    expect(
-      deriveActivity([
-        assistant([tool("analyzePerformance", scan, "input-available")]),
-      ]).scanning
-    ).toBe(true)
-    expect(
-      deriveActivity([assistant([tool("analyzePerformance", scan)])]).scanning
-    ).toBe(false)
+    expect(activity).toEqual({ caption: "Analyzing", spoken: null })
   })
 
   it("treats only text after the last tool call as speech", () => {
     const activity = deriveActivity([
       assistant([
         { type: "text", text: "Let me check." },
-        tool("getUserContext", { reason: "Reviewing" }),
+        { type: "tool-getUserContext", input: { reason: "Reviewing" } },
         { type: "text", text: "You react faster" },
         { type: "text", text: " after more sleep." },
       ]),
     ])
     expect(activity.spoken).toBe("You react faster after more sleep.")
-  })
-
-  it("shows the user's own question but never the app's hidden turns", () => {
-    expect(deriveActivity([user("Does sleep matter?")]).asked).toBe(
-      "Does sleep matter?"
-    )
-    expect(deriveActivity([user("Internal", true)]).asked).toBeNull()
-  })
-
-  it("drops an old question once a later turn has started", () => {
-    expect(
-      deriveActivity([
-        user("Does sleep matter?"),
-        assistant([{ type: "text", text: "Yes." }]),
-        user("Keep going", true),
-      ]).asked
-    ).toBeNull()
-  })
-
-  it("focuses the map on what a plan is about", () => {
-    const activity = deriveActivity([
-      assistant([
-        tool("planInvestigation", {
-          reason: "Planning",
-          evidence: [
-            {
-              factorId: "stress.level",
-              assessmentId: "visual-search",
-              metricId: "medianRt",
-              minPairs: 12,
-            },
-          ],
-        }),
-      ]),
-    ])
-    expect(activity.focus).toEqual({
-      domain: "stress",
-      assessmentId: "visual-search",
-    })
-  })
-})
-
-describe("splitSpeech", () => {
-  it("makes the first sentence the headline", () => {
-    expect(
-      splitSpeech(
-        "Not enough evidence yet. Keep answering. It takes a few days."
-      )
-    ).toEqual({
-      headline: "Not enough evidence yet.",
-      rest: "Keep answering. It takes a few days.",
-    })
-  })
-
-  it("keeps a single sentence whole", () => {
-    expect(splitSpeech("You react faster after more sleep.")).toEqual({
-      headline: "You react faster after more sleep.",
-      rest: null,
-    })
-  })
-
-  it("doesn't split on an abbreviation", () => {
-    expect(splitSpeech("Try a nap, e.g. after lunch.").rest).toBeNull()
   })
 })
 
