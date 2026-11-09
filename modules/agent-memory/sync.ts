@@ -1,3 +1,5 @@
+import type { z } from "zod"
+
 import { countPairs } from "@/modules/analytics"
 import {
   discoveries,
@@ -36,6 +38,7 @@ import {
   type Fact,
   type HandoffRecord,
   type HandoffReference,
+  type MemoryReference,
 } from "./records"
 import { getPreferenceRevisions } from "./preferences"
 import { dropRecalledNotes } from "./recalled"
@@ -125,6 +128,35 @@ async function loadLocal(): Promise<LocalResearch> {
     withdrawals,
     preferences,
   }
+}
+
+/**
+ * Reads exact revisions and checks each is the record its name says. One
+ * unreadable blob mustn't stop everything else syncing, so failures come back
+ * as `failed` instead of throwing.
+ */
+async function readExact<T extends { revision: number }>(
+  workspace: MemoryWorkspace,
+  stale: readonly [string, MemoryReference][],
+  schema: z.ZodType<T>,
+  keyOf: (record: T) => string
+) {
+  let failed = false
+  const records = await inParallel(stale, async ([key, reference]) => {
+    try {
+      const record = readRecord(schema, await workspace.read(reference))
+      // The namespace vouches for which record and revision this is.
+      return record &&
+        opaqueId(keyOf(record)) === key &&
+        record.revision === reference.revision
+        ? record
+        : null
+    } catch {
+      failed = true
+      return null
+    }
+  })
+  return { records: records.filter((record) => record !== null), failed }
 }
 
 /** Runs `work` over `items`, a few at a time. */
@@ -219,22 +251,14 @@ async function restoreHandoffs(
       stale.push([key, reference])
     }
   }
-  const records = await inParallel(stale, async ([key, reference]) => {
-    const record = readRecord(handoffRecord, await workspace.read(reference))
-    // The namespace vouches for which investigation and revision this is.
-    return record &&
-      opaqueId(record.investigation.id) === key &&
-      record.revision === reference.revision
-      ? record
-      : null
-  })
-  let changed = false
-  for (const record of records) {
-    if (!record) continue
-    await applyHandoff(record, isWithdrawn)
-    changed = true
-  }
-  return changed
+  const { records, failed } = await readExact(
+    workspace,
+    stale,
+    handoffRecord,
+    (record) => record.investigation.id
+  )
+  for (const record of records) await applyHandoff(record, isWithdrawn)
+  return { changed: records.length > 0, complete: !failed }
 }
 
 /**
@@ -276,26 +300,23 @@ async function restorePreferences(workspace: MemoryWorkspace) {
       return reference.revision > (id ? local[id]!.revision : -1)
     }
   )
-  if (stale.length === 0) return false
-  const records = await inParallel(stale, async ([key, reference]) => {
-    const record = readRecord(preferenceRecord, await workspace.read(reference))
-    return record &&
-      opaqueId(record.id) === key &&
-      record.revision === reference.revision
-      ? record
-      : null
-  })
+  if (stale.length === 0) return { changed: false, complete: true }
+  const { records, failed } = await readExact(
+    workspace,
+    stale,
+    preferenceRecord,
+    (record) => record.id
+  )
   // Re-read, so an edit made here while reading isn't overwritten.
   const latest = await getPreferenceRevisions()
   let changed = false
   for (const record of records) {
-    if (!record || (latest[record.id]?.revision ?? -1) >= record.revision)
-      continue
+    if ((latest[record.id]?.revision ?? -1) >= record.revision) continue
     latest[record.id] = { revision: record.revision, text: record.text }
     changed = true
   }
   if (changed) await kv.set(PREFERENCES_KEY, latest)
-  return changed
+  return { changed, complete: !failed }
 }
 
 /** Forgotten, or another person's: this device's caches no longer apply. */
@@ -337,7 +358,7 @@ export async function runMemorySync(
   options: {
     /** Other devices' work is now on this one. */
     onRestored?: () => void
-    /** What this device shows changed because of another device. */
+    /** What this device shows, or what's synced, changed. */
     onChanged?: () => void
   } = {}
 ): Promise<{ more: boolean }> {
@@ -364,12 +385,14 @@ export async function runMemorySync(
     workspace.catalog,
     await getLocalWithdrawals()
   )
-  const restored = await restoreHandoffs(workspace, isWithdrawn)
+  const plans = await restoreHandoffs(workspace, isWithdrawn)
   const withdrawn = await applyWithdrawals(workspace)
-  const preferred = await restorePreferences(workspace)
-  if (restored || withdrawn || preferred) options.onChanged?.()
-  options.onRestored?.()
+  const preferences = await restorePreferences(workspace)
+  if (plans.changed || withdrawn || preferences.changed) options.onChanged?.()
+  // Only a full restore lets a new device's agent carry on as if it knew it all.
+  if (plans.complete && preferences.complete) options.onRestored?.()
 
+  let saved = false
   if (state.pending.length > 0) {
     const { jobs } = await api.status(state.pending.map((job) => job.jobId))
     const statusOf = new Map(jobs.map((job) => [job.jobId, job.status]))
@@ -379,6 +402,7 @@ export async function runMemorySync(
       if (status === "done") {
         state.remembered.push(job.factId)
         state.lastSavedAt = Date.now()
+        saved = true
       } else if (
         status === "pending" ||
         status === "running" ||
@@ -390,6 +414,7 @@ export async function runMemorySync(
     }
     state.pending = stillRunning
     await saveState(state)
+    if (saved) options.onChanged?.()
   }
 
   const facts = distillFacts(await loadLocal())
@@ -428,7 +453,7 @@ let restored = false
 const restoreWaiters = new Set<() => void>()
 const changeListeners = new Set<() => void>()
 
-/** Calls `listener` whenever another device's work changes what's shown here. */
+/** Calls `listener` when another device's work arrives or a save finishes. */
 export function onMemoryChange(listener: () => void) {
   changeListeners.add(listener)
   return () => {

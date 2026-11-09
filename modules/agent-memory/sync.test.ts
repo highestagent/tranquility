@@ -387,6 +387,31 @@ describe("resuming on another device", () => {
     }
   })
 
+  it("keeps syncing past an unreadable note, without claiming it restored everything", async () => {
+    const { api } = fakeWalrus()
+    await startInvestigation()
+    await settle(api)
+
+    await onDevice("phone")
+    const open = api.open.getMockImplementation()!
+    api.open.mockImplementation(async () => ({
+      ...(await open()),
+      read: async () => {
+        throw new Error("Blob unavailable")
+      },
+    }))
+    await savePreference("Mornings")
+    const restored = vi.fn()
+    await runMemorySync(api, "u1", { onRestored: restored })
+    expect(restored).not.toHaveBeenCalled()
+    expect(api.remember).toHaveBeenCalledTimes(2)
+
+    api.open.mockImplementation(open)
+    await runMemorySync(api, "u1", { onRestored: restored })
+    expect(restored).toHaveBeenCalledOnce()
+    expect(await investigations.list()).toHaveLength(1)
+  })
+
   it("leaves completed investigations it never saw out of the way", async () => {
     const { api } = fakeWalrus()
     const { investigation } = await startInvestigation()
