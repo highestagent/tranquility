@@ -175,12 +175,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Quiet, opaque surfaces preserve contrast in either theme. */
-@utility surface {
-  background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

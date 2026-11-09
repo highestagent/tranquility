@@ -1,3 +1,10 @@
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Spinner } from "@/components/ui/spinner"
 import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 
@@ -7,7 +14,11 @@ export function LoadingMessage({
   children?: string
 }) {
   return (
-    <p role="status" className="py-8 text-sm text-muted-foreground">
+    <p
+      role="status"
+      className="flex items-center gap-2 py-8 text-sm text-muted-foreground"
+    >
+      <Spinner aria-hidden className="motion-reduce:animate-none" />
       {children}
     </p>
   )
@@ -42,9 +53,11 @@ export function EmptyMessage({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col gap-1 rounded-3xl p-6 text-sm surface">
-      <p className="voice-note not-italic">{title}</p>
-      <div className="text-muted-foreground">{children}</div>
-    </div>
+    <Empty className="flex-none items-start rounded-3xl border bg-card text-left">
+      <EmptyHeader className="items-start gap-1">
+        <EmptyTitle className="voice-note not-italic">{title}</EmptyTitle>
+        <EmptyDescription className="text-sm">{children}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   )
 }

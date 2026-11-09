@@ -1,5 +1,6 @@
 "use client"
 
+import { Card } from "@/components/ui/card"
 import { LogOut, UserRound } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ export function AccountCard() {
   if (!account.available) return null
 
   return (
-    <section className="flex items-center gap-3 rounded-3xl p-4 pl-5 surface">
+    <Card className="flex-row items-center gap-3 rounded-3xl p-4 pl-5">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
         <UserRound aria-hidden className="size-5" />
       </span>
@@ -44,6 +45,6 @@ export function AccountCard() {
           Sign in
         </Button>
       )}
-    </section>
+    </Card>
   )
 }

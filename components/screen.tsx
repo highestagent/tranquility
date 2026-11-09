@@ -1,3 +1,8 @@
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { AgentOrb } from "@/modules/insights/agent-orb"
 import { cn } from "@/lib/utils"
 
@@ -13,7 +18,7 @@ const dockStyle =
  *   dock     the one thing to do, in thumb reach
  *
  * Spacing rhythm: a 20px gutter (from the layout), 24px between regions, and
- * 12px within a group. Screens are a reading width unless they're `wide`.
+ * 12px within a group. Screens share the same reading width.
  */
 export function Screen({
   eyebrow,
@@ -22,7 +27,6 @@ export function Screen({
   titleKey,
   live = false,
   action,
-  wide = false,
   children,
   dock,
 }: {
@@ -35,14 +39,11 @@ export function Screen({
   live?: boolean
   /** One small control at the top right. */
   action?: React.ReactNode
-  wide?: boolean
   children?: React.ReactNode
   dock?: React.ReactNode
 }) {
   return (
-    <div
-      className={cn("mx-auto flex w-full flex-1 flex-col", !wide && "max-w-lg")}
-    >
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
       {eyebrow || title || action ? (
         <header className="flex items-start justify-between gap-3 pt-2 pb-7">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -173,7 +174,7 @@ export function ConversationCanvas({
 }) {
   return (
     <section
-      className="mx-auto flex w-full max-w-xl flex-1 flex-col pt-[clamp(2rem,10svh,7rem)] pb-6"
+      className="mx-auto flex w-full max-w-lg flex-1 flex-col pt-[clamp(2rem,10svh,7rem)] pb-6"
       aria-label="Conversation"
     >
       <div
@@ -190,10 +191,14 @@ export function ConversationCanvas({
       </div>
       <div className="mt-7 flex flex-col gap-5">{children}</div>
       {why ? (
-        <details className="mt-6 text-sm text-muted-foreground">
-          <summary className="cursor-pointer">Why I’m asking</summary>
-          <p className="mt-3 leading-relaxed">{why}</p>
-        </details>
+        <Collapsible className="mt-6 text-sm text-muted-foreground">
+          <CollapsibleTrigger className="cursor-pointer rounded text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+            Why I’m asking
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <p className="mt-3 leading-relaxed">{why}</p>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
       {controls ? (
         <div className="mt-auto flex flex-wrap items-center gap-3 pt-12">

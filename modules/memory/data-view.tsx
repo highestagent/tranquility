@@ -1,5 +1,24 @@
 "use client"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Card } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { Input } from "@/components/ui/input"
 import {
   CalendarDays,
   ChartScatter,
@@ -142,7 +161,7 @@ export function DataView() {
             Import
           </Button>
         </div>
-        <input
+        <Input
           ref={fileInput}
           type="file"
           accept="application/json,.json"
@@ -155,86 +174,80 @@ export function DataView() {
           }}
         />
         {notice ? (
-          <p
+          <Alert
+            variant={notice.kind === "error" ? "destructive" : "default"}
             role={notice.kind === "error" ? "alert" : "status"}
-            className={
-              notice.kind === "error" ? "text-sm text-destructive" : "text-sm"
-            }
           >
-            {notice.text}
-          </p>
+            <AlertDescription>{notice.text}</AlertDescription>
+          </Alert>
         ) : null}
-        {importFile ? (
-          <div
-            role="alertdialog"
-            aria-label="Confirm import"
-            className="rise-in flex flex-col gap-3 rounded-2xl border border-border p-4 text-sm"
-          >
-            <p>Replace everything here with {importFile.name}?</p>
-            <div className="grid grid-cols-2 gap-2">
-              <Button size="lg" onClick={() => void runImport(importFile)}>
-                Replace
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => setImportFile(null)}
+        <AlertDialog
+          open={importFile !== null}
+          onOpenChange={(open) => {
+            if (!open) setImportFile(null)
+          }}
+        >
+          <AlertDialogContent className="rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm import</AlertDialogTitle>
+              <AlertDialogDescription>
+                Replace everything here with {importFile?.name}?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (importFile) void runImport(importFile)
+                }}
               >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : null}
+                Replace
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </Section>
 
       <Section label="Everything stored">
-        <ul className="flex flex-col divide-y divide-border rounded-3xl px-5 surface">
-          {STORE_NAMES.map((name) => (
-            <li key={name}>
-              <StoreRow name={name} count={counts[name]} />
-            </li>
-          ))}
-        </ul>
+        <Card className="rounded-3xl px-5 py-0">
+          <ul className="flex flex-col divide-y divide-border">
+            {STORE_NAMES.map((name) => (
+              <li key={name}>
+                <StoreRow name={name} count={counts[name]} />
+              </li>
+            ))}
+          </ul>
+        </Card>
       </Section>
 
-      {confirmDelete ? (
-        <div
-          role="alertdialog"
-          aria-label="Confirm delete"
-          className="rise-in flex flex-col gap-3 rounded-2xl border border-destructive p-4 text-sm"
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogTrigger
+          render={
+            <Button size="cta" variant="ghost" className="text-destructive" />
+          }
         >
-          <p>
-            Permanently delete everything from this browser? To stop the agent
-            recalling what it saved, use Agent memory above.
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              size="lg"
+          <Trash2 aria-hidden data-icon="inline-start" />
+          Delete from this browser
+        </AlertDialogTrigger>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm delete</AlertDialogTitle>
+            <AlertDialogDescription>
+              Permanently delete everything from this browser? To stop the agent
+              recalling what it saved, use Agent memory above.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
               onClick={() => void runDelete()}
             >
               Delete
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => setConfirmDelete(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          size="cta"
-          variant="ghost"
-          className="text-destructive"
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Trash2 aria-hidden data-icon="inline-start" />
-          Delete from this browser
-        </Button>
-      )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
@@ -244,17 +257,17 @@ function StoreRow({ name, count }: { name: StoreName; count: number }) {
   const { label, Icon } = STORES[name]
 
   return (
-    <details
+    <Collapsible
       className="group text-sm"
-      onToggle={(event) => {
-        if (event.currentTarget.open && rows === null) {
+      onOpenChange={(open) => {
+        if (open && rows === null) {
           void getDb()
             .then((db) => db.getAll(name))
             .then(setRows)
         }
       }}
     >
-      <summary className="flex h-12 cursor-pointer list-none items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <CollapsibleTrigger className="group flex h-12 w-full cursor-pointer list-none items-center gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Icon aria-hidden className="size-4 text-muted-foreground" />
         <span className="flex-1">{label}</span>
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -262,14 +275,16 @@ function StoreRow({ name, count }: { name: StoreName; count: number }) {
         </span>
         <ChevronDown
           aria-hidden
-          className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+          className="size-4 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180"
         />
-      </summary>
-      {rows ? (
-        <pre className="mb-3 max-h-72 overflow-auto rounded-2xl bg-muted p-3 font-mono text-xs">
-          {JSON.stringify(rows, null, 2)}
-        </pre>
-      ) : null}
-    </details>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {rows ? (
+          <pre className="mb-3 max-h-72 overflow-auto rounded-2xl bg-muted p-3 font-mono text-xs">
+            {JSON.stringify(rows, null, 2)}
+          </pre>
+        ) : null}
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

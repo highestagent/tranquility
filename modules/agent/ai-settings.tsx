@@ -1,10 +1,16 @@
 "use client"
 
+import { Card } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import { Switch } from "@/components/ui/switch"
 import { Cloud } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { LoadingMessage, StorageError } from "@/components/status-message"
-import { cn } from "@/lib/utils"
 
 import { AiDisclosure } from "./ai-consent-card"
 import { isCloudAiEnabled, setAiConsent } from "./consent"
@@ -33,7 +39,7 @@ export function AiSettings() {
   if (granted === null) return <LoadingMessage />
 
   return (
-    <section className="flex flex-col gap-3 rounded-3xl p-4 pl-5 surface">
+    <Card className="gap-3 rounded-3xl p-4 pl-5">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-full bg-muted">
           <Cloud aria-hidden className="size-5" />
@@ -41,34 +47,22 @@ export function AiSettings() {
         <h2 id="cloud-ai" className="flex-1 text-sm font-medium">
           Cloud AI
         </h2>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={granted}
+        <Switch
+          checked={granted}
           aria-labelledby="cloud-ai"
-          onClick={() => void change(!granted)}
-          className={cn(
-            "relative h-7 w-12 rounded-full transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-            granted ? "bg-glow" : "bg-input"
-          )}
-        >
-          <span
-            aria-hidden
-            className={cn(
-              "absolute top-1 left-1 size-5 rounded-full bg-background shadow-sm transition-transform duration-200",
-              granted && "translate-x-5"
-            )}
-          />
-        </button>
+          onCheckedChange={(checked) => void change(checked)}
+        />
       </div>
-      <details>
-        <summary className="cursor-pointer text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+      <Collapsible>
+        <CollapsibleTrigger className="cursor-pointer rounded text-left text-xs text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-2 focus-visible:outline-ring">
           What gets sent
-        </summary>
-        <div className="mt-2">
-          <AiDisclosure />
-        </div>
-      </details>
-    </section>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-2">
+            <AiDisclosure />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
   )
 }

@@ -23,18 +23,17 @@ export function DecisionLog({ decisions }: { decisions: readonly Decision[] }) {
   return (
     <Sheet
       title="What I did"
-      trigger={(open) => (
+      trigger={
         <Button
           variant="ghost"
           size="icon-lg"
           aria-label="What I did"
           title="What I did"
           className="-my-2 -mr-3 text-muted-foreground"
-          onClick={open}
         >
           <History aria-hidden className="size-[1.0625rem]" />
         </Button>
-      )}
+      }
     >
       <ol className="flex flex-col gap-4 text-sm">
         {decisions.map((decision) => {

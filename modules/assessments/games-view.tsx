@@ -1,5 +1,7 @@
 "use client"
 
+import { Card } from "@/components/ui/card"
+import { buttonVariants } from "@/components/ui/button"
 import { Check, ChevronRight, ClipboardList } from "lucide-react"
 import Link from "next/link"
 
@@ -34,8 +36,10 @@ async function loadGames() {
   }
 }
 
-const rowStyle =
-  "surface flex items-center gap-3 rounded-3xl p-3 pr-4 transition-colors outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring"
+const rowStyle = buttonVariants({
+  variant: "outline",
+  className: "h-auto w-full justify-start gap-3 rounded-3xl p-3 pr-4",
+})
 
 export function GamesView() {
   const { state } = useAsync(loadGames)
@@ -60,7 +64,7 @@ export function GamesView() {
         </Link>
       )}
 
-      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3">
         {ASSESSMENTS.map(
           ({ id, shortName, Preview, primaryMetricId, metrics }) => {
             const primary = metrics.find(
@@ -71,26 +75,28 @@ export function GamesView() {
               <li key={id}>
                 <Link
                   href={`/assessments/${id}`}
-                  className="flex h-full flex-col gap-3 rounded-3xl p-3.5 surface transition-colors outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring"
+                  className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex h-28 items-center justify-center lg:h-36">
-                    <Preview />
-                  </span>
-                  <span className="flex items-baseline justify-between gap-2 px-1">
-                    <span className="text-sm font-medium">{shortName}</span>
-                    {values.length > 0 ? (
-                      <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                        {values.length}×
-                      </span>
-                    ) : null}
-                  </span>
-                  <Sparkline
-                    values={values.slice(-14)}
-                    invert={!primary.higherIsBetter}
-                    label={shortName}
-                    format={(value) => formatMetric(value, primary)}
-                    className="w-full"
-                  />
+                  <Card className="h-full gap-3 rounded-3xl p-3.5 transition-colors group-hover:bg-muted">
+                    <span className="flex h-28 items-center justify-center">
+                      <Preview />
+                    </span>
+                    <span className="flex items-baseline justify-between gap-2 px-1">
+                      <span className="text-sm font-medium">{shortName}</span>
+                      {values.length > 0 ? (
+                        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                          {values.length}×
+                        </span>
+                      ) : null}
+                    </span>
+                    <Sparkline
+                      values={values.slice(-14)}
+                      invert={!primary.higherIsBetter}
+                      label={shortName}
+                      format={(value) => formatMetric(value, primary)}
+                      className="w-full"
+                    />
+                  </Card>
                 </Link>
               </li>
             )

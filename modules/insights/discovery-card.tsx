@@ -1,5 +1,12 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Check,
   ChevronDown,
@@ -54,7 +61,8 @@ export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
       ) : (
         <Telescope aria-hidden className="size-6 text-muted-foreground" />
       )}
-      <span
+      <Badge
+        variant="outline"
         className={cn(
           "stamp-in flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
           verdict.solid
@@ -64,7 +72,7 @@ export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
       >
         <verdict.Icon aria-hidden className="size-3.5" />
         {verdict.label}
-      </span>
+      </Badge>
     </div>
   )
 }
@@ -96,32 +104,38 @@ export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
         />
       ) : null}
 
-      <details className="group text-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Collapsible className="group text-sm">
+        <CollapsibleTrigger className="group flex w-full cursor-pointer list-none items-center justify-between gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <StrengthMeter grade={discovery.grade} />
           <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
             Details
             <ChevronDown
               aria-hidden
-              className="size-3.5 transition-transform duration-200 group-open:rotate-180"
+              className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
             />
           </span>
-        </summary>
-        <dl className="mt-4 flex flex-col gap-3">
-          <Detail Icon={Telescope} label="Evidence" text={discovery.evidence} />
-          <Detail
-            Icon={Check}
-            label="Reliability"
-            text={discovery.reliability}
-          />
-          <Detail
-            Icon={CircleHelp}
-            label="Uncertain"
-            text={discovery.uncertainty}
-          />
-          <Detail Icon={Compass} label="Next" text={discovery.nextStep} />
-        </dl>
-      </details>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <dl className="mt-4 flex flex-col gap-3">
+            <Detail
+              Icon={Telescope}
+              label="Evidence"
+              text={discovery.evidence}
+            />
+            <Detail
+              Icon={Check}
+              label="Reliability"
+              text={discovery.reliability}
+            />
+            <Detail
+              Icon={CircleHelp}
+              label="Uncertain"
+              text={discovery.uncertainty}
+            />
+            <Detail Icon={Compass} label="Next" text={discovery.nextStep} />
+          </dl>
+        </CollapsibleContent>
+      </Collapsible>
     </>
   )
 }
@@ -129,11 +143,11 @@ export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
 /** A finding as a self-contained card, for lists. */
 export function DiscoveryCard({ view }: { view: DiscoveryView }) {
   return (
-    <article className="flex flex-col gap-4 rounded-[1.75rem] p-5 surface lg:p-6">
+    <Card className="gap-4 rounded-[1.75rem] p-5 text-sm lg:p-6">
       <DiscoveryEyebrow view={view} />
       <h2 className="voice-title text-balance">{view.discovery.observed}</h2>
       <DiscoveryEvidence view={view} />
-    </article>
+    </Card>
   )
 }
 

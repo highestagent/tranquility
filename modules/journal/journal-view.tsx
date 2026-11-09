@@ -1,4 +1,10 @@
 "use client"
+import { Card } from "@/components/ui/card"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import Link from "next/link"
 import { useState } from "react"
 import { Screen } from "@/components/screen"
@@ -79,97 +85,113 @@ export function JournalView() {
         <p>Your first session will appear here.</p>
       ) : (
         state.data.map((entry) => (
-          <details key={entry.session.id} className="rounded-xl border p-5">
-            <summary className="cursor-pointer">
-              <time className="font-medium">
-                {new Date(entry.session.startedAt).toLocaleString([], {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </time>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {entry.answers.length + entry.context.length} contextual answers
-                · {entry.runs.length} measurements · {entry.findings.length}{" "}
-                findings
-              </p>
-            </summary>
-            <div className="mt-6 space-y-6">
-              {entry.summary ? (
-                <div className="space-y-2">
-                  <p>{entry.summary.summary}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Next: {entry.summary.nextStep}
-                  </p>
-                </div>
-              ) : null}
-              {entry.answers.map((answer) => (
-                <AnswerEntry key={answer.id} answer={answer} onSaved={reload} />
-              ))}
-              {entry.context.map((answer) => (
-                <div key={answer.id}>
-                  <p className="text-sm">{answer.message}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {answer.value === null
-                      ? "Skipped"
-                      : Array.isArray(answer.value)
-                        ? answer.value.join(", ")
-                        : String(answer.value)}
-                  </p>
-                </div>
-              ))}
-              {entry.runs.map((run) => {
-                const assessment = getAssessment(run.assessmentId)
-                return (
-                  <details key={run.id} id={run.id}>
-                    <summary className="cursor-pointer text-sm">
-                      {assessment?.shortName ?? run.assessmentId} ·{" "}
-                      {run.valid ? "Completed" : "Invalid run"}
-                    </summary>
-                    <dl className="mt-3 space-y-2 text-sm text-muted-foreground">
-                      {assessment?.metrics.map((metric) => (
-                        <div key={metric.id} className="flex justify-between">
-                          <dt>{metric.label}</dt>
-                          <dd>
-                            {run.metrics[metric.id] === undefined
-                              ? "—"
-                              : formatMetric(run.metrics[metric.id], metric)}
-                          </dd>
-                        </div>
-                      ))}
-                      <p>
-                        Protocol version {run.protocolVersion}. A single
-                        measurement is not diagnostic.
+          <Card key={entry.session.id} className="rounded-xl p-5 text-sm">
+            <Collapsible>
+              <CollapsibleTrigger className="cursor-pointer rounded text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                <time className="font-medium">
+                  {new Date(entry.session.startedAt).toLocaleString([], {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </time>
+                <span className="mt-2 block text-sm text-muted-foreground">
+                  {entry.answers.length + entry.context.length} contextual
+                  answers · {entry.runs.length} measurements ·{" "}
+                  {entry.findings.length} findings
+                </span>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-6 space-y-6">
+                  {entry.summary ? (
+                    <div className="space-y-2">
+                      <p>{entry.summary.summary}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Next: {entry.summary.nextStep}
                       </p>
-                    </dl>
-                  </details>
-                )
-              })}
-              {entry.log
-                .filter((d) => d.reason)
-                .map((d) => (
-                  <p key={d.id} className="text-sm text-muted-foreground">
-                    {d.reason}
-                  </p>
-                ))}
-              {entry.findings.map((f) => (
-                <article key={f.id} className="space-y-2 border-t pt-4">
-                  <Link
-                    href="/findings"
-                    className="underline underline-offset-4"
-                  >
-                    {f.observed}
-                  </Link>
-                  <p className="text-sm">
-                    {f.grade} evidence · {f.verdict}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {f.evidence} {f.uncertainty}
-                  </p>
-                  <p className="text-sm">Next: {f.nextStep}</p>
-                </article>
-              ))}
-            </div>
-          </details>
+                    </div>
+                  ) : null}
+                  {entry.answers.map((answer) => (
+                    <AnswerEntry
+                      key={answer.id}
+                      answer={answer}
+                      onSaved={reload}
+                    />
+                  ))}
+                  {entry.context.map((answer) => (
+                    <div key={answer.id}>
+                      <p className="text-sm">{answer.message}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {answer.value === null
+                          ? "Skipped"
+                          : Array.isArray(answer.value)
+                            ? answer.value.join(", ")
+                            : String(answer.value)}
+                      </p>
+                    </div>
+                  ))}
+                  {entry.runs.map((run) => {
+                    const assessment = getAssessment(run.assessmentId)
+                    return (
+                      <Collapsible key={run.id} id={run.id}>
+                        <CollapsibleTrigger className="cursor-pointer rounded text-left text-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+                          {assessment?.shortName ?? run.assessmentId} ·{" "}
+                          {run.valid ? "Completed" : "Invalid run"}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <dl className="mt-3 space-y-2 text-sm text-muted-foreground">
+                            {assessment?.metrics.map((metric) => (
+                              <div
+                                key={metric.id}
+                                className="flex justify-between"
+                              >
+                                <dt>{metric.label}</dt>
+                                <dd>
+                                  {run.metrics[metric.id] === undefined
+                                    ? "—"
+                                    : formatMetric(
+                                        run.metrics[metric.id],
+                                        metric
+                                      )}
+                                </dd>
+                              </div>
+                            ))}
+                            <p>
+                              Protocol version {run.protocolVersion}. A single
+                              measurement is not diagnostic.
+                            </p>
+                          </dl>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )
+                  })}
+                  {entry.log
+                    .filter((d) => d.reason)
+                    .map((d) => (
+                      <p key={d.id} className="text-sm text-muted-foreground">
+                        {d.reason}
+                      </p>
+                    ))}
+                  {entry.findings.map((f) => (
+                    <article key={f.id} className="space-y-2 border-t pt-4">
+                      <Link
+                        href="/findings"
+                        className="underline underline-offset-4"
+                      >
+                        {f.observed}
+                      </Link>
+                      <p className="text-sm">
+                        {f.grade} evidence · {f.verdict}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {f.evidence} {f.uncertainty}
+                      </p>
+                      <p className="text-sm">Next: {f.nextStep}</p>
+                    </article>
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
         ))
       )}
     </Screen>

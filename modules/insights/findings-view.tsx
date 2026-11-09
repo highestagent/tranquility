@@ -50,9 +50,8 @@ export function FindingsView() {
     await reload()
   }
 
-  // Findings lead, and what's still being investigated sits beside them.
   return (
-    <div className="grid flex-1 items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-10">
+    <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
         {discoveries.length > 0 ? (
           discoveries.map((view) => (

@@ -1,5 +1,7 @@
 "use client"
 
+import { Progress } from "@/components/ui/progress"
+import { Card } from "@/components/ui/card"
 import {
   Archive,
   Check,
@@ -37,9 +39,9 @@ export function ThreadCard({
   const completed = investigation.status === "completed"
 
   return (
-    <article
+    <Card
       className={cn(
-        "flex flex-col gap-3 rounded-3xl p-5 surface",
+        "gap-3 rounded-3xl p-5 text-sm",
         (paused || completed) && "opacity-75"
       )}
     >
@@ -87,21 +89,12 @@ export function ThreadCard({
                 className="flex items-center gap-2"
               >
                 <FactorIcon aria-hidden className="size-4 shrink-0" />
-                <div
-                  role="progressbar"
+                <Progress
                   aria-label={label}
-                  aria-valuemin={0}
-                  aria-valuemax={item.need}
-                  aria-valuenow={Math.min(item.have, item.need)}
-                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-                >
-                  <div
-                    className="h-full rounded-full bg-glow"
-                    style={{
-                      width: `${Math.min(100, (item.have / item.need) * 100)}%`,
-                    }}
-                  />
-                </div>
+                  max={item.need}
+                  value={Math.min(item.have, item.need)}
+                  className="min-w-0 flex-1 [&_[data-slot=progress-indicator]]:bg-glow [&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-track]]:rounded-full"
+                />
                 <AbilityIcon aria-hidden className="size-4 shrink-0" />
                 <span className="w-11 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">
                   {item.have}/{item.need}
@@ -128,6 +121,6 @@ export function ThreadCard({
           })}
         </ul>
       ) : null}
-    </article>
+    </Card>
   )
 }

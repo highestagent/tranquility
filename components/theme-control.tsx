@@ -4,7 +4,8 @@ import { Monitor, Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
 
-import { cn } from "@/lib/utils"
+import { Card } from "@/components/ui/card"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 const OPTIONS = [
   { value: "system", label: "Match device", Icon: Monitor },
@@ -16,7 +17,6 @@ const subscribe = () => () => undefined
 
 export function ThemeControl() {
   const { theme, setTheme } = useTheme()
-  // The stored theme is unknown until the page runs in the browser.
   const mounted = useSyncExternalStore(
     subscribe,
     () => true,
@@ -24,34 +24,28 @@ export function ThemeControl() {
   )
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Appearance"
-      className="flex items-center justify-between gap-3 rounded-3xl p-4 pl-5 surface"
-    >
+    <Card className="flex-row items-center justify-between gap-3 rounded-3xl p-4 pl-5">
       <span className="text-sm font-medium">Appearance</span>
-      <span className="flex gap-1 rounded-full bg-muted p-1">
-        {OPTIONS.map(({ value, label, Icon }) => {
-          const selected = mounted && theme === value
-          return (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-label={label}
-              title={label}
-              onClick={() => setTheme(value)}
-              className={cn(
-                "flex size-10 items-center justify-center rounded-full text-muted-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                selected && "bg-foreground/10 text-foreground"
-              )}
-            >
-              <Icon aria-hidden className="size-4" />
-            </button>
-          )
-        })}
-      </span>
-    </div>
+      <ToggleGroup
+        aria-label="Appearance"
+        value={mounted && theme ? [theme] : []}
+        onValueChange={([value]) => {
+          if (value) setTheme(value)
+        }}
+        className="gap-1 rounded-full bg-muted p-1"
+      >
+        {OPTIONS.map(({ value, label, Icon }) => (
+          <ToggleGroupItem
+            key={value}
+            value={value}
+            aria-label={label}
+            title={label}
+            className="size-10 rounded-full"
+          >
+            <Icon aria-hidden className="size-4" />
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </Card>
   )
 }

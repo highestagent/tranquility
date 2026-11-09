@@ -1,4 +1,9 @@
 "use client"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { useEffect, useRef, useState } from "react"
 import { ConversationCanvas } from "@/components/screen"
 import { Button } from "@/components/ui/button"
@@ -101,10 +106,14 @@ export function QuestionFlow({
       message={question?.prompt ?? "Restoring your progress…"}
     >
       {eyebrow ? (
-        <details className="text-sm text-muted-foreground">
-          <summary className="cursor-pointer">Why I’m asking</summary>
-          <div className="mt-3">{eyebrow}</div>
-        </details>
+        <Collapsible className="text-sm text-muted-foreground">
+          <CollapsibleTrigger className="cursor-pointer rounded text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+            Why I’m asking
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-3">{eyebrow}</div>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
       {error ? (
         <p role="alert" className="text-sm">

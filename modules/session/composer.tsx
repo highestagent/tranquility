@@ -1,5 +1,6 @@
 "use client"
 
+import { Input } from "@/components/ui/input"
 import { Activity, ArrowUp, Coffee, Moon } from "lucide-react"
 import { useState } from "react"
 
@@ -20,17 +21,18 @@ export function Composer({ onAsk }: { onAsk: (text: string) => void }) {
       <ul className="flex flex-col">
         {SUGGESTIONS.map(({ Icon, text }) => (
           <li key={text}>
-            <button
+            <Button
+              variant="ghost"
               type="button"
               onClick={() => onAsk(text)}
-              className="-mx-3 flex h-13 w-[calc(100%+1.5rem)] items-center gap-3 rounded-2xl px-3 text-left font-voice text-lg transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+              className="-mx-3 flex h-13 w-[calc(100%+1.5rem)] items-center justify-start gap-3 rounded-2xl px-3 text-left font-voice text-lg transition-colors outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Icon
                 aria-hidden
                 className="size-4 shrink-0 text-muted-foreground"
               />
               {text}
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -44,14 +46,14 @@ export function Composer({ onAsk }: { onAsk: (text: string) => void }) {
           onAsk(text)
         }}
       >
-        <input
+        <Input
           aria-label="Ask your own question"
           value={question}
           maxLength={500}
           autoComplete="off"
           placeholder="Or ask your own…"
           onChange={(event) => setQuestion(event.target.value)}
-          className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+          className="h-full min-w-0 flex-1 rounded-none border-0 bg-transparent text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0 dark:bg-transparent"
         />
         <Button
           type="submit"

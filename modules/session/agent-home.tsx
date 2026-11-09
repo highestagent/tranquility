@@ -29,11 +29,7 @@ export function AgentHome() {
   const ask = (
     <Sheet
       title="Ask Tranquility"
-      trigger={(open) => (
-        <Button variant="outline" onClick={open}>
-          Ask
-        </Button>
-      )}
+      trigger={<Button variant="outline">Ask</Button>}
     >
       {(close) => (
         <Composer
@@ -69,7 +65,7 @@ export function AgentHome() {
           eyebrow={pending.reason}
           onDone={session.finishQuestions}
         />
-        <div className="mx-auto w-full max-w-xl pb-6">{ask}</div>
+        <div className="mx-auto w-full max-w-lg pb-6">{ask}</div>
       </>
     )
   if (phase === "interaction" && pending?.kind === "interaction")

@@ -69,7 +69,9 @@ export default function RootLayout({
                 </Link>
               </header>
               <SessionNotifications />
-              <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+              <main className="mx-auto flex w-full max-w-lg min-w-0 flex-1 flex-col">
+                {children}
+              </main>
               <AppNav />
             </div>
           </AccountProvider>

@@ -1,4 +1,8 @@
 "use client"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Card } from "@/components/ui/card"
 import { defineRegistry, Renderer, JSONUIProvider } from "@json-render/react"
 import { createContext, useContext, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
@@ -65,12 +69,12 @@ function ConfirmInput({
               key={option}
               className="flex items-center gap-3 rounded-lg border p-3"
             >
-              <input
-                type="checkbox"
+              <Checkbox
+                disabled={disabled}
                 checked={Array.isArray(value) && value.includes(option)}
-                onChange={(e) =>
+                onCheckedChange={(checked) =>
                   setValue(
-                    e.target.checked
+                    checked
                       ? [...(Array.isArray(value) ? value : []), option]
                       : (Array.isArray(value) ? value : []).filter(
                           (v) => v !== option
@@ -83,25 +87,25 @@ function ConfirmInput({
           ))}
         </fieldset>
       ) : interaction.type === "TextInput" ? (
-        <textarea
+        <Textarea
           aria-label={interaction.props.label}
           maxLength={2000}
           disabled={disabled}
           placeholder={interaction.props.placeholder}
-          className="min-h-28 rounded-lg border bg-background p-3"
+          className="min-h-28 rounded-lg bg-background p-3 text-base"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => setValue(e.target.value)}
         />
       ) : (
         <label className="flex items-center gap-3">
-          <input
+          <Input
             type="number"
             aria-label={interaction.props.label}
             min={interaction.props.min}
             max={interaction.props.max}
             step={interaction.props.step}
             disabled={disabled}
-            className="w-36 rounded-lg border bg-background p-3 text-2xl"
+            className="h-12 w-36 rounded-lg bg-background p-3 text-2xl md:text-2xl"
             value={typeof value === "number" ? value : ""}
             onChange={(e) =>
               setValue(e.target.value === "" ? null : e.target.valueAsNumber)
@@ -245,14 +249,14 @@ const { registry } = defineRegistry(catalog, {
     AssessmentCard: ({ props }) => {
       const assessment = getAssessment(props.assessmentId)
       return (
-        <div className="space-y-4 rounded-xl border p-5">
+        <Card className="gap-4 rounded-xl p-5 text-base">
           <p>{assessment?.shortName}</p>
           <p className="text-sm text-muted-foreground">
             {assessment?.measures} · About{" "}
             {Math.ceil((assessment?.approxSeconds ?? 0) / 60)} minutes
           </p>
           <Choices options={[{ label: "Begin assessment", value: true }]} />
-        </div>
+        </Card>
       )
     },
     EvidenceCard: ({ props }) => <Evidence id={props.discoveryId} />,

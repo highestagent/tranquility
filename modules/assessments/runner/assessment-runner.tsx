@@ -1,5 +1,10 @@
 "use client"
 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { ChevronDown, Clock, Play, X } from "lucide-react"
 import { useEffect, useEffectEvent, useRef, useState } from "react"
 
@@ -197,8 +202,8 @@ export function AssessmentRunner({
           <div className="rise-in my-auto flex h-52 items-center justify-center">
             <Preview />
           </div>
-          <details className="group text-sm text-muted-foreground">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          <Collapsible className="group text-sm text-muted-foreground">
+            <CollapsibleTrigger className="group flex w-full cursor-pointer list-none items-center justify-between gap-3 text-left text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
               <span className="flex items-center gap-1.5">
                 <Clock aria-hidden className="size-3.5" />
                 {Math.ceil(assessment.approxSeconds / 60)} min · stay on this
@@ -208,16 +213,18 @@ export function AssessmentRunner({
                 Rules
                 <ChevronDown
                   aria-hidden
-                  className="size-3.5 transition-transform duration-200 group-open:rotate-180"
+                  className="size-3.5 transition-transform duration-200 group-aria-expanded:rotate-180"
                 />
               </span>
-            </summary>
-            <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
-              {assessment.instructions.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </details>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
+                {assessment.instructions.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
         </Screen>
       )
 

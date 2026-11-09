@@ -1,4 +1,5 @@
 "use client"
+import { Card } from "@/components/ui/card"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { kv } from "@/modules/memory"
@@ -62,7 +63,7 @@ export function NotificationSettings() {
     }
   }
   return (
-    <section className="space-y-3 rounded-xl border p-5">
+    <Card className="items-start gap-3 rounded-xl p-5">
       <h2 className="text-sm font-medium">Session invitations</h2>
       <p className="text-sm text-muted-foreground">
         Optional browser notifications while Tranquility is open. Closed-browser
@@ -77,6 +78,6 @@ export function NotificationSettings() {
           {status}
         </p>
       ) : null}
-    </section>
+    </Card>
   )
 }
