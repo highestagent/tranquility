@@ -32,7 +32,7 @@ import {
   savePreference,
 } from "./preferences"
 import {
-  getMemoryOverview,
+  getMemoryCount,
   getMemoryState,
   getRestoredHandoffs,
   ROUTINE_UPLOAD_GAP_MS,
@@ -601,20 +601,24 @@ describe("remembered preferences", () => {
     ).toEqual(["You react faster after more sleep."])
   })
 
-  it("shows what has synced and what hasn't yet", async () => {
+  it("counts what the agent remembers, once each", async () => {
     const { api } = fakeWalrus()
-    const { investigation } = await startInvestigation()
-    await savePreference("Mornings")
-    expect(await getMemoryOverview(api)).toMatchObject({
-      investigations: [{ id: investigation.id, synced: false }],
-      preferences: [{ text: "Mornings", synced: false }],
-    })
+    const { investigation, hypothesis } = await startInvestigation()
+    await discoveries.put(
+      finding({
+        investigationId: investigation.id,
+        hypothesisId: hypothesis.id,
+      })
+    )
+    const { id } = await savePreference("Mornings")
     await settle(api)
-    expect(await getMemoryOverview(api)).toMatchObject({
-      investigations: [{ synced: true }],
-      preferences: [{ synced: true }],
-      findings: 0,
-    })
+    // A newer plan revision is still one investigation.
+    await updateInvestigation(investigation.id, { progressNote: "Later" })
+    await settle(api)
+    expect(await getMemoryCount(api)).toBe(3)
+
+    await removePreference(id)
+    expect(await getMemoryCount(api)).toBe(2)
   })
 
   it("is forgotten with everything else", async () => {

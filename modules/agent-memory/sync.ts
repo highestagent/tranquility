@@ -25,10 +25,8 @@ import {
 } from "./distill"
 import {
   handoffRecord,
-  handoffNamespace,
   HANDOFFS_KEY,
   memoryPrefix,
-  preferenceNamespace,
   preferenceRecord,
   PREFERENCES_KEY,
   RECALLED_KEY,
@@ -662,76 +660,29 @@ export async function waitForRestore(timeoutMs: number): Promise<boolean> {
 }
 
 /** What the signed-in account holds across devices. */
-export interface MemoryOverview {
-  investigations: {
-    id: string
-    title: string
-    status: string
-    synced: boolean
-  }[]
-  /** Saved findings, counting ones since withdrawn. */
-  findings: number
-  withdrawn: number
-  preferences: { id: string; text: string; synced: boolean }[]
-}
-
 /** The latest pass's listing is recent enough to show without asking again. */
-const OVERVIEW_MAX_AGE_MS = 2 * 60_000
+const COUNT_MAX_AGE_MS = 2 * 60_000
 
 /**
- * What's synced, for review. Compares this device's records with what the
- * account held at the latest pass, and with uploads finished since.
+ * How many things the agent remembers across devices: investigations,
+ * findings that still stand, and preferences.
  */
-export async function getMemoryOverview(
-  api: Pick<MemoryApi, "open"> = memoryApi
-): Promise<MemoryOverview> {
+export async function getMemoryCount(api: Pick<MemoryApi, "open"> = memoryApi) {
   // A pass that's already running lists the account anyway, so wait for it.
   if (running) await running
   const fresh =
-    lastOpened && Date.now() - lastOpened.at < OVERVIEW_MAX_AGE_MS
+    lastOpened && Date.now() - lastOpened.at < COUNT_MAX_AGE_MS
       ? lastOpened.workspace
       : null
-  const [{ catalog }, local, state] = await Promise.all([
+  const [{ catalog }, preferences] = await Promise.all([
     fresh ?? api.open(),
-    loadLocal(),
-    getMemoryState(),
+    getPreferenceRevisions(),
   ])
-  const stored = new Set(state.remembered)
-  return {
-    investigations: [...local.investigations]
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((row) => {
-        const revision = localRevision(row, local)
-        return {
-          id: row.id,
-          title: row.title,
-          status: row.status,
-          synced:
-            (catalog.handoffs.get(opaqueId(row.id))?.revision ?? -1) >=
-              revision ||
-            stored.has(handoffNamespace(row.id, revision, row.status)),
-        }
-      }),
-    findings: catalog.findings,
-    withdrawn: catalog.withdrawn.size,
-    preferences: Object.entries(local.preferences)
-      .flatMap(([id, { revision, text }]) =>
-        text === null
-          ? []
-          : [
-              {
-                id,
-                text,
-                revision,
-                synced:
-                  (catalog.preferences.get(opaqueId(id))?.revision ?? -1) >=
-                    revision || stored.has(preferenceNamespace(id, revision)),
-              },
-            ]
-      )
-      .sort((a, b) => b.revision - a.revision)
-      .map(({ id, text, synced }) => ({ id, text, synced })),
-  }
+  return (
+    catalog.handoffs.size +
+    Math.max(0, catalog.findings - catalog.withdrawn.size) +
+    Object.values(preferences).filter(({ text }) => text !== null).length
+  )
 }
 
 /**

@@ -38,7 +38,7 @@ export interface AgentMemory {
   /** False when other devices' work couldn't be loaded this turn. */
   available: boolean
   /** What the person asked to have remembered, kept apart from research. */
-  preferences: string[]
+  preferences: { id: string; text: string }[]
   /** `null` when saved findings couldn't be searched this turn. */
   pastResearch: PastFinding[] | null
 }
@@ -116,7 +116,10 @@ export async function recallForAgent(
 ): Promise<AgentMemory> {
   const available = await waitForRestore(RESTORE_BUDGET_MS)
   // Preferences come from this device's copy, which restoring just refreshed.
-  const preferences = (await listPreferences()).map(({ text }) => text)
+  const preferences = (await listPreferences()).map(({ id, text }) => ({
+    id,
+    text,
+  }))
   try {
     return {
       available,

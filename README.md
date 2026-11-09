@@ -47,8 +47,8 @@ background, so it can pick up where it left off on any device:
   before?" and show the note it used.
 - Correcting an answer saves a withdrawal for each finding it affected, and every
   device stops presenting those findings.
-- Preferences people ask it to remember are kept apart from research, and can be
-  reviewed, edited, or removed in **You → Agent memory**.
+- Preferences people ask it to remember in chat are kept apart from research.
+  Asking it to change or forget one works the same way.
 
 The relayer allows each account 500 points an hour, and an upload costs 10, so
 routine changes go up at most every five minutes, carrying every plan revision

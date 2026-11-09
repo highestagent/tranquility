@@ -1,6 +1,6 @@
 import { restSession } from "./rest-session"
 import { presentInteraction } from "./present-interaction"
-import { rememberPreference } from "./remember-preference"
+import { managePreferences } from "./manage-preferences"
 import { analyzePerformance } from "./analyze-performance"
 import { evaluateEvidence } from "./evaluate-evidence"
 import { getMeasurements } from "./get-measurements"
@@ -23,7 +23,7 @@ export const investigationTools = {
   planInvestigation,
   evaluateEvidence,
   saveInvestigation,
-  rememberPreference,
+  managePreferences,
 }
 
 export type InvestigationTools = typeof investigationTools
