@@ -130,8 +130,8 @@ export function DataView() {
   }
 
   return (
-    <>
-      <Section label="Stored on this device">
+    <Section label="On this device">
+      <Card className="gap-4 rounded-3xl p-5">
         <dl className="grid grid-cols-3 gap-3">
           {HEADLINE_STORES.map((name) => (
             <div key={name} className="flex flex-col gap-0.5">
@@ -148,13 +148,19 @@ export function DataView() {
           Browsers can clear storage, so export a copy regularly.
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <Button size="cta" onClick={() => void runExport()}>
+          <Button
+            size="lg"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => void runExport()}
+          >
             <Download aria-hidden data-icon="inline-start" />
             Export
           </Button>
           <Button
-            size="cta"
+            size="lg"
             variant="outline"
+            className="rounded-full"
             onClick={() => fileInput.current?.click()}
           >
             <Upload aria-hidden data-icon="inline-start" />
@@ -181,49 +187,56 @@ export function DataView() {
             <AlertDescription>{notice.text}</AlertDescription>
           </Alert>
         ) : null}
-        <AlertDialog
-          open={importFile !== null}
-          onOpenChange={(open) => {
-            if (!open) setImportFile(null)
-          }}
-        >
-          <AlertDialogContent className="rounded-2xl">
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm import</AlertDialogTitle>
-              <AlertDialogDescription>
-                Replace everything here with {importFile?.name}?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  if (importFile) void runImport(importFile)
-                }}
-              >
-                Replace
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </Section>
+        <Collapsible>
+          <CollapsibleTrigger className="cursor-pointer rounded text-left text-xs text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-2 focus-visible:outline-ring">
+            Everything stored
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul className="mt-2 flex flex-col divide-y divide-border">
+              {STORE_NAMES.map((name) => (
+                <li key={name}>
+                  <StoreRow name={name} count={counts[name]} />
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
 
-      <Section label="Everything stored">
-        <Card className="rounded-3xl px-5 py-0">
-          <ul className="flex flex-col divide-y divide-border">
-            {STORE_NAMES.map((name) => (
-              <li key={name}>
-                <StoreRow name={name} count={counts[name]} />
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </Section>
+      <AlertDialog
+        open={importFile !== null}
+        onOpenChange={(open) => {
+          if (!open) setImportFile(null)
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm import</AlertDialogTitle>
+            <AlertDialogDescription>
+              Replace everything here with {importFile?.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (importFile) void runImport(importFile)
+              }}
+            >
+              Replace
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogTrigger
           render={
-            <Button size="cta" variant="ghost" className="text-destructive" />
+            <Button
+              size="lg"
+              variant="ghost"
+              className="self-start text-destructive"
+            />
           }
         >
           <Trash2 aria-hidden data-icon="inline-start" />
@@ -248,7 +261,7 @@ export function DataView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </Section>
   )
 }
 

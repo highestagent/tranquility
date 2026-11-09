@@ -1,6 +1,6 @@
 "use client"
 
-import { Monitor, Moon, Sun } from "lucide-react"
+import { Monitor, Moon, Palette, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
 
@@ -24,8 +24,11 @@ export function ThemeControl() {
   )
 
   return (
-    <Card className="flex-row items-center justify-between gap-3 rounded-3xl p-4 pl-5">
-      <span className="text-sm font-medium">Appearance</span>
+    <Card className="flex-row items-center gap-3 rounded-3xl p-4 pl-5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+        <Palette aria-hidden className="size-5" />
+      </span>
+      <h2 className="flex-1 text-sm font-medium">Appearance</h2>
       <ToggleGroup
         aria-label="Appearance"
         value={mounted && theme ? [theme] : []}

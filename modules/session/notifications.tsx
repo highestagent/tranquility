@@ -1,7 +1,8 @@
 "use client"
-import { Card } from "@/components/ui/card"
+import { Bell } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { kv } from "@/modules/memory"
 import { getAgentRest } from "./wake"
 export function SessionNotifications() {
@@ -45,36 +46,45 @@ export function NotificationSettings() {
       () => setStatus("Could not read notification preferences.")
     )
   }, [])
-  async function toggle() {
+  async function toggle(next: boolean) {
     try {
       if (
-        !enabled &&
+        next &&
         (!("Notification" in window) ||
           (await Notification.requestPermission()) !== "granted")
       ) {
         setStatus("Browser notifications are unavailable or not permitted.")
         return
       }
-      await kv.set("sessionNotifications", !enabled)
-      setEnabled(!enabled)
+      await kv.set("sessionNotifications", next)
+      setEnabled(next)
       setStatus("")
     } catch {
       setStatus("Could not save this preference. Please retry.")
     }
   }
   return (
-    <Card className="items-start gap-3 rounded-xl p-5">
-      <h2 className="text-sm font-medium">Session invitations</h2>
-      <p className="text-sm text-muted-foreground">
-        Optional browser notifications while Tranquility is open. Closed-browser
-        delivery is not supported; your next invitation will be here when you
-        return.
-      </p>
-      <Button variant="outline" onClick={() => void toggle()}>
-        {enabled ? "Turn off notifications" : "Enable browser notifications"}
-      </Button>
+    <Card className="gap-3 rounded-3xl p-4 pl-5">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
+          <Bell aria-hidden className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 id="session-reminders" className="text-sm font-medium">
+            Session reminders
+          </h2>
+          <p className="truncate text-sm text-muted-foreground">
+            When the next session is due
+          </p>
+        </div>
+        <Switch
+          checked={enabled}
+          aria-labelledby="session-reminders"
+          onCheckedChange={(checked) => void toggle(checked)}
+        />
+      </div>
       {status ? (
-        <p role="status" className="text-sm">
+        <p role="status" className="text-sm text-muted-foreground">
           {status}
         </p>
       ) : null}
