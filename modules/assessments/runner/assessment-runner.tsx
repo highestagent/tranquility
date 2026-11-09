@@ -13,7 +13,7 @@ import {
   type Measurement,
 } from "@/modules/memory"
 
-import { nextMeasurementAt } from "../interval"
+import { assessmentHistory, MIN_MEASUREMENT_INTERVAL_MS } from "../interval"
 import { getAssessment } from "../registry"
 import { RunResult } from "./run-result"
 
@@ -60,16 +60,23 @@ export function AssessmentRunner({
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [stage.name])
+  const protocolVersion = assessment.protocolVersion
+  const [hasPlayed, setHasPlayed] = useState(false)
   const [availableAt, setAvailableAt] = useState<number | null>(null)
   useEffect(() => {
     let active = true
     Promise.all([
-      nextMeasurementAt(assessmentId),
+      assessmentHistory(assessmentId),
       runId ? measurements.get(runId) : Promise.resolve(undefined),
     ]).then(
-      ([at, saved]) => {
+      ([history, saved]) => {
         if (!active) return
-        setAvailableAt(at)
+        setAvailableAt(history.availableAt)
+        setHasPlayed(
+          history.completed.some(
+            (run) => run.protocolVersion === protocolVersion
+          )
+        )
         if (saved) setStage({ name: "result", measurement: saved })
       },
       () => {
@@ -79,7 +86,7 @@ export function AssessmentRunner({
     return () => {
       active = false
     }
-  }, [assessmentId, runId])
+  }, [assessmentId, protocolVersion, runId])
   const retrySave = useRef<(() => Promise<void>) | null>(null)
   const saveId = useRef<{ startedAt: number; id: string } | null>(null)
   const saving = useRef(false)
@@ -115,9 +122,10 @@ export function AssessmentRunner({
         metrics: invalidReason ? {} : assessment!.score(trials as never[]),
       })
       retrySave.current = null
-      setAvailableAt(
-        measurement.valid ? measurement.completedAt + 30 * 60 * 1000 : 0
-      )
+      if (measurement.valid) {
+        setHasPlayed(true)
+        setAvailableAt(measurement.completedAt + MIN_MEASUREMENT_INTERVAL_MS)
+      }
       setStage({ name: "result", measurement })
     } catch {
       setStage({ name: "error" })
@@ -161,12 +169,18 @@ export function AssessmentRunner({
               <Button
                 size="cta"
                 disabled={availableAt === null || availableAt > now}
-                onClick={() => setStage({ name: "practice" })}
+                onClick={() =>
+                  setStage(
+                    hasPlayed ? { name: "countdown" } : { name: "practice" }
+                  )
+                }
               >
                 <Play aria-hidden data-icon="inline-start" />
                 {availableAt && availableAt > now
                   ? `Available after ${new Date(availableAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                  : "Try it"}
+                  : hasPlayed
+                    ? "Start game"
+                    : "Try it"}
               </Button>
               {onFinish ? (
                 <Button
