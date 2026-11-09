@@ -14,15 +14,25 @@ export function Sparkline({
   label,
   format,
   className,
+  reserveSpace = false,
 }: {
   values: readonly number[]
   invert?: boolean
   label: string
   format: (value: number) => string
   className?: string
+  /** Keep the chart's box while there's too little to draw, so nothing moves when it fills. */
+  reserveSpace?: boolean
 }) {
   const gradient = useId()
-  if (values.length < 2) return null
+  if (values.length < 2)
+    return reserveSpace ? (
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        aria-hidden
+        className={className}
+      />
+    ) : null
   const low = Math.min(...values)
   const high = Math.max(...values)
   const span = high - low || 1

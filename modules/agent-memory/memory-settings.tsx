@@ -51,10 +51,12 @@ export function MemorySettings() {
     }
   }, [authenticated, refresh])
 
-  if (!account.available || !authenticated || !state) return null
+  if (!account.available || !authenticated) return null
 
-  const status =
-    state.failing || saved === "failed"
+  // Shown at once with "Checking…", so the cards below don't move when it loads.
+  const status = !state
+    ? "Checking…"
+    : state.failing || saved === "failed"
       ? "Can't connect right now. It'll keep trying"
       : state.pending.length > 0
         ? "Saving…"

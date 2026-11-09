@@ -38,7 +38,7 @@ import {
 import { useEffect, useRef, useState } from "react"
 
 import { Section } from "@/components/screen"
-import { LoadingMessage, StorageError } from "@/components/status-message"
+import { StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
 import { useAccount } from "@/modules/account/account-context"
@@ -132,11 +132,11 @@ export function DataView() {
     }
   }, [reload])
 
-  if (state.status === "loading") return <LoadingMessage />
   if (state.status === "error") {
     return <StorageError onRetry={() => void reload()} />
   }
-  const counts = state.data
+  // Laid out before the counts arrive, so nothing below moves when they do.
+  const counts = state.status === "ready" ? state.data : null
 
   async function runExport() {
     try {
@@ -183,7 +183,7 @@ export function DataView() {
           {HEADLINE_STORES.map((name) => (
             <div key={name} className="flex flex-col gap-0.5">
               <dd className="font-mono text-2xl tabular-nums">
-                {counts[name]}
+                {counts ? counts[name] : "–"}
               </dd>
               <dt className="text-xs text-muted-foreground">
                 {STORES[name].label}
@@ -242,7 +242,7 @@ export function DataView() {
             <ul className="mt-2 flex flex-col divide-y divide-border">
               {STORE_NAMES.map((name) => (
                 <li key={name}>
-                  <StoreRow name={name} count={counts[name]} />
+                  <StoreRow name={name} count={counts?.[name] ?? null} />
                 </li>
               ))}
             </ul>
@@ -313,7 +313,7 @@ export function DataView() {
   )
 }
 
-function StoreRow({ name, count }: { name: StoreName; count: number }) {
+function StoreRow({ name, count }: { name: StoreName; count: number | null }) {
   const [rows, setRows] = useState<unknown[] | null>(null)
   const { label, Icon } = STORES[name]
 
@@ -332,7 +332,7 @@ function StoreRow({ name, count }: { name: StoreName; count: number }) {
         <Icon aria-hidden className="size-4 text-muted-foreground" />
         <span className="flex-1">{label}</span>
         <span className="text-xs text-muted-foreground tabular-nums">
-          {count}
+          {count ?? "–"}
         </span>
         <ChevronDown
           aria-hidden

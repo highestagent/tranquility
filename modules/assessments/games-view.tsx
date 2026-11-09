@@ -95,6 +95,7 @@ export function GamesView() {
                       label={shortName}
                       format={(value) => formatMetric(value, primary)}
                       className="w-full"
+                      reserveSpace
                     />
                   </Card>
                 </Link>
