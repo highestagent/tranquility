@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getAssessment } from "@/modules/assessments"
 import type { InvestigationSummary } from "@/modules/investigation"
-import { getDomain, getQuestion } from "@/modules/questionnaire"
+import { getQuestion } from "@/modules/questionnaire"
 
 const HYPOTHESIS_ICONS = {
   proposed: FlaskConical,
@@ -74,31 +74,35 @@ export function ThreadCard({
       </div>
 
       {investigation.evidence.length > 0 ? (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-3">
           {investigation.evidence.map((item) => {
             const question = getQuestion(item.factorId)
             const assessment = getAssessment(item.metric.assessmentId)
-            const FactorIcon = question
-              ? getDomain(question.domain).Icon
-              : FlaskConical
-            const AbilityIcon = assessment?.Icon ?? FlaskConical
-            const label = `${question?.label ?? item.factorId} and ${assessment?.shortName ?? item.metric.assessmentId}`
+            const metric = assessment?.metrics.find(
+              ({ id }) => id === item.metric.metricId
+            )
+            const label =
+              `${question?.label ?? item.factorId} · ${assessment?.shortName ?? item.metric.assessmentId} ${metric?.label.toLowerCase() ?? ""}`.trim()
+            const enough = item.have >= item.need
             return (
               <li
                 key={`${item.factorId}-${item.metric.assessmentId}-${item.metric.metricId}`}
-                className="flex items-center gap-2"
+                className="flex flex-col gap-1.5"
               >
-                <FactorIcon aria-hidden className="size-4 shrink-0" />
+                <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate">{label}</span>
+                  <span className="shrink-0 font-mono tabular-nums">
+                    {enough
+                      ? `${item.have} paired`
+                      : `${item.have} of ${item.need}`}
+                  </span>
+                </div>
                 <Progress
-                  aria-label={label}
+                  aria-label={`${label}: ${item.have} of ${item.need} paired sessions`}
                   max={item.need}
                   value={Math.min(item.have, item.need)}
-                  className="min-w-0 flex-1 [&_[data-slot=progress-indicator]]:bg-glow [&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-track]]:rounded-full"
+                  className="[&_[data-slot=progress-indicator]]:bg-glow [&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-track]]:rounded-full"
                 />
-                <AbilityIcon aria-hidden className="size-4 shrink-0" />
-                <span className="w-11 shrink-0 text-right font-mono text-xs text-muted-foreground tabular-nums">
-                  {item.have}/{item.need}
-                </span>
               </li>
             )
           })}

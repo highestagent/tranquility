@@ -20,8 +20,14 @@ export async function loadSnapshot() {
       responses.list(),
       loadResumePoint(),
     ])
+  // A finding the agent is showing right now would otherwise be shown twice.
+  const presented =
+    pending?.kind === "interaction" &&
+    pending.interaction.type === "EvidenceCard"
+      ? pending.interaction.props.discoveryId
+      : null
   const unseen = findings
-    .filter((finding) => finding.createdAt > seenAt)
+    .filter((finding) => finding.createdAt > seenAt && finding.id !== presented)
     .sort((a, b) => a.createdAt - b.createdAt)
 
   return {

@@ -41,6 +41,7 @@ import { Section } from "@/components/screen"
 import { StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
+import { localDate } from "@/lib/utils"
 import { useAccount } from "@/modules/account/account-context"
 import {
   getBackupStatus,
@@ -140,8 +141,7 @@ export function DataView() {
 
   async function runExport() {
     try {
-      const date = new Date().toISOString().slice(0, 10)
-      downloadJson(await exportAll(), `tranquility-${date}.json`)
+      downloadJson(await exportAll(), `tranquility-${localDate()}.json`)
       setNotice({ kind: "info", text: "Exported." })
     } catch {
       setNotice({ kind: "error", text: "The export failed." })

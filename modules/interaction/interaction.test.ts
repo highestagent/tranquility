@@ -3,6 +3,7 @@ import { deleteDB } from "idb"
 import { beforeEach, expect, it, vi } from "vitest"
 import {
   closeDb,
+  discoveries,
   kv,
   measurements,
   responses,
@@ -16,6 +17,7 @@ import {
   setPendingTask,
 } from "@/modules/agent/pending-task"
 import { commitTask, getContinuation } from "@/modules/session/checkpoint"
+import { getSeenDiscoveriesAt } from "@/modules/session/wake"
 import { correctAnswer } from "@/modules/journal/corrections"
 import {
   nextMeasurementAt,
@@ -201,4 +203,30 @@ it("lets a pending task go once its session is over or the day has turned", asyn
   } finally {
     vi.useRealTimers()
   }
+})
+
+it("doesn't record continuing past a finding as an answer, and counts it as seen", async () => {
+  await discoveries.put({
+    id: "d1",
+    investigationId: "i1",
+    hypothesisId: "h1",
+    analysisIds: ["a1"],
+    grade: "moderate",
+    verdict: "supported",
+    observed: "You react faster after more sleep.",
+    evidence: "12 comparable sessions.",
+    reliability: "Moderate evidence.",
+    uncertainty: "Stress could also play a part.",
+    nextStep: "Check stress.",
+    createdAt: 5_000,
+  })
+  const task = await setPendingTask({
+    kind: "interaction",
+    reason: "Show the new finding",
+    message: "Here's what the evidence suggests.",
+    interaction: { type: "EvidenceCard", props: { discoveryId: "d1" } },
+  })
+  await commitTask(task, "Continue", true)
+  expect(await kv.get("contextAnswers")).toBeUndefined()
+  expect(await getSeenDiscoveriesAt()).toBe(5_000)
 })

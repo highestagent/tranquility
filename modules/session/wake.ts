@@ -43,3 +43,10 @@ export async function getSeenDiscoveriesAt() {
 export async function setSeenDiscoveriesAt(at: number) {
   await kv.set(SEEN_KEY, at)
 }
+
+/** A finding the person has looked at isn't revealed to them again. */
+export async function markDiscoverySeen(createdAt: number) {
+  if (createdAt > (await getSeenDiscoveriesAt())) {
+    await setSeenDiscoveriesAt(createdAt)
+  }
+}

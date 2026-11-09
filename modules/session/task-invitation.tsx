@@ -3,8 +3,7 @@ import { ClipboardList, Gamepad2, MessageCircle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import type { PendingTask } from "@/modules/agent/pending-task"
 import { getAssessment } from "@/modules/assessments"
-
-const SHOW_ONLY = new Set(["EvidenceCard", "PastFindingCard", "ChartView"])
+import { isDisplayOnly } from "@/modules/interaction/catalog"
 
 /** What the task is, how long it takes, and why, before it opens. */
 function describe(task: PendingTask) {
@@ -36,7 +35,7 @@ function describe(task: PendingTask) {
       return {
         Icon: MessageCircle,
         title: task.message,
-        detail: SHOW_ONLY.has(task.interaction.type)
+        detail: isDisplayOnly(task.interaction)
           ? "Something to show you"
           : "One question",
       }

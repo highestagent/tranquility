@@ -193,6 +193,11 @@
   padding-bottom: var(--bottom-nav-space);
 }
 
+/* Anything scrolled into view lands above the fixed bar, not under it. */
+html {
+  scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+
 .app-bottom-nav {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);

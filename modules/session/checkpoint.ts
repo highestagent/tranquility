@@ -1,6 +1,12 @@
 import { getDb } from "@/modules/memory/db"
-import { getCurrentSession, kv } from "@/modules/memory"
-import { validAnswer, type Answer } from "@/modules/interaction/catalog"
+import { discoveries, getCurrentSession, kv } from "@/modules/memory"
+
+import { markDiscoverySeen } from "./wake"
+import {
+  isDisplayOnly,
+  validAnswer,
+  type Answer,
+} from "@/modules/interaction/catalog"
 import type { PendingTask } from "@/modules/agent/pending-task"
 export const CONTINUATION_KEY = "sessionContinuation"
 export interface ContextAnswer {
@@ -31,7 +37,8 @@ export async function commitTask(
     await tx.done
     return
   }
-  if (task.kind === "interaction") {
+  // Continuing past a finding or chart isn't an answer, so it isn't recorded as one.
+  if (task.kind === "interaction" && !isDisplayOnly(task.interaction)) {
     const previous = (await tx.store.get("contextAnswers"))?.value as
       ContextAnswer[] | undefined
     const record: ContextAnswer = {
@@ -49,6 +56,10 @@ export async function commitTask(
   await tx.store.put({ key: CONTINUATION_KEY, value: text })
   await tx.store.delete("pendingTask")
   await tx.done
+  if (task.kind === "interaction" && task.interaction.type === "EvidenceCard") {
+    const shown = await discoveries.get(task.interaction.props.discoveryId)
+    if (shown) await markDiscoverySeen(shown.createdAt)
+  }
 }
 export async function getContinuation() {
   return kv.get<string>(CONTINUATION_KEY)

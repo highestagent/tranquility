@@ -54,10 +54,14 @@ async function loadJournal() {
     .map((session, index, all) => ({
       session,
       summary: summaryById.get(session.id),
-      answers: answers.filter((r) => r.sessionId === session.id),
+      answers: answers
+        .filter((r) => r.sessionId === session.id)
+        .sort((a, b) => a.answeredAt - b.answeredAt),
       runs: runs.filter((r) => r.sessionId === session.id),
       log: log.filter((r) => r.sessionId === session.id),
-      context: (context ?? []).filter((r) => r.sessionId === session.id),
+      context: (context ?? [])
+        .filter((r) => r.sessionId === session.id)
+        .sort((a, b) => a.at - b.at),
       findings: findings.filter(
         (f) =>
           f.createdAt >= session.startedAt &&
@@ -197,7 +201,11 @@ function EntryDetails({
   entry: JournalEntry
   onSaved: () => Promise<void>
 }) {
-  const notes = entry.log.filter((d) => d.reason)
+  // The agent often repeats a step's reason; once is enough to read.
+  const notes = entry.log
+    .filter((d) => d.reason)
+    .sort((a, b) => a.at - b.at)
+    .filter((d, index, all) => d.reason !== all[index - 1]?.reason)
   const hasAnswers = entry.answers.length + entry.context.length > 0
   return (
     <>
@@ -227,9 +235,13 @@ function EntryDetails({
                   <p className="text-muted-foreground">
                     {answer.value === null
                       ? "Skipped"
-                      : Array.isArray(answer.value)
-                        ? answer.value.join(", ")
-                        : String(answer.value)}
+                      : typeof answer.value === "boolean"
+                        ? answer.value
+                          ? "Yes"
+                          : "No"
+                        : Array.isArray(answer.value)
+                          ? answer.value.join(", ")
+                          : String(answer.value)}
                   </p>
                 </li>
               ))}
@@ -310,13 +322,22 @@ function EntryDetails({
 
       {notes.length > 0 ? (
         <Section label="Agent notes">
-          <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-            {notes.map((d) => (
-              <li key={d.id} className="text-pretty">
-                {d.reason}
-              </li>
-            ))}
-          </ul>
+          <Collapsible className="text-sm text-muted-foreground">
+            <CollapsibleTrigger className="cursor-pointer rounded text-left underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring">
+              {notes.length === 1
+                ? "One step the agent took"
+                : `${notes.length} steps the agent took`}
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5">
+                {notes.map((d) => (
+                  <li key={d.id} className="text-pretty">
+                    {d.reason}
+                  </li>
+                ))}
+              </ol>
+            </CollapsibleContent>
+          </Collapsible>
         </Section>
       ) : null}
     </>

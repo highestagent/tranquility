@@ -17,6 +17,8 @@ import {
 } from "@/modules/memory"
 import { getQuestion } from "@/modules/questionnaire"
 
+import { localDate } from "@/lib/utils"
+
 import { byImportance, loadDiscoveryViews } from "./discovery-data"
 
 const PAGE = { width: 595.28, height: 841.89 }
@@ -242,18 +244,19 @@ export async function buildReport() {
     write.gap(6)
     write.text(investigation.question, { size: 11, bold: true })
     write.text(
-      `${investigation.status[0]!.toUpperCase()}${investigation.status.slice(1)}. ${investigation.title}.`,
+      `${investigation.status[0]!.toUpperCase()}${investigation.status.slice(1)} · ${investigation.title}`,
       { color: MUTED }
     )
-    if (investigation.progressNote) {
-      write.text(investigation.progressNote, { indent: 10 })
-    }
+    // Progress notes are the agent's own working notes; the next step is for you.
     if (investigation.nextStep) {
       write.text(`Next: ${investigation.nextStep}`, { indent: 10 })
     }
     for (const evidence of investigation.evidence) {
       write.text(
-        `${factorLabel(evidence.factorId)} with ${metricLabel(evidence.metric)}: ${evidence.have} of ${evidence.need} paired sessions.`,
+        `${factorLabel(evidence.factorId)} with ${metricLabel(evidence.metric)}: ` +
+          (evidence.have >= evidence.need
+            ? `${evidence.have} paired sessions, enough to judge.`
+            : `${evidence.have} of the ${evidence.need} paired sessions needed.`),
         { indent: 10, color: MUTED }
       )
     }
@@ -289,7 +292,7 @@ export async function downloadReport() {
   )
   const link = document.createElement("a")
   link.href = url
-  link.download = `tranquility-report-${new Date().toISOString().slice(0, 10)}.pdf`
+  link.download = `tranquility-report-${localDate()}.pdf`
   link.click()
   URL.revokeObjectURL(url)
 }

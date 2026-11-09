@@ -6,6 +6,7 @@ import { StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { AssessmentRunner } from "@/modules/assessments/runner/assessment-runner"
 import { QuestionFlow } from "@/modules/questionnaire/question-flow"
+import { isDisplayOnly } from "@/modules/interaction/catalog"
 import { InteractionRenderer } from "@/modules/interaction/renderer"
 import { Composer } from "./composer"
 import { ResumeNote } from "./resume-note"
@@ -87,20 +88,25 @@ export function AgentHome() {
         <div className="mx-auto w-full max-w-lg pb-6">{ask}</div>
       </>
     )
-  if (phase === "interaction" && pending?.kind === "interaction")
+  if (phase === "interaction" && pending?.kind === "interaction") {
+    // Something to look at, not a question, so there's nothing to skip.
+    const showing = isDisplayOnly(pending.interaction)
     return (
       <ConversationCanvas
         message={pending.message}
         why={pending.reason}
+        whyLabel={showing ? "Why I’m showing this" : undefined}
         controls={
           <>
             {ask}
-            <Button
-              variant="ghost"
-              onClick={() => session.finishInteraction(null)}
-            >
-              Skip
-            </Button>
+            {showing ? null : (
+              <Button
+                variant="ghost"
+                onClick={() => session.finishInteraction(null)}
+              >
+                Skip
+              </Button>
+            )}
           </>
         }
       >
@@ -109,15 +115,14 @@ export function AgentHome() {
           interaction={pending.interaction}
           onAnswer={session.finishInteraction}
         />
-        {["EvidenceCard", "PastFindingCard", "ChartView"].includes(
-          pending.interaction.type
-        ) ? (
+        {showing ? (
           <Button onClick={() => session.finishInteraction(true)}>
             Continue
           </Button>
         ) : null}
       </ConversationCanvas>
     )
+  }
   if (phase === "playing" && pending?.kind === "assessment")
     return (
       <ConversationCanvas
