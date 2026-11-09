@@ -41,9 +41,18 @@ export const handoffRecord = z.object({
   latestFinding: findingRecord.optional(),
 })
 
+/** A finding that no longer stands, wherever it was saved. */
+export const withdrawalRecord = z.object({
+  kind: z.literal("withdrawal"),
+  id: z.string().min(1),
+  at: timestamp,
+  reason: z.string(),
+})
+
 export type FindingRecord = z.infer<typeof findingRecord>
 export type HandoffRecord = z.infer<typeof handoffRecord>
-export type MemoryRecord = FindingRecord | HandoffRecord
+export type WithdrawalRecord = z.infer<typeof withdrawalRecord>
+export type MemoryRecord = FindingRecord | HandoffRecord | WithdrawalRecord
 
 export interface Fact {
   /** Stable per record revision, so nothing is sent twice. */
@@ -60,6 +69,8 @@ export const RESEARCH_NAMESPACE = "research"
 export const SYNC_STATE_KEY = "agentMemory:sync"
 /** Handoffs this device took from another, by investigation. */
 export const HANDOFFS_KEY = "agentMemory:handoffs"
+/** Findings withdrawn on this device, until every device has heard. */
+export const WITHDRAWALS_KEY = "agentMemory:withdrawals"
 
 /** "Forget" moves to a new prefix, so nothing saved before is found again. */
 export function memoryPrefix(epoch: number) {
@@ -75,6 +86,11 @@ export function encodeFact(record: MemoryRecord): Fact {
   const text = JSON.stringify(record)
   if (record.kind === "finding") {
     return { id: `finding:${record.id}`, namespace: RESEARCH_NAMESPACE, text }
+  }
+  if (record.kind === "withdrawal") {
+    // The name alone says it's withdrawn, so no device has to read it.
+    const namespace = `withdrawn:${opaqueId(record.id)}`
+    return { id: namespace, namespace, text }
   }
   const { id, status } = record.investigation
   const namespace = `handoff:${opaqueId(id)}:${record.revision}:${status}`
@@ -105,11 +121,14 @@ export interface Catalog {
   /** The newest handoff per investigation, keyed by its opaque ID. */
   handoffs: Map<string, HandoffReference>
   findings: number
+  /** Opaque IDs of findings that no longer stand. */
+  withdrawn: Set<string>
   /** Every full namespace name, to skip sending what's already there. */
   namespaces: Set<string>
 }
 
 const HANDOFF = /^handoff:([a-f0-9]{64}):(\d+):(active|paused|completed)$/
+const WITHDRAWN = /^withdrawn:([a-f0-9]{64})$/
 
 function newer(current: MemoryReference | undefined, next: MemoryReference) {
   if (!current) return true
@@ -127,6 +146,7 @@ export function readCatalog(
   const catalog: Catalog = {
     handoffs: new Map(),
     findings: 0,
+    withdrawn: new Set(),
     namespaces: new Set(),
   }
   for (const row of rows) {
@@ -135,6 +155,11 @@ export function readCatalog(
     const name = row.namespace_id.slice(prefix.length)
     if (name === RESEARCH_NAMESPACE) {
       catalog.findings++
+      continue
+    }
+    const withdrawn = WITHDRAWN.exec(name)
+    if (withdrawn) {
+      catalog.withdrawn.add(withdrawn[1]!)
       continue
     }
     const handoff = HANDOFF.exec(name)
@@ -152,4 +177,14 @@ export function readCatalog(
     }
   }
   return catalog
+}
+
+/** Whether a finding no longer stands, by this device's word or another's. */
+export function withdrawnCheck(
+  catalog: Pick<Catalog, "withdrawn">,
+  local: readonly Pick<WithdrawalRecord, "id">[]
+) {
+  const here = new Set(local.map(({ id }) => id))
+  return (findingId: string) =>
+    here.has(findingId) || catalog.withdrawn.has(opaqueId(findingId))
 }

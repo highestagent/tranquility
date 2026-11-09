@@ -8,17 +8,20 @@ import {
   createInvestigation,
   updateInvestigation,
 } from "@/modules/investigation"
+import { correctAnswer } from "@/modules/journal/corrections"
 import {
   closeDb,
   discoveries,
   hypotheses,
   investigations,
   kv,
+  responses,
   type Discovery,
 } from "@/modules/memory"
 import { activateAccountDb, DB_NAME } from "@/modules/memory/db"
 
 import type { MemoryApi, MemoryWorkspace } from "./api"
+import { searchPastResearch } from "./recall"
 import { loadResumePoint } from "./resume"
 import { memoryPrefix, readCatalog, SYNC_STATE_KEY, type Fact } from "./records"
 import { getMemoryState, getRestoredHandoffs, runMemorySync } from "./sync"
@@ -366,5 +369,85 @@ describe("resuming on another device", () => {
     await onDevice("phone")
     await settle(api)
     expect(await investigations.list()).toEqual([])
+  })
+})
+
+describe("correcting an answer", () => {
+  /** A finding on the laptop, already resumed on the phone. */
+  async function sharedFinding(api: MemoryApi) {
+    const { investigation, hypothesis } = await startInvestigation()
+    await responses.put({
+      id: "r1",
+      sessionId: "s1",
+      questionId: "sleep.hours",
+      bankVersion: 1,
+      value: 7,
+      answeredAt: 1,
+    })
+    await discoveries.put(
+      finding({
+        investigationId: investigation.id,
+        hypothesisId: hypothesis.id,
+      })
+    )
+    await settle(api)
+    await onDevice("phone")
+    await settle(api)
+    expect((await loadResumePoint())?.lastResult).toBeDefined()
+    expect(await searchPastResearch("sleep", 6, api)).toHaveLength(1)
+    await onDevice("laptop")
+  }
+
+  it("stops the old conclusion appearing on both devices", async () => {
+    const { api } = fakeWalrus()
+    await sharedFinding(api)
+
+    await correctAnswer("r1", 6)
+    // Honored here before Walrus has heard.
+    expect(await searchPastResearch("sleep", 6, api)).toEqual([])
+    expect((await loadResumePoint())?.lastResult).toBeUndefined()
+    await settle(api)
+
+    await onDevice("phone")
+    const changed = vi.fn()
+    await runMemorySync(api, "u1", { onChanged: changed })
+    expect(changed).toHaveBeenCalled()
+    expect((await loadResumePoint())?.lastResult).toBeUndefined()
+    expect(await searchPastResearch("sleep", 6, api)).toEqual([])
+    expect((await investigations.list())[0]?.progressNote).toMatch(/corrected/i)
+  })
+
+  it("won't take the conclusion back from a device that hadn't heard", async () => {
+    const { api } = fakeWalrus()
+    await sharedFinding(api)
+
+    // The phone moves the plan on, still carrying the old result.
+    await onDevice("phone")
+    const [resumed] = await investigations.list()
+    await onDevice("laptop")
+    await correctAnswer("r1", 6)
+    await onDevice("phone")
+    await updateInvestigation(resumed!.id, { progressNote: "Later work." })
+    await settle(api)
+
+    await onDevice("laptop")
+    await settle(api)
+    expect((await loadResumePoint())?.lastResult).toBeUndefined()
+    expect(
+      (await getRestoredHandoffs())[resumed!.id]?.latestFinding
+    ).toBeUndefined()
+  })
+
+  it("drops a withdrawn finding that came back with an old backup", async () => {
+    const { api } = fakeWalrus()
+    await sharedFinding(api)
+    const [old] = await discoveries.list()
+    await correctAnswer("r1", 6)
+    await settle(api)
+
+    await onDevice("phone")
+    await discoveries.put(old!)
+    await settle(api)
+    expect(await discoveries.list()).toEqual([])
   })
 })

@@ -61,6 +61,7 @@ const all: LocalResearch = {
     ],
   },
   restored: {},
+  withdrawals: [],
 }
 
 function handoffOf(input: LocalResearch) {

@@ -28,10 +28,12 @@ import {
   readRecord,
   RESEARCH_NAMESPACE,
   SYNC_STATE_KEY,
+  withdrawnCheck,
   type Fact,
   type HandoffRecord,
   type HandoffReference,
 } from "./records"
+import { getLocalWithdrawals } from "./withdrawals"
 
 const BATCH_SIZE = 10
 /** The proxy accepts 64 KB per request, and JSON escaping adds some. */
@@ -71,13 +73,19 @@ export async function getRestoredHandoffs() {
 }
 
 async function loadLocal(): Promise<LocalResearch> {
-  const [discoveryRows, hypothesisRows, investigationRows, restored] =
-    await Promise.all([
-      discoveries.list(),
-      hypotheses.list(),
-      investigations.list(),
-      getRestoredHandoffs(),
-    ])
+  const [
+    discoveryRows,
+    hypothesisRows,
+    investigationRows,
+    restored,
+    withdrawals,
+  ] = await Promise.all([
+    discoveries.list(),
+    hypotheses.list(),
+    investigations.list(),
+    getRestoredHandoffs(),
+    getLocalWithdrawals(),
+  ])
   const evidence = Object.fromEntries(
     await Promise.all(
       investigationRows
@@ -106,6 +114,7 @@ async function loadLocal(): Promise<LocalResearch> {
     investigations: investigationRows,
     evidence,
     restored,
+    withdrawals,
   }
 }
 
@@ -137,8 +146,10 @@ function mergeHypothesis(local: Hypothesis | undefined, remote: Hypothesis) {
   }
 }
 
+type IsWithdrawn = (findingId: string) => boolean
+
 /** One transaction, so a half-applied plan can't be mistaken for current. */
-async function applyHandoff(record: HandoffRecord) {
+async function applyHandoff(record: HandoffRecord, isWithdrawn: IsWithdrawn) {
   const db = await getDb()
   const tx = db.transaction(["investigations", "hypotheses", "kv"], "readwrite")
   await tx.objectStore("investigations").put(record.investigation)
@@ -154,7 +165,11 @@ async function applyHandoff(record: HandoffRecord) {
   restored[record.investigation.id] = {
     revision: record.revision,
     evidence: record.evidence,
-    latestFinding: record.latestFinding,
+    // A device that hasn't heard of a correction yet can still hand it over.
+    latestFinding:
+      record.latestFinding && !isWithdrawn(record.latestFinding.id)
+        ? record.latestFinding
+        : undefined,
   }
   await kvStore.put({ key: HANDOFFS_KEY, value: restored })
   await tx.done
@@ -165,7 +180,10 @@ async function applyHandoff(record: HandoffRecord) {
  * change. Completed investigations this device never saw stay out of the way;
  * their findings remain searchable.
  */
-async function restoreHandoffs(workspace: MemoryWorkspace) {
+async function restoreHandoffs(
+  workspace: MemoryWorkspace,
+  isWithdrawn: IsWithdrawn
+) {
   const local = await loadLocal()
   const byKey = new Map(
     local.investigations.map((row) => [opaqueId(row.id), row])
@@ -187,7 +205,41 @@ async function restoreHandoffs(workspace: MemoryWorkspace) {
       ? record
       : null
   })
-  for (const record of records) if (record) await applyHandoff(record)
+  let changed = false
+  for (const record of records) {
+    if (!record) continue
+    await applyHandoff(record, isWithdrawn)
+    changed = true
+  }
+  return changed
+}
+
+/**
+ * Drops findings another device withdrew. This device never holds another's
+ * findings as its own, except through an imported backup, but a result carried
+ * over with a handoff has to go too.
+ */
+async function applyWithdrawals(workspace: MemoryWorkspace) {
+  const { withdrawn } = workspace.catalog
+  if (withdrawn.size === 0) return false
+  let changed = false
+  for (const finding of await discoveries.list()) {
+    if (!withdrawn.has(opaqueId(finding.id))) continue
+    await discoveries.remove(finding.id)
+    changed = true
+  }
+  const restored = await getRestoredHandoffs()
+  for (const handoff of Object.values(restored)) {
+    if (
+      handoff.latestFinding &&
+      withdrawn.has(opaqueId(handoff.latestFinding.id))
+    ) {
+      delete handoff.latestFinding
+      changed = true
+    }
+  }
+  if (changed) await kv.set(HANDOFFS_KEY, restored)
+  return changed
 }
 
 /** Forgotten, or another person's: this device's caches no longer apply. */
@@ -224,7 +276,12 @@ function nextBatch(facts: readonly Fact[]) {
 export async function runMemorySync(
   api: MemoryApi,
   owner: string,
-  options: { onRestored?: () => void } = {}
+  options: {
+    /** Other devices' work is now on this one. */
+    onRestored?: () => void
+    /** What this device shows changed because of another device. */
+    onChanged?: () => void
+  } = {}
 ): Promise<{ more: boolean }> {
   const state = await getMemoryState()
   const workspace = await api.open()
@@ -245,7 +302,13 @@ export async function runMemorySync(
   state.epoch = epoch
   await saveState(state)
 
-  await restoreHandoffs(workspace)
+  const isWithdrawn = withdrawnCheck(
+    workspace.catalog,
+    await getLocalWithdrawals()
+  )
+  const restored = await restoreHandoffs(workspace, isWithdrawn)
+  const withdrawn = await applyWithdrawals(workspace)
+  if (restored || withdrawn) options.onChanged?.()
   options.onRestored?.()
 
   if (state.pending.length > 0) {
@@ -304,6 +367,19 @@ let timer: ReturnType<typeof setTimeout> | null = null
 let failures = 0
 let restored = false
 const restoreWaiters = new Set<() => void>()
+const changeListeners = new Set<() => void>()
+
+/** Calls `listener` whenever another device's work changes what's shown here. */
+export function onMemoryChange(listener: () => void) {
+  changeListeners.add(listener)
+  return () => {
+    changeListeners.delete(listener)
+  }
+}
+
+function notifyChanged() {
+  for (const listener of changeListeners) listener()
+}
 
 function markRestored() {
   restored = true
@@ -336,7 +412,10 @@ export function syncMemory(): Promise<void> {
     try {
       const { more } = await withMemoryLock(async () =>
         owner === getMemoryUserId()
-          ? runMemorySync(memoryApi, owner, { onRestored: markRestored })
+          ? runMemorySync(memoryApi, owner, {
+              onRestored: markRestored,
+              onChanged: notifyChanged,
+            })
           : { more: false }
       )
       failures = 0

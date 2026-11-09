@@ -10,6 +10,7 @@ import {
   useState,
 } from "react"
 
+import { onMemoryChange } from "@/modules/agent-memory/sync"
 import { kv } from "@/modules/memory"
 import { commitTask, getContinuation, CONTINUATION_KEY } from "./checkpoint"
 import type { Answer } from "@/modules/interaction/catalog"
@@ -135,6 +136,9 @@ export function useAgentSession() {
     booted.current = true
     void boot()
   }, [])
+
+  // Another device can move the plan on or withdraw a finding at any time.
+  useEffect(() => onMemoryChange(() => void refresh()), [refresh])
 
   // Storage is the source of truth, so re-read it whenever a turn ends. This
   // includes a turn that began before this screen did.

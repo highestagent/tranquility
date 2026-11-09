@@ -1,6 +1,12 @@
-import { memoryApi } from "./api"
-import { findingRecord, readRecord, type FindingRecord } from "./records"
+import { memoryApi, type MemoryApi } from "./api"
+import {
+  findingRecord,
+  readRecord,
+  withdrawnCheck,
+  type FindingRecord,
+} from "./records"
 import { waitForRestore } from "./sync"
+import { getLocalWithdrawals } from "./withdrawals"
 
 const SEARCH_LIMIT = 6
 /**
@@ -46,14 +52,24 @@ function withBudget<T>(work: Promise<T>, ms: number) {
   ]).finally(() => clearTimeout(timer))
 }
 
-export async function searchPastResearch(query: string, limit: number) {
-  const workspace = await memoryApi.open()
+export async function searchPastResearch(
+  query: string,
+  limit: number,
+  api: Pick<MemoryApi, "open"> = memoryApi
+) {
+  const [workspace, withdrawals] = await Promise.all([
+    api.open(),
+    getLocalWithdrawals(),
+  ])
+  // Checked against a fresh inventory, so a correction made on another device
+  // is honored as soon as it's saved.
+  const isWithdrawn = withdrawnCheck(workspace.catalog, withdrawals)
   const seen = new Set<string>()
   const findings: PastFinding[] = []
   for (const hit of await workspace.search(query, limit)) {
     const record = readRecord(findingRecord, hit.text)
     // Retries can store a finding twice.
-    if (!record || seen.has(record.id)) continue
+    if (!record || seen.has(record.id) || isWithdrawn(record.id)) continue
     seen.add(record.id)
     findings.push({
       reference: hit.blobId,

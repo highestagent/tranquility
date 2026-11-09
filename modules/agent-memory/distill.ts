@@ -5,6 +5,7 @@ import {
   type Fact,
   type FindingRecord,
   type HandoffRecord,
+  type WithdrawalRecord,
 } from "./records"
 
 /** Keeps a bulk request under the proxy's body limit. */
@@ -67,6 +68,8 @@ export interface LocalResearch {
   /** Paired sessions per investigation, as counted on this device. */
   evidence: Readonly<Record<string, HandoffRecord["evidence"]>>
   restored: Readonly<Record<string, RestoredHandoff>>
+  /** Findings this device withdrew. Other devices' are applied before this runs. */
+  withdrawals: readonly WithdrawalRecord[]
 }
 
 function findingRecords(input: LocalResearch) {
@@ -89,11 +92,15 @@ function describe(
     (row) => row.updatedAt
   )
   // A result from another device carries forward until this one has its own.
+  const carried = input.restored[investigation.id]?.latestFinding
   const latestFinding =
     byRecent(
       findings.filter((row) => row.investigationId === investigation.id),
       (row) => row.createdAt
-    )[0] ?? input.restored[investigation.id]?.latestFinding
+    )[0] ??
+    (carried && !input.withdrawals.some(({ id }) => id === carried.id)
+      ? carried
+      : undefined)
   const revision = handoffRevision(investigation, plan, latestFinding)
   return { plan, latestFinding, revision }
 }
@@ -145,5 +152,10 @@ export function distillFacts(input: LocalResearch): Fact[] {
   const handoffs = input.investigations.flatMap(
     (investigation) => handoffFor(investigation, input, findings) ?? []
   )
-  return [...handoffs, ...findings.map(encodeFact)]
+  // Withdrawals go first: a stale finding is worse than a missing one.
+  return [
+    ...input.withdrawals.map(encodeFact),
+    ...handoffs,
+    ...findings.map(encodeFact),
+  ]
 }

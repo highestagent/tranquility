@@ -1,3 +1,4 @@
+import { recordWithdrawals } from "@/modules/agent-memory/withdrawals"
 import { analyzeRelationship, scanRelationships } from "@/modules/analytics"
 import { ASSESSMENTS } from "@/modules/assessments"
 import { getDb } from "@/modules/memory/db"
@@ -63,12 +64,17 @@ export async function correctAnswer(id: string, value: number | null) {
   const previous = await tx.objectStore("analyses").getAll()
   // A corrected factor can change family-wide adjusted p-values, so all derived findings need review.
   const findings = await tx.objectStore("discoveries").getAll()
-  await tx
-    .objectStore("kv")
-    .put({
-      key: `correction:${id}:${at}`,
-      value: { before: row, after: value, at, withdrawnFindings: findings },
-    })
+  await tx.objectStore("kv").put({
+    key: `correction:${id}:${at}`,
+    value: { before: row, after: value, at, withdrawnFindings: findings },
+  })
+  // Every device that saw these findings has to stop presenting them.
+  await recordWithdrawals(
+    tx.objectStore("kv"),
+    findings.map(({ id }) => id),
+    at,
+    `${question.label} was corrected.`
+  )
   const pairs = previous.map((a) => ({
     factorId: a.factorId,
     metric: a.metric,
@@ -78,41 +84,35 @@ export async function correctAnswer(id: string, value: number | null) {
   await tx.objectStore("discoveries").clear()
   for (const h of await tx.objectStore("hypotheses").getAll()) {
     if (h.status !== "rejected")
-      await tx
-        .objectStore("hypotheses")
-        .put({
-          ...h,
-          status: "testing",
-          updatedAt: at,
-          history: [
-            ...h.history,
-            {
-              at,
-              status: "testing",
-              note: "Context corrected; previous conclusions withdrawn pending evaluation.",
-            },
-          ],
-        })
+      await tx.objectStore("hypotheses").put({
+        ...h,
+        status: "testing",
+        updatedAt: at,
+        history: [
+          ...h.history,
+          {
+            at,
+            status: "testing",
+            note: "Context corrected; previous conclusions withdrawn pending evaluation.",
+          },
+        ],
+      })
   }
   for (const i of await tx.objectStore("investigations").getAll())
-    await tx
-      .objectStore("investigations")
-      .put({
-        ...i,
-        status: "active",
-        updatedAt: at,
-        progressNote:
-          "Context corrected. Re-evaluate the updated analyses before reporting a finding.",
-      })
-  await tx
-    .objectStore("decisions")
-    .put({
-      id: `correction:${id}:${at}`,
-      sessionId: row.sessionId,
-      at,
-      action: "correctContext",
-      reason: `Corrected ${question.label}. Previous findings withdrawn; deterministic analyses will be recalculated.`,
+    await tx.objectStore("investigations").put({
+      ...i,
+      status: "active",
+      updatedAt: at,
+      progressNote:
+        "Context corrected. Re-evaluate the updated analyses before reporting a finding.",
     })
+  await tx.objectStore("decisions").put({
+    id: `correction:${id}:${at}`,
+    sessionId: row.sessionId,
+    at,
+    action: "correctContext",
+    reason: `Corrected ${question.label}. Previous findings withdrawn; deterministic analyses will be recalculated.`,
+  })
   await tx.objectStore("kv").delete("agentRest")
   await tx.done
   await resumeRecalculation()
