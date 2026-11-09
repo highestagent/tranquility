@@ -20,6 +20,7 @@ import {
   savePreference,
   type Preference,
 } from "./preferences"
+import { PermanentDeletion } from "./deletion-panel"
 import { MAX_PREFERENCE_CHARS } from "./records"
 import {
   forgetMemories,
@@ -331,19 +332,22 @@ function Research({ overview }: { overview: MemoryOverview }) {
 }
 
 function Disclosure({ onForgot }: { onForgot: () => void }) {
-  const [confirming, setConfirming] = useState(false)
+  const [open, setOpen] = useState<"forget" | "delete" | null>(null)
   const [forgetFailed, setForgetFailed] = useState(false)
 
   async function forget() {
     setForgetFailed(false)
     try {
       await forgetMemories()
-      setConfirming(false)
+      setOpen(null)
       onForgot()
     } catch {
       setForgetFailed(true)
     }
   }
+
+  const choice =
+    "rounded underline decoration-border underline-offset-4 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
 
   return (
     <Collapsible className="text-sm text-muted-foreground">
@@ -359,11 +363,12 @@ function Disclosure({ onForgot }: { onForgot: () => void }) {
             storing and searching them. Answers and game results stay in this
             browser.
           </p>
-          {confirming ? (
+          {open === "forget" ? (
             <div className="flex flex-col gap-2">
               <p className="text-pretty text-foreground">
                 The agent will stop recalling everything saved so far, on every
-                device. Encrypted copies stay on Walrus until they expire.
+                device. Encrypted copies stay on Walrus until they expire,
+                unless you delete them permanently.
               </p>
               {forgetFailed ? (
                 <p role="alert" className="text-destructive">
@@ -381,22 +386,38 @@ function Disclosure({ onForgot }: { onForgot: () => void }) {
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => setConfirming(false)}
+                  onClick={() => setOpen(null)}
                 >
                   Cancel
                 </Button>
               </div>
             </div>
+          ) : open === "delete" ? (
+            <PermanentDeletion
+              onClose={() => setOpen(null)}
+              onDeleted={onForgot}
+            />
           ) : (
-            <Button
-              variant="link"
-              size="sm"
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="rounded underline decoration-border underline-offset-4 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Forget what it has saved
-            </Button>
+            <div className="flex flex-wrap gap-x-4">
+              <Button
+                variant="link"
+                size="sm"
+                type="button"
+                onClick={() => setOpen("forget")}
+                className={choice}
+              >
+                Forget what it has saved
+              </Button>
+              <Button
+                variant="link"
+                size="sm"
+                type="button"
+                onClick={() => setOpen("delete")}
+                className={choice}
+              >
+                Delete it permanently
+              </Button>
+            </div>
           )}
         </div>
       </CollapsibleContent>

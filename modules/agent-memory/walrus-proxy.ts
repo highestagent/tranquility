@@ -1,7 +1,7 @@
 import { isOverLimit, type RateWindows } from "@/lib/rate-limit"
 import { clientAddress, isSameOrigin } from "@/modules/relay/relay"
 
-export const RELAYER_URL = "https://relayer.memory.walrus.xyz"
+export { RELAYER_URL } from "./relayer"
 
 const RATE_LIMIT = { requests: 120, windowMs: 60_000 }
 const MAX_BODY_BYTES = 64 * 1024
