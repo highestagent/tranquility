@@ -1,4 +1,4 @@
-import { getAiConsent } from "@/modules/agent/consent"
+import { isCloudAiEnabled } from "@/modules/agent/consent"
 
 import { memoryApi, type RecalledMemory } from "./api"
 import { getMemoryState } from "./sync"
@@ -16,11 +16,11 @@ const RECALL_BUDGET_MS = 10_000
  */
 export async function recallMemories(query: string): Promise<RecalledMemory[]> {
   try {
-    const [consent, state] = await Promise.all([
-      getAiConsent(),
+    const [enabled, state] = await Promise.all([
+      isCloudAiEnabled(),
       getMemoryState(),
     ])
-    if (!consent?.granted || !state.enabled) return []
+    if (!enabled || !state.enabled) return []
     const { memories } = await memoryApi.recall(
       query,
       RECALL_LIMIT,

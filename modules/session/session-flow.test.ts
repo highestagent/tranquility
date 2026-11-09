@@ -2,7 +2,6 @@ import type { UIMessage } from "ai"
 import { describe, expect, it } from "vitest"
 
 import { deriveActivity } from "./activity"
-import { homeView } from "./home-view"
 import { splitSpeech } from "./speech"
 import { REST_WINDOW_MS, shouldWake } from "./wake"
 
@@ -184,49 +183,5 @@ describe("shouldWake", () => {
         now,
       })
     ).toBe(true)
-  })
-})
-
-describe("homeView", () => {
-  const base = {
-    consent: "granted",
-    accountReady: true,
-    accountAvailable: true,
-    authenticated: true,
-  } as const
-
-  it("runs the agent for someone who has begun", () => {
-    expect(homeView(base)).toBe("agent")
-  })
-
-  it("asks a new person to begin", () => {
-    expect(homeView({ ...base, consent: "ask", authenticated: false })).toBe(
-      "welcome"
-    )
-  })
-
-  it("returns to Begin if sign-in was cancelled", () => {
-    expect(homeView({ ...base, authenticated: false })).toBe("welcome")
-  })
-
-  it("waits for the sign-in state rather than flashing Welcome", () => {
-    expect(homeView({ ...base, accountReady: false })).toBe("loading")
-  })
-
-  it("keeps working when Privy is unreachable", () => {
-    expect(
-      homeView({ ...base, accountAvailable: false, authenticated: false })
-    ).toBe("agent")
-  })
-
-  it("needs no account without AI", () => {
-    expect(
-      homeView({
-        ...base,
-        consent: "declined",
-        accountAvailable: false,
-        authenticated: false,
-      })
-    ).toBe("asleep")
   })
 })

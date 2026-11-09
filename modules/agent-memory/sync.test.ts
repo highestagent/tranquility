@@ -138,7 +138,7 @@ describe("runMemorySync", () => {
 })
 
 describe("getSavedCount", () => {
-  it("doesn't connect without consent, since that can create an account", async () => {
+  it("doesn't connect when memory is off or cloud AI is disabled", async () => {
     await expect(getSavedCount()).resolves.toBeNull()
     await setAiConsent(false)
     await expect(getSavedCount()).resolves.toBeNull()

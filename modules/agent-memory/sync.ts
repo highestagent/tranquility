@@ -1,4 +1,4 @@
-import { getAiConsent } from "@/modules/agent/consent"
+import { isCloudAiEnabled } from "@/modules/agent/consent"
 import { discoveries, hypotheses, investigations, kv } from "@/modules/memory"
 
 import {
@@ -135,8 +135,8 @@ export function syncMemory(): Promise<void> {
   running ??= (async () => {
     const owner = getMemoryUserId()
     if (!owner) return
-    const consent = await getAiConsent()
-    if (!consent?.granted) return
+    const enabled = await isCloudAiEnabled()
+    if (!enabled) return
 
     try {
       const { more } = await runMemorySync(memoryApi, owner, await loadFacts())
@@ -163,8 +163,11 @@ export function syncMemory(): Promise<void> {
  * Connecting can create their account, so it needs the same consent as syncing.
  */
 export async function getSavedCount(): Promise<number | null> {
-  const [consent, state] = await Promise.all([getAiConsent(), getMemoryState()])
-  if (!consent?.granted || !state.enabled) return null
+  const [enabled, state] = await Promise.all([
+    isCloudAiEnabled(),
+    getMemoryState(),
+  ])
+  if (!enabled || !state.enabled) return null
   return memoryApi.count()
 }
 

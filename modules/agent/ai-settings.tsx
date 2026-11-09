@@ -7,15 +7,15 @@ import { LoadingMessage, StorageError } from "@/components/status-message"
 import { cn } from "@/lib/utils"
 
 import { AiDisclosure } from "./ai-consent-card"
-import { getAiConsent, setAiConsent } from "./consent"
+import { isCloudAiEnabled, setAiConsent } from "./consent"
 
 export function AiSettings() {
   const [granted, setGranted] = useState<boolean | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    getAiConsent()
-      .then((consent) => setGranted(consent?.granted ?? false))
+    isCloudAiEnabled()
+      .then(setGranted)
       .catch(() => setFailed(true))
   }, [])
 

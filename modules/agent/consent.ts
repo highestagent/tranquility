@@ -7,8 +7,8 @@ export interface AiConsent {
   at: number
 }
 
-export async function getAiConsent() {
-  return (await kv.get<AiConsent>(KEY)) ?? null
+export async function isCloudAiEnabled() {
+  return (await kv.get<AiConsent>(KEY))?.granted ?? true
 }
 
 export async function setAiConsent(granted: boolean) {
