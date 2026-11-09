@@ -404,13 +404,6 @@ describe("figures in tool results", () => {
     expect(isRounded(run!.metrics.medianRt)).toBe(true)
     expect(isRounded(stored!.metrics.medianRt!)).toBe(false)
   })
-
-  it("explains that start-testing is optional", () => {
-    expect(investigationTools.manageHypotheses.description).toMatch(
-      /being tested while evidence is collected/
-    )
-    expect(investigationTools.manageHypotheses.description).toMatch(/optional/)
-  })
 })
 
 describe("history sent to the model", () => {

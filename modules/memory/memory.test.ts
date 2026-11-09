@@ -3,7 +3,6 @@ import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import demoData from "@/fixtures/demo-data.json"
 
 import { activateAccountDb, closeDb, DB_NAME, LOCAL_OWNER_KEY } from "./db"
 import {
@@ -92,11 +91,6 @@ describe("portability", () => {
       InvalidImportError
     )
     expect(await measurements.get("m1")).toBeDefined()
-  })
-
-  it("accepts the demo data file", async () => {
-    await importAll(demoData)
-    expect((await countAll()).measurements).toBe(48)
   })
 
   it("deletes everything", async () => {

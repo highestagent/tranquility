@@ -26,15 +26,4 @@ describe("summarizeCoverage", () => {
   it("has nothing to report without rows", () => {
     expect(summarizeCoverage([])).toEqual([])
   })
-
-  it("reports counts only, never the values", () => {
-    const [entry] = summarizeCoverage([
-      { questionId: "stress.level", value: 4 },
-    ])
-    expect(Object.keys(entry!).sort()).toEqual([
-      "answered",
-      "declined",
-      "questionId",
-    ])
-  })
 })

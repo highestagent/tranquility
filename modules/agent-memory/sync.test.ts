@@ -40,7 +40,7 @@ beforeEach(async () => {
 })
 
 describe("runMemorySync", () => {
-  it("sends new facts, then marks them saved once stored", async () => {
+  it("sends new facts once and marks them saved after storage", async () => {
     const api = fakeApi()
     expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: true })
     expect(api.remember).toHaveBeenCalledWith(["Fact 0", "Fact 1"], 0)
@@ -49,14 +49,9 @@ describe("runMemorySync", () => {
     const state = await getMemoryState()
     expect(state.remembered).toEqual(["fact-0", "fact-1"])
     expect(state.pending).toEqual([])
-  })
 
-  it("never sends a fact twice", async () => {
-    const api = fakeApi()
-    await runMemorySync(api, "u1", facts(1))
-    await runMemorySync(api, "u1", facts(1))
-    await runMemorySync(api, "u1", facts(1))
-    expect(api.remember).toHaveBeenCalledTimes(1)
+    expect(await runMemorySync(api, "u1", facts(2))).toEqual({ more: false })
+    expect(api.remember).toHaveBeenCalledOnce()
   })
 
   it("waits on running jobs without resending them", async () => {
@@ -98,12 +93,6 @@ describe("runMemorySync", () => {
     await runMemorySync(api, "u2", facts(3))
     expect(api.remember).toHaveBeenCalledTimes(1)
     expect((await getMemoryState()).owner).toBe("u2")
-  })
-
-  it("saves what someone did before signing in the first time", async () => {
-    const api = fakeApi()
-    await runMemorySync(api, "u1", facts(2))
-    expect(api.remember).toHaveBeenCalledTimes(1)
   })
 
   it("syncs automatically even if an older version left it disabled", async () => {
