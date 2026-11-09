@@ -13,6 +13,7 @@ import { getDb } from "@/modules/memory/db"
 import {
   getMemoryUserId,
   memoryApi,
+  waitForMemoryAccount,
   type MemoryApi,
   type MemoryWorkspace,
 } from "./api"
@@ -640,6 +641,8 @@ export function syncMemory(request: SyncRequest = {}): Promise<void> {
  */
 export async function waitForRestore(timeoutMs: number): Promise<boolean> {
   if (restored) return true
+  // A returning visit opens before Privy confirms the session.
+  await waitForMemoryAccount(timeoutMs)
   if (!getMemoryUserId()) return false
   let done = () => {}
   let timer: ReturnType<typeof setTimeout> | undefined

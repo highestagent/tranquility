@@ -16,6 +16,18 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
     !account.ready || (account.authenticated && account.storage === "loading")
   const unavailable = !account.available || account.storage === "error"
 
+  // Plain while the session is checked, so it can't be taken for sign-in.
+  if (loading)
+    return (
+      <main className="flex min-h-svh w-full items-center justify-center bg-background">
+        <Spinner
+          role="status"
+          aria-label="Opening Tranquility"
+          className="text-muted-foreground motion-reduce:animate-none"
+        />
+      </main>
+    )
+
   return (
     <main className="dark flex min-h-svh w-full items-center justify-center bg-background bg-[url('/signal-atlas.webp')] bg-cover bg-center px-6 py-12 text-center text-foreground">
       <div className="flex w-full max-w-lg flex-col items-center">
@@ -32,18 +44,7 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
         </p>
 
         <div className="mt-9 flex w-full max-w-xs flex-col items-center gap-3">
-          {loading ? (
-            <p
-              role="status"
-              className="flex min-h-12 items-center gap-2 text-sm text-muted-foreground"
-            >
-              <Spinner
-                aria-hidden="true"
-                className="motion-reduce:animate-none"
-              />
-              Opening Tranquility…
-            </p>
-          ) : unavailable ? (
+          {unavailable ? (
             <>
               <p role="alert" className="text-sm text-muted-foreground">
                 {account.storage === "error"

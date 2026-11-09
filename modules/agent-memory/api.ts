@@ -28,10 +28,41 @@ interface MemoryAccount {
 
 let account: MemoryAccount | null = null
 let clientPromise: Promise<MemWal> | null = null
+/** A session is being restored, so an account should arrive shortly. */
+let accountExpected = false
+const accountWaiters = new Set<() => void>()
+
+function settleAccountWaiters() {
+  for (const resolve of accountWaiters) resolve()
+  accountWaiters.clear()
+}
 
 export function setMemoryAccount(next: MemoryAccount | null) {
   if (account?.userId !== next?.userId) clientPromise = null
   account = next
+  if (next) settleAccountWaiters()
+}
+
+/** Set while a returning visit waits for its session to be confirmed. */
+export function expectMemoryAccount(expected: boolean) {
+  accountExpected = expected
+  if (!expected) settleAccountWaiters()
+}
+
+/** Resolves once there's an account, or none is on its way. */
+export function waitForMemoryAccount(timeoutMs: number) {
+  if (account || !accountExpected) return Promise.resolve()
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(() => {
+      accountWaiters.delete(done)
+      resolve()
+    }, timeoutMs)
+    accountWaiters.add(done)
+  })
 }
 
 export function getMemoryUserId() {

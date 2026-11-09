@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/collapsible"
 import { useAccount } from "@/modules/account/account-context"
 
+import { NotSignedInError } from "./api"
 import {
   forgetMemories,
   getMemoryCount,
@@ -30,7 +31,11 @@ export function MemorySettings() {
 
   const refresh = useCallback(() => {
     getMemoryState().then(setState, () => setState(null))
-    getMemoryCount().then(setSaved, () => setSaved("failed"))
+    // Until the session is confirmed there's no account to ask yet, which
+    // isn't a failure: the next sync pass refreshes this.
+    getMemoryCount().then(setSaved, (error) =>
+      setSaved(error instanceof NotSignedInError ? null : "failed")
+    )
   }, [])
 
   const { authenticated } = account
