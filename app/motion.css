@@ -114,16 +114,6 @@
   }
 }
 
-/* Without WebGL, the orb is a soft sphere of light. */
-.orb-canvas:not([data-gl]) {
-  background: radial-gradient(
-    circle at 50% 50%,
-    var(--glow) 0,
-    color-mix(in oklch, var(--glow) 55%, transparent) 20%,
-    transparent 44%
-  );
-}
-
 /* How-to-play demos */
 .demo-on {
   position: absolute;

@@ -1,7 +1,8 @@
+import { AgentOrb } from "@/modules/insights/agent-orb"
 import { cn } from "@/lib/utils"
 
 const dockStyle =
-  "sticky bottom-0 z-10 -mx-5 flex flex-col gap-2 bg-background px-5 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+  "sticky bottom-[var(--bottom-nav-space,0px)] z-10 -mx-5 flex flex-col gap-2 bg-background px-5 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
 
 /**
  * Every screen has the same anatomy, so the eye always knows where to look:
@@ -179,13 +180,7 @@ export function ConversationCanvas({
         className="mb-7 flex items-center gap-3 text-xs text-muted-foreground"
         role="status"
       >
-        <span
-          aria-hidden
-          className={cn(
-            "size-2 rounded-full bg-glow",
-            busy && "motion-safe:animate-pulse"
-          )}
-        />
+        <AgentOrb size={20} state={busy ? "thinking" : "resting"} />
         {stage}
       </div>
       <div className="min-h-28">

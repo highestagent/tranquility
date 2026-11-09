@@ -328,7 +328,7 @@ export function KnowledgeMap({
         ) : null}
       </svg>
 
-      <div className="absolute inset-0">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <AgentOrb state={state} />
       </div>
 
