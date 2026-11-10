@@ -116,6 +116,26 @@ describe("proxyToWalrus", () => {
     expect(await response.text()).toBe('{"error":"nope"}')
   })
 
+  it("routes Seal sessions through Tatum and removes the public RPC fallback", async () => {
+    const d = deps({
+      fetch: vi.fn(async () =>
+        Response.json({
+          network: "mainnet",
+          packageId: "0xpackage",
+          suiGrpcUrl: "https://public.example",
+          suiRpcUrl: "https://fallback.example",
+        })
+      ) as typeof fetch,
+    })
+    const response = await proxyToWalrus(get("config"), ["config"], d)
+    expect(await response.json()).toEqual({
+      network: "mainnet",
+      packageId: "0xpackage",
+      suiTransport: "grpc",
+      suiGrpcUrl: "/api/sui",
+    })
+  })
+
   it("allows only the routes this app uses", async () => {
     const d = deps()
     for (const path of [
