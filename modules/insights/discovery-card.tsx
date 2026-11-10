@@ -13,6 +13,7 @@ import {
   ChevronDown,
   CircleHelp,
   Compass,
+  History,
   Minus,
   Telescope,
 } from "lucide-react"
@@ -21,11 +22,12 @@ import { ScatterPlot } from "@/components/charts/scatter-plot"
 import { cn } from "@/lib/utils"
 import { formatMetric, formatTick, getAssessment } from "@/modules/assessments"
 import {
+  GRADE_WORDS,
   OUTCOME_LABELS,
   verdictOutcome,
   type Outcome,
 } from "@/modules/investigation/verdict"
-import type { Analysis } from "@/modules/memory"
+import type { Analysis, Discovery } from "@/modules/memory"
 import { getDomain, getQuestion } from "@/modules/questionnaire"
 
 import type { DiscoveryView } from "./discovery-data"
@@ -46,6 +48,20 @@ const OUTCOMES: Record<Outcome, { Icon: typeof Check; solid: boolean }> = {
   opposite: { Icon: ArrowLeftRight, solid: false },
   "no-link": { Icon: Minus, solid: false },
   unclear: { Icon: CircleHelp, solid: false },
+}
+
+/** What the same relationship showed when it was checked before. */
+function describeEarlier(checks: readonly Discovery[]) {
+  const list = checks
+    .map(
+      (check) =>
+        `${new Date(check.createdAt).toLocaleDateString([], {
+          month: "short",
+          day: "numeric",
+        })}, ${OUTCOME_LABELS[verdictOutcome(check)]} (${GRADE_WORDS[check.grade]})`
+    )
+    .join("; ")
+  return `Checked before: ${list}.`
 }
 
 /** Which habit and ability this is about, and what the evidence decided. */
@@ -146,6 +162,13 @@ export function DiscoveryEvidence({ view }: { view: DiscoveryView }) {
               text={discovery.uncertainty}
             />
             <Detail Icon={Compass} label="Next" text={discovery.nextStep} />
+            {view.earlier.length > 0 ? (
+              <Detail
+                Icon={History}
+                label="Earlier checks"
+                text={describeEarlier(view.earlier)}
+              />
+            ) : null}
           </dl>
         </CollapsibleContent>
       </Collapsible>

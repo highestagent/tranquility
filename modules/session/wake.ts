@@ -1,4 +1,4 @@
-import { kv } from "@/modules/memory"
+import { kv, type Discovery } from "@/modules/memory"
 
 /** After this long, the agent looks again even if nothing new has arrived. */
 export const REST_WINDOW_MS = 6 * 60 * 60 * 1000
@@ -49,4 +49,33 @@ export async function markDiscoverySeen(createdAt: number) {
   if (createdAt > (await getSeenDiscoveriesAt())) {
     await setSeenDiscoveriesAt(createdAt)
   }
+}
+
+/**
+ * New findings to show, oldest first. A re-check that reached the same verdict
+ * on the same strength of evidence isn't news, so it stays on the Findings page
+ * rather than interrupting. The one the agent is showing is left out too.
+ */
+export function findingsToReveal(
+  findings: readonly Discovery[],
+  seenAt: number,
+  showingId: string | null
+) {
+  return findings
+    .filter((finding) => {
+      if (finding.createdAt <= seenAt || finding.id === showingId) return false
+      const previous = findings
+        .filter(
+          (other) =>
+            other.hypothesisId === finding.hypothesisId &&
+            other.createdAt < finding.createdAt
+        )
+        .sort((a, b) => b.createdAt - a.createdAt)[0]
+      return (
+        !previous ||
+        previous.verdict !== finding.verdict ||
+        previous.grade !== finding.grade
+      )
+    })
+    .sort((a, b) => a.createdAt - b.createdAt)
 }

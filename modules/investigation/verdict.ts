@@ -56,3 +56,11 @@ export const OUTCOME_LABELS: Record<Outcome, string> = {
   "no-link": "No link",
   unclear: "Unclear",
 }
+
+export const GRADE_WORDS: Record<Analysis["grade"], string> = {
+  insufficient: "too little data",
+  weak: "weak evidence",
+  moderate: "moderate evidence",
+  strong: "strong evidence",
+  contradictory: "contradictory evidence",
+}

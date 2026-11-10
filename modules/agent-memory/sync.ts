@@ -62,6 +62,8 @@ import { getLocalWithdrawals } from "./withdrawals"
 
 /** The relayer takes up to 20 memories in one bulk request, for the same cost as one. */
 const BATCH_SIZE = 20
+/** And checks on at most 20 of their jobs in one status request. */
+const STATUS_BATCH = 20
 /** The proxy accepts 64 KB per request, and JSON escaping adds some. */
 const BATCH_CHARS = 160_000
 const READ_CONCURRENCY = 4
@@ -547,7 +549,14 @@ export async function runMemorySync(
 
   let saved = false
   if (state.pending.length > 0) {
-    const { jobs } = await api.status(state.pending.map((job) => job.jobId))
+    // A batch can go up before the last one finishes, so more can be waiting.
+    const jobs: { jobId: string; status: string }[] = []
+    for (let at = 0; at < state.pending.length; at += STATUS_BATCH) {
+      const ids = state.pending
+        .slice(at, at + STATUS_BATCH)
+        .map((job) => job.jobId)
+      jobs.push(...(await api.status(ids)).jobs)
+    }
     const statusOf = new Map(jobs.map((job) => [job.jobId, job.status]))
     const stillRunning: MemoryState["pending"] = []
     for (const job of state.pending) {

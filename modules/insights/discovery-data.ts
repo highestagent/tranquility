@@ -17,6 +17,8 @@ export interface DiscoveryView {
   hypothesis: Hypothesis | undefined
   analysis: Analysis | undefined
   points: { x: number; y: number }[]
+  /** Earlier checks of the same relationship, newest first. */
+  earlier: Discovery[]
 }
 
 const VERDICT_ORDER: Record<Discovery["verdict"], number> = {
@@ -60,7 +62,7 @@ export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
         !getQuestion(hypothesis.factorId) ||
         !getAssessment(hypothesis.metric.assessmentId)
       ) {
-        return { discovery, hypothesis, analysis, points: [] }
+        return { discovery, hypothesis, analysis, points: [], earlier: [] }
       }
       const [runs, answers] = await Promise.all([
         measurements.byAssessment(hypothesis.metric.assessmentId),
@@ -71,8 +73,26 @@ export async function loadDiscoveryViews(): Promise<DiscoveryView[]> {
         answers,
         hypothesis.metric.metricId
       ).map(({ x, y }) => ({ x, y }))
-      return { discovery, hypothesis, analysis, points }
+      return { discovery, hypothesis, analysis, points, earlier: [] }
     })
   )
   return views
+}
+
+/**
+ * Each relationship once, as its latest check. Re-checking with new data
+ * records a new finding, and the ones before it become its history.
+ */
+export function latestFindings(views: readonly DiscoveryView[]) {
+  const byRelationship = new Map<string, DiscoveryView[]>()
+  for (const view of views) {
+    const key = view.discovery.hypothesisId
+    byRelationship.set(key, [...(byRelationship.get(key) ?? []), view])
+  }
+  return [...byRelationship.values()].map((checks) => {
+    const [latest, ...earlier] = checks.sort(
+      (a, b) => b.discovery.createdAt - a.discovery.createdAt
+    )
+    return { ...latest!, earlier: earlier.map(({ discovery }) => discovery) }
+  })
 }

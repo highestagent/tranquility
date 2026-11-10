@@ -729,6 +729,32 @@ describe("staying within the relayer's hourly budget", () => {
     expect(api.remember).toHaveBeenCalledTimes(2)
   })
 
+  it("checks on more running jobs than one status request takes", async () => {
+    const statuses: Record<string, string> = {}
+    for (let i = 0; i < 23; i++) statuses[`job-${i}`] = "running"
+    const { api } = fakeWalrus(statuses)
+    api.status.mockImplementation(async (jobIds: string[]) => {
+      if (jobIds.length > 20) {
+        throw new Error("job_ids exceeds maximum of 20 per bulk status request")
+      }
+      return {
+        jobs: jobIds.map((jobId) => ({
+          jobId,
+          status: statuses[jobId] ?? "done",
+        })),
+      }
+    })
+    for (let i = 0; i < 23; i++) await discoveries.put(finding({ id: `d${i}` }))
+    await runMemorySync(api, "u1", { flush: true })
+    await runMemorySync(api, "u1", { flush: true })
+    expect((await getMemoryState()).pending).toHaveLength(23)
+
+    for (const id of Object.keys(statuses)) statuses[id] = "done"
+    await settle(api)
+    expect((await getMemoryState()).remembered).toHaveLength(23)
+    expect(api.remember).toHaveBeenCalledTimes(2)
+  })
+
   it("drains a long backlog without waiting between batches", async () => {
     const { api } = fakeWalrus()
     for (let i = 0; i < 23; i++) await discoveries.put(finding({ id: `d${i}` }))

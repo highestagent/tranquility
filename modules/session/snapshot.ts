@@ -3,7 +3,7 @@ import { expireStaleTask, getPendingTask } from "@/modules/agent/pending-task"
 import { loadResumePoint } from "@/modules/agent-memory/resume"
 import { discoveries, measurements, responses } from "@/modules/memory"
 
-import { getAgentRest, getSeenDiscoveriesAt } from "./wake"
+import { findingsToReveal, getAgentRest, getSeenDiscoveriesAt } from "./wake"
 
 /** Everything the home screen shows, restored from this device. */
 export async function loadSnapshot() {
@@ -26,9 +26,7 @@ export async function loadSnapshot() {
     pending.interaction.type === "EvidenceCard"
       ? pending.interaction.props.discoveryId
       : null
-  const unseen = findings
-    .filter((finding) => finding.createdAt > seenAt && finding.id !== presented)
-    .sort((a, b) => a.createdAt - b.createdAt)
+  const unseen = findingsToReveal(findings, seenAt, presented)
 
   return {
     pending,
