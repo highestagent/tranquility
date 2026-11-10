@@ -11,8 +11,12 @@ import {
 } from "react"
 
 import { onMemoryChange } from "@/modules/agent-memory/sync"
-import { kv } from "@/modules/memory"
-import { commitTask, getContinuation, CONTINUATION_KEY } from "./checkpoint"
+import {
+  commitTask,
+  getContinuation,
+  setContinuation,
+  unansweredContinuation,
+} from "./checkpoint"
 import type { Answer } from "@/modules/interaction/catalog"
 import type { Measurement } from "@/modules/memory"
 
@@ -115,7 +119,7 @@ export function useAgentSession() {
 
   function sendContinuation(line: string, text: string) {
     return runTurn(line, async () => {
-      await kv.set(CONTINUATION_KEY, text)
+      await setContinuation(text)
       await sendMessage({ text })
     })
   }
@@ -131,9 +135,17 @@ export function useAgentSession() {
       ) {
         engage()
       }
-      const continuation = await getContinuation()
-      if (continuation && !busy && !restored.pending) {
-        void sendContinuation("Picking up where we left off…", continuation)
+      const continuation = unansweredContinuation(
+        await getContinuation(),
+        restored.pending
+      )
+      if (continuation && !busy) {
+        // Only the person's own question can be newer than a showing task.
+        if (restored.pending) engage()
+        void sendContinuation(
+          "Picking up where we left off…",
+          continuation.text
+        )
         return
       }
       if (
@@ -236,7 +248,7 @@ export function useAgentSession() {
       await runTurn(
         "Thinking about that…",
         async () => {
-          await kv.set(CONTINUATION_KEY, text)
+          await setContinuation(text)
           await sendMessage({ text })
         },
         true

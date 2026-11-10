@@ -7,13 +7,16 @@ import {
 } from "pdf-lib"
 
 import { getAssessment } from "@/modules/assessments"
-import { listInvestigationSummaries } from "@/modules/investigation"
+import {
+  listInvestigationSummaries,
+  OUTCOME_LABELS,
+  verdictOutcome,
+} from "@/modules/investigation"
 import {
   measurements,
   responses,
   sessions,
   type EvidenceGrade,
-  type Discovery,
 } from "@/modules/memory"
 import { getQuestion } from "@/modules/questionnaire"
 
@@ -27,12 +30,6 @@ const WIDTH = PAGE.width - MARGIN * 2
 const INK = rgb(0.1, 0.12, 0.13)
 const MUTED = rgb(0.42, 0.45, 0.47)
 const RULE = rgb(0.85, 0.86, 0.87)
-
-const VERDICT: Record<Discovery["verdict"], string> = {
-  supported: "Supported",
-  refuted: "No link",
-  inconclusive: "Unclear",
-}
 
 const GRADE: Record<EvidenceGrade, string> = {
   insufficient: "too little data",
@@ -228,7 +225,7 @@ export async function buildReport() {
       write.text(`Hypothesis: ${hypothesis.statement}`, { color: MUTED })
     }
     write.text(
-      `${VERDICT[discovery.verdict]} on ${GRADE[discovery.grade]}, ${day(discovery.createdAt)}.`
+      `${OUTCOME_LABELS[verdictOutcome(discovery)]} (${GRADE[discovery.grade]}), ${day(discovery.createdAt)}.`
     )
     write.text(discovery.evidence, { indent: 10 })
     write.text(discovery.reliability, { indent: 10 })

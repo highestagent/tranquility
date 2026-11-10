@@ -156,6 +156,8 @@ export function AgentHome() {
       <ConversationCanvas
         stage="An observation"
         message="Here’s what the evidence suggests."
+        why="I show each new finding once, as soon as it’s recorded, so none slips past. Details has the numbers behind it."
+        whyLabel="Why I’m showing this"
         controls={
           <>
             <Button onClick={() => void session.dismissDiscovery()}>

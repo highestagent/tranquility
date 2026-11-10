@@ -16,7 +16,11 @@ import {
   isStale,
   setPendingTask,
 } from "@/modules/agent/pending-task"
-import { commitTask, getContinuation } from "@/modules/session/checkpoint"
+import {
+  commitTask,
+  getContinuation,
+  unansweredContinuation,
+} from "@/modules/session/checkpoint"
 import { getSeenDiscoveriesAt } from "@/modules/session/wake"
 import { correctAnswer } from "@/modules/journal/corrections"
 import {
@@ -83,7 +87,7 @@ it("commits one answer and a resumable continuation atomically, ignoring duplica
   await commitTask(task, "Continue", "Quiet")
   await commitTask(task, "Duplicate", "Busy")
   expect(await getPendingTask()).toBeNull()
-  expect(await getContinuation()).toBe("Continue")
+  expect((await getContinuation())?.text).toBe("Continue")
   expect(await kv.get("contextAnswers")).toEqual([
     expect.objectContaining({ id: task.id, value: "Quiet" }),
   ])
@@ -98,6 +102,15 @@ it("rejects an invalid answer without releasing the pending interaction", async 
   await expect(commitTask(task, "Continue", "not boolean")).rejects.toThrow()
   expect((await getPendingTask())?.id).toBe(task.id)
   expect(await getContinuation()).toBeUndefined()
+})
+it("carries on a question cut off while a task was showing, but not the turn that made the task", () => {
+  const question = { text: "Is my search steadier after sleep?", at: 20 }
+  expect(unansweredContinuation(question, { createdAt: 10 })).toBe(question)
+  expect(unansweredContinuation(question, null)).toBe(question)
+  expect(
+    unansweredContinuation({ text: "Continue", at: 5 }, { createdAt: 10 })
+  ).toBeNull()
+  expect(unansweredContinuation(undefined, null)).toBeNull()
 })
 it("corrects context and recalculates while preserving measured outcomes and observation time", async () => {
   await responses.put({
