@@ -1,201 +1,35 @@
-<img src="public/tranquility.svg" width="72" height="72" alt="Tranquility logo">
-
 # Tranquility
 
-A personal cognitive research agent. It investigates how sleep, stress, mood,
-habits, and surroundings relate to your own cognitive performance: it forms
-hypotheses, collects evidence through short games and questions, and explains
-what it found and how far to trust it.
+Tranquility pairs science-based cognitive games with check-ins about sleep,
+stress, and energy. It compares sessions and uses the findings to decide what
+to measure next.
 
-Tranquility is not a medical tool and doesn't diagnose anything.
+[Try the app](https://www.tranquility.lifestyle/) ·
+[Watch the demo](https://youtu.be/4bqIiR0Gbig) ·
+[Read the write-up](https://medium.com/@highestlordagent/building-tranquility-a-cognitive-training-app-that-learns-from-your-results-bdde449af656)
 
-## Getting started
+Built for [Total Recall](https://tatum.io/hackathon/total-recall).
 
-```bash
+- **Walrus Memory** stores findings and open investigations so the agent can
+  pick up on another device and show the note behind a recalled result. The
+  demo account showed 53 saved memories on mainnet.
+- **Tatum** provides Sui mainnet RPC for account setup and transaction
+  confirmation. Tranquility uses it to verify that the Walrus Memory account
+  is active and belongs to the signed-in wallet.
+
+Across 25 comparable sessions, longer sleep was associated with faster
+reactions after adjusting for trends over time. The agent suggested pairing
+sleep quality and energy ratings with another Go/No-Go run.
+
+## Run locally
+
+Use Node.js 20.9+ and pnpm. Set `NEXT_PUBLIC_PRIVY_APP_ID`, `PRIVY_APP_SECRET`,
+`AI_GATEWAY_API_KEY`, and `TATUM_API_KEY` in `.env.local`. Enable Google sign-in
+in Privy and allow `http://localhost:3000`.
+
+```sh
 pnpm install
-```
-
-The agent uses [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). Add your
-key to `.env.local`, which stays on the server. The agent uses `openai/gpt-5.2`, which is
-available on the gateway's free tier once a card is on your Vercel account.
-
-```bash
-echo 'AI_GATEWAY_API_KEY=your-key' >> .env.local
-```
-
-```bash
 pnpm dev
 ```
 
-Games, questionnaires, statistics, and data tools all work without a key.
-
-For self-hosted deployments, set `SITE_URL` to the public app origin at build time
-so social previews can load the share image. Vercel supplies its deployment
-domain automatically.
-
-### Accounts and memory
-
-Tranquility requires Google sign-in through [Privy](https://www.privy.io). The agent's
-research syncs to [Walrus Memory](https://docs.wal.app/walrus-memory) in the
-background, so it can pick up where it left off on any device:
-
-- Each investigation is a small handoff: the open question, its hypotheses, the
-  last verified result, the evidence still missing, and when another measurement
-  would help. Every revision has its own namespace, and a new device reads the
-  current one by exact reference before the agent's first turn.
-- Findings share one namespace, so the agent can answer "have we looked at this
-  before?" and show the note it used.
-- Correcting an answer saves a withdrawal for each finding it affected, and every
-  device stops presenting those findings.
-- Preferences people ask it to remember in chat are kept apart from research.
-  Asking it to change or forget one works the same way.
-- Everything else (answers, game results, sessions, analyses, and the agent's
-  log) is backed up as an encrypted snapshot. It's compressed and encrypted in
-  the browser with a key derived from a wallet signature, so the relayer and
-  Walrus only see ciphertext, and every device derives the same key. A device
-  with no answers or game results restores each device's latest snapshot before
-  the agent's first turn, adding only what it doesn't have, so evidence from
-  all of a person's devices pools together.
-
-The relayer allows each account 500 points an hour, and an upload costs 10, so
-routine changes go up at most every five minutes, carrying every plan revision
-since, and a changed backup at most every half hour (five minutes on leaving). Corrections and preferences go at once, and leaving the page or the agent
-resting sends whatever is waiting. While the page is hidden, nothing syncs on a
-timer.
-
- Add these to `.env.local` and allow
-your app origin in Privy’s settings:
-
-| Variable | Where it comes from | Exposure |
-|---|---|---|
-| `NEXT_PUBLIC_PRIVY_APP_ID` | Privy dashboard | Public |
-| `PRIVY_APP_SECRET` | Privy dashboard | Server only |
-| `TATUM_API_KEY` | Tatum dashboard, mainnet API key | Server only |
-
-Each person gets their own Walrus Memory account on mainnet, with nothing to set
-up:
-
-1. Their first sync creates a Sui wallet through Privy.
-2. Walrus Memory sponsors the transactions that create their account and register
-   a signing key, so the wallet never needs funding. Its managed relayer also pays
-   for storage.
-3. That key is derived from a wallet signature, so it's the same on every device.
-   It stays in memory and is never stored or exported.
-
-With a Tatum key configured, Tranquility verifies the signed-in wallet’s
-Walrus Memory account in the background when memory connects. Tatum’s Sui
-mainnet gRPC `GetObject` checks that the account is active and belongs to
-the wallet. Memory sync proceeds independently.
-[Tatum Sui gRPC documentation](https://docs.tatum.io/reference/sui-grpc)
-
-MemWal receives agent notes, and the hosted relayer reads their text while storing
-and searching it, except for backups, which are encrypted before they're sent.
-The first sign-in claims previously unowned local history. Deleting everything
-from a browser also signs out, since a signed-in device with nothing on it
-restores the backup straight away. "Forget" moves a person
-to a new namespace, and old encrypted copies remain until they expire. Walrus
-Memory's [Security Delete API](https://docs.wal.app/walrus-memory/guides/delete-memories-programmatically)
-only deletes blobs it tracked under its earlier version, and a signed-in check on
-mainnet found none of this app's memories among them, so the app doesn't offer
-permanent deletion. See `modules/agent-memory/`.
-
-### Try it with demo data
-
-To skip weeks of data collection, open **You** (the fingerprint icon) → **Import** and choose
-[`fixtures/demo-data.json`](fixtures/demo-data.json). It's synthetic, with one
-planted pattern: more sleep, faster reactions. Importing replaces what's stored
-in that browser. Regenerate it with `scripts/generate-demo-data.mjs`.
-
-## How it works
-
-The agent runs in the browser. Research records stay in IndexedDB and the agent
-recalls synced notes from MemWal. There's no start button: when you open the app, the agent wakes if it has a reason to (first run,
-new data, or a long rest), and the screen follows what it's doing.
-
-| Phase | What you see |
-|---|---|
-| Thinking | A short description of the current task and the agent’s reply |
-| Asking | One tap-to-answer question at a time |
-| Playing | A game with an animated preview, then a visual result |
-| Reveal | A new finding, with its chart and evidence strength |
-| Resting | What the agent said, the map, and a way to ask your own question |
-
-Every screen uses the same layout (`components/screen.tsx`): a quiet reason, one
-thing to read, one thing to look at, and one action in thumb reach. The orb is a
-WebGL shader (`modules/insights/agent-orb.tsx`) that never renders beside a game.
-
-Closing the browser loses nothing, because the investigation and any pending task
-are stored. See `modules/session/use-agent-session.ts`.
-
-```
-app/          Thin routes, plus the stateless AI relay at /api/ai
-modules/
-  assessments/    The games. Each folder is a self-contained game.
-  questionnaire/  Question bank and form
-  memory/         IndexedDB storage, export, import, delete
-  analytics/      Deterministic statistics
-  investigation/  Hypotheses, verdicts, and resumable state
-  agent/          ToolLoopAgent, tools, permissions, consent
-  account/        Sign-in with Google through Privy
-  agent-memory/   Background sync to Walrus Memory, and recall
-  relay/          Forwards model requests, keeping the key on the server
-  session/        The home screen and its phases
-  insights/       Findings and evidence displays
-```
-
-Dependencies run one way: `agent → investigation → analytics → memory`.
-
-### The agent can't invent results
-
-- **Measurements:** no tool can write a measurement or answer. Only the UI can.
-- **Protocols:** the agent picks a game by ID, so it can't change how it runs.
-  Protocols are versioned, and results from different versions are never compared.
-- **Statistics:** analysis tools take IDs and read the numbers from storage.
-- **Verdicts:** code decides whether a hypothesis is supported, from stored
-  analyses. The figures on a finding are generated too, and the agent's own
-  wording may not contain numerals.
-- **Permissions:** the agent must read before acting, and can only record a finding
-  after running an analysis in that turn. See `modules/agent/policy.ts`.
-
-Evidence grades are heuristics for comparing a person's data with itself, not
-validated clinical cut-offs. See `modules/analytics/grading.ts`.
-
-### Adding a game
-
-1. Create `modules/assessments/<game>/`, following the shape of `go-no-go/`:
-   `protocol.ts`, `scoring.ts`, `game.tsx`, `index.ts`, and tests.
-2. Export an `AssessmentDefinition` and add it to `modules/assessments/registry.ts`.
-
-The session runner, agent tools, and analysis pick it up from the registry.
-
-### Using a different model
-
-Inference is isolated in `modules/agent/model.ts`. To run a local model, return a
-different `LanguageModel` from there.
-
-## Known limits
-
-- **Memory requests pass through this app's server.** The managed Walrus Memory
-  relayer only accepts browsers from Walrus's own apps, so `/api/walrus` forwards
-  them. It stores nothing and can't sign, but memory text and a short-lived
-  decryption credential do pass through it, and everyone shares its IP address for
-  the relayer's per-IP limits. A self-hosted relayer could accept this app directly.
-- **The managed relayer has no uptime guarantee.** It's a free public service with
-  usage limits. When it's unavailable, the agent carries on without memory.
-- **The relay is for personal use.** There are no accounts, so anyone who can reach
-  a deployment can use its AI key, within basic same-origin and rate limits. Add
-  real abuse protection before deploying publicly.
-- **Browser storage can be cleared.** Export regularly. There's no encrypted backup
-  or sync yet.
-- **Reaction times are browser-based.** They are comparable on one device and input
-  method, but not between them.
-
-## Development
-
-```bash
-pnpm test
-```
-
-```bash
-pnpm typecheck && pnpm lint
-```
+[Apache License 2.0](LICENSE)
