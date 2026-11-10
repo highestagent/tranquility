@@ -8,6 +8,7 @@ import {
 import { ChevronDown, Clock, Play, X } from "lucide-react"
 import { useEffect, useEffectEvent, useRef, useState } from "react"
 
+import { BackLink } from "@/components/back-link"
 import { Screen } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 import { randomSeed } from "@/lib/random"
@@ -167,7 +168,19 @@ export function AssessmentRunner({
     case "intro":
       return (
         <Screen
-          eyebrow={eyebrow ?? <p className="eyebrow">{assessment.shortName}</p>}
+          eyebrow={
+            eyebrow ??
+            (onFinish ? (
+              <p className="eyebrow">{assessment.shortName}</p>
+            ) : (
+              // Opened from Games, so the way back is there.
+              <p className="flex items-center gap-2 eyebrow">
+                <BackLink href="/assessments">Games</BackLink>
+                <span aria-hidden>·</span>
+                {assessment.shortName}
+              </p>
+            ))
+          }
           title={assessment.tagline}
           dock={
             <>
@@ -290,10 +303,19 @@ export function AssessmentRunner({
           eyebrow={<p className="eyebrow">Practice done</p>}
           title="Now for real."
           dock={
-            <Button size="cta" onClick={() => setStage({ name: "countdown" })}>
-              <Play aria-hidden data-icon="inline-start" />
-              Start
-            </Button>
+            <>
+              <Button
+                size="cta"
+                onClick={() => setStage({ name: "countdown" })}
+              >
+                <Play aria-hidden data-icon="inline-start" />
+                Start
+              </Button>
+              {/* The bottom bar is hidden while a game is under way. */}
+              <Button size="cta" variant="ghost" onClick={stop}>
+                Stop
+              </Button>
+            </>
           }
         >
           <div className="my-auto flex h-52 items-center justify-center opacity-60">
