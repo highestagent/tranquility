@@ -5,9 +5,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { useCallback, useState } from "react"
+import { BackLink } from "@/components/back-link"
 import { Screen, Section } from "@/components/screen"
 import { Button } from "@/components/ui/button"
 import { useAsync } from "@/hooks/use-async"
@@ -168,15 +169,7 @@ export function JournalEntryView({ sessionId }: { sessionId: string }) {
 
   return (
     <Screen
-      eyebrow={
-        <Link
-          href="/journal"
-          className="inline-flex min-h-11 w-fit items-center gap-1 rounded eyebrow outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ChevronLeft aria-hidden className="size-4" />
-          Journal
-        </Link>
-      }
+      eyebrow={<BackLink href="/journal">Journal</BackLink>}
       title={entry ? formatWhen(entry.session.startedAt) : "Session"}
     >
       {state.status === "loading" ? (
