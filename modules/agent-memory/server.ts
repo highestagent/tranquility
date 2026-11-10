@@ -1,13 +1,20 @@
 import { isOverLimit, type RateWindows } from "@/lib/rate-limit"
 import { isSameOrigin } from "@/modules/relay/relay"
 
+import type { MemoryVerification } from "./tatum"
+
 const RATE_LIMIT = { requests: 60, windowMs: 60_000 }
+const VERIFICATION_LIMIT = { requests: 6, windowMs: 60_000 }
 
 export interface MemoryDeps {
   /** Returns the user's ID, or throws if the token isn't valid. */
   verifyToken(token: string): Promise<string>
   getEpoch(userId: string): Promise<number>
   setEpoch(userId: string, epoch: number): Promise<void>
+  verifyAccount(
+    userId: string,
+    signal: AbortSignal
+  ): Promise<MemoryVerification>
   now: () => number
   rateWindows: RateWindows
 }
@@ -17,9 +24,8 @@ function reply(status: number, code: string) {
 }
 
 /**
- * The one thing about memory that has to be kept outside a person's Walrus
- * account: which namespace is current. It's how "forget" reaches every device.
- * It never sees a memory or a key.
+ * Handles authenticated memory controls. The epoch makes "forget" reach
+ * every device, and verification checks the wallet's account on Sui.
  */
 export async function handleMemoryRequest(
   request: Request,
@@ -27,7 +33,7 @@ export async function handleMemoryRequest(
   deps: MemoryDeps
 ): Promise<Response> {
   if (!isSameOrigin(request)) return reply(403, "cross_origin")
-  if (action !== "info" && action !== "forget") {
+  if (action !== "info" && action !== "forget" && action !== "verify") {
     return reply(404, "unknown_action")
   }
 
@@ -40,11 +46,16 @@ export async function handleMemoryRequest(
     return reply(401, "unauthorized")
   }
 
-  if (isOverLimit(deps.rateWindows, userId, deps.now(), RATE_LIMIT)) {
+  const key = action === "verify" ? "verify:" + userId : userId
+  const limit = action === "verify" ? VERIFICATION_LIMIT : RATE_LIMIT
+  if (isOverLimit(deps.rateWindows, key, deps.now(), limit)) {
     return reply(429, "too_many_requests")
   }
 
   try {
+    if (action === "verify") {
+      return Response.json(await deps.verifyAccount(userId, request.signal))
+    }
     const epoch = await deps.getEpoch(userId)
     if (action === "info") return Response.json({ epoch })
     await deps.setEpoch(userId, epoch + 1)

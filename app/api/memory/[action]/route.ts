@@ -3,6 +3,8 @@ import { PrivyClient } from "@privy-io/node"
 import type { RateWindows } from "@/lib/rate-limit"
 import { handleMemoryRequest } from "@/modules/agent-memory/server"
 
+export const runtime = "nodejs"
+
 const rateWindows: RateWindows = new Map()
 
 let privy: PrivyClient | null = null
@@ -35,6 +37,21 @@ export async function POST(
         .setCustomMetadata(userId, {
           custom_metadata: { memoryEpoch: epoch },
         })
+    },
+    verifyAccount: async (userId, signal) => {
+      const apiKey = process.env.TATUM_API_KEY?.trim()
+      if (!apiKey) return { status: "unconfigured" }
+
+      const deadline = AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+      const user = await getPrivy().users()._get(userId, { signal: deadline })
+      for (const linked of user.linked_accounts) {
+        if (linked.type === "wallet" && linked.chain_type === "sui") {
+          const { verifyWalrusAccount } =
+            await import("@/modules/agent-memory/tatum")
+          return verifyWalrusAccount(linked.address, apiKey, deadline)
+        }
+      }
+      return { status: "not_ready" }
     },
     now: Date.now,
     rateWindows,

@@ -4,6 +4,7 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   msw: false
+  protobufjs: false
 
 # Privy imports Solana packages statically, though this app doesn't use Solana.
 # They need one recent version of the kit, or the build fails.

@@ -9,6 +9,8 @@ import {
   type MemoryReference,
 } from "./records"
 
+import type { MemoryVerification } from "./tatum"
+
 const PROXY_PATH = "/api/walrus"
 const MAX_QUERY_LENGTH = 300
 
@@ -72,8 +74,7 @@ export function getMemoryUserId() {
 /** No one is signed in. Nothing to do until someone is. */
 export class NotSignedInError extends Error {}
 
-/** The forget counter is the only thing about memory this app's server keeps. */
-async function epochRequest(action: "info" | "forget") {
+async function memoryRequest<T>(action: "info" | "forget" | "verify") {
   const owner = getMemoryUserId()
   const token = await account?.getToken()
   if (!token || owner !== getMemoryUserId()) throw new NotSignedInError()
@@ -84,11 +85,21 @@ async function epochRequest(action: "info" | "forget") {
     signal: AbortSignal.timeout(15_000),
   })
   if (!response.ok) throw new Error(`Memory request failed: ${response.status}`)
-  const { epoch } = (await response.json()) as { epoch: number }
+  const result = (await response.json()) as T
   if (owner !== getMemoryUserId()) throw new NotSignedInError()
+  return result
+}
+
+/** The forget counter is the only thing about memory this app's server keeps. */
+async function epochRequest(action: "info" | "forget") {
+  const { epoch } = await memoryRequest<{ epoch: number }>(action)
   if (!Number.isSafeInteger(epoch) || epoch < 0)
     throw new Error("Invalid memory epoch")
   return epoch
+}
+
+export function verifyMemoryAccount() {
+  return memoryRequest<MemoryVerification>("verify")
 }
 
 /** Loaded on demand, since the Sui libraries are too heavy for every page. */

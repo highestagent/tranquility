@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/collapsible"
 import { useAccount } from "@/modules/account/account-context"
 
-import { NotSignedInError } from "./api"
+import { NotSignedInError, verifyMemoryAccount } from "./api"
 import {
   forgetMemories,
   getMemoryCount,
@@ -21,6 +21,7 @@ import {
   onSyncPass,
   type MemoryState,
 } from "./sync"
+import type { MemoryVerification } from "./tatum"
 
 /** Memory just works, so this exists for transparency and control. */
 export function MemorySettings() {
@@ -79,8 +80,56 @@ export function MemorySettings() {
           </p>
         </div>
       </div>
+      <VerifyAccount />
       <Disclosure onForgot={refresh} />
     </Card>
+  )
+}
+
+const VERIFICATION_STATUS = {
+  checking: "Checking the account on Sui mainnet…",
+  verified: "Verified on Sui mainnet through Tatum.",
+  not_ready:
+    "Your account is still being set up. Try again after memory syncs.",
+  unconfigured: "Tatum verification is unavailable on this deployment.",
+  mismatch: "The onchain account could not be verified for your wallet.",
+  failed: "Couldn’t verify the account right now. Try again.",
+}
+
+function VerifyAccount() {
+  const [result, setResult] = useState<
+    MemoryVerification | "checking" | "failed" | null
+  >(null)
+  const status = typeof result === "string" ? result : result?.status
+
+  async function verify() {
+    setResult("checking")
+    try {
+      setResult(await verifyMemoryAccount())
+    } catch {
+      setResult("failed")
+    }
+  }
+
+  return (
+    <div className="text-xs text-muted-foreground">
+      <Button
+        variant="link"
+        size="sm"
+        type="button"
+        className="h-auto justify-start px-0 text-xs"
+        disabled={status === "checking"}
+        onClick={() => void verify()}
+      >
+        Verify account on Sui
+      </Button>
+      <p role="status">{status ? VERIFICATION_STATUS[status] : ""}</p>
+      {typeof result === "object" && result?.status === "verified" ? (
+        <p className="mt-1 break-all">
+          Account ID <code>{result.accountId}</code>
+        </p>
+      ) : null}
+    </div>
   )
 }
 

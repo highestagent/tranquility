@@ -63,6 +63,7 @@ your app origin in Privy’s settings:
 |---|---|---|
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy dashboard | Public |
 | `PRIVY_APP_SECRET` | Privy dashboard | Server only |
+| `TATUM_API_KEY` | Tatum dashboard, mainnet API key | Server only |
 
 Each person gets their own Walrus Memory account on mainnet, with nothing to set
 up:
@@ -73,6 +74,12 @@ up:
    for storage.
 3. That key is derived from a wallet signature, so it's the same on every device.
    It stays in memory and is never stored or exported.
+
+With a Tatum key configured, open **You → Agent memory → Verify account on
+Sui**. Tranquility looks up the signed-in wallet’s Walrus Memory account and uses
+Tatum’s Sui mainnet gRPC `GetObject` to confirm the account is active and belongs to
+that wallet. Verification runs on demand, separately from memory sync.
+[Tatum Sui gRPC documentation](https://docs.tatum.io/reference/sui-grpc)
 
 MemWal receives agent notes, and the hosted relayer reads their text while storing
 and searching it. Raw answers, game records, and journals live in the account’s

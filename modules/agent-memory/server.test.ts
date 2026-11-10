@@ -26,6 +26,7 @@ function deps(overrides: Partial<MemoryDeps> = {}): MemoryDeps {
     },
     getEpoch: async (userId) => epochs.get(userId) ?? 0,
     setEpoch: async (userId, epoch) => void epochs.set(userId, epoch),
+    verifyAccount: async () => ({ status: "not_ready" }),
     now: () => 0,
     rateWindows: new Map(),
     ...overrides,
@@ -99,6 +100,45 @@ describe("handleMemoryRequest", () => {
     const limited = await handleMemoryRequest(request(), "info", d)
     expect(limited.status).toBe(429)
     expect(await epochOf(d, "user-b")).toBe(0)
+  })
+
+  it("verifies the signed-in account without reading or changing its epoch", async () => {
+    const result = { status: "verified", accountId: "0x123" } as const
+    const verifyAccount = vi.fn(async () => result)
+    const getEpoch = vi.fn(async () => 0)
+    const setEpoch = vi.fn(async () => {})
+    const d = deps({ verifyAccount, getEpoch, setEpoch })
+    const req = request()
+
+    expect((await handleMemoryRequest(req, "verify", d)).status).toBe(200)
+    expect(verifyAccount).toHaveBeenCalledWith("user-a", req.signal)
+    expect(getEpoch).not.toHaveBeenCalled()
+    expect(setEpoch).not.toHaveBeenCalled()
+    expect(await (await handleMemoryRequest(req, "verify", d)).json()).toEqual(
+      result
+    )
+  })
+
+  it("keeps account verification behind auth and its own rate limit", async () => {
+    const verifyAccount = vi.fn(async () => ({ status: "not_ready" as const }))
+    const d = deps({ verifyAccount })
+    expect(
+      (
+        await handleMemoryRequest(
+          request({ authorization: "Bearer bad" }),
+          "verify",
+          d
+        )
+      ).status
+    ).toBe(401)
+    for (let i = 0; i < 6; i++) {
+      expect((await handleMemoryRequest(request(), "verify", d)).status).toBe(
+        200
+      )
+    }
+    expect((await handleMemoryRequest(request(), "verify", d)).status).toBe(429)
+    expect(verifyAccount).toHaveBeenCalledTimes(6)
+    expect(await epochOf(d)).toBe(0)
   })
 
   it("hides storage failures behind a generic error", async () => {
