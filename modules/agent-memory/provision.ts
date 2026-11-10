@@ -29,7 +29,6 @@ interface RelayerConfig {
   packageId: string
   registryId: string
   network: "mainnet" | "testnet"
-  suiGrpcUrl: string
 }
 
 async function relayerRequest<T>(
@@ -152,7 +151,7 @@ export async function connectMemoryAccount(
     }
     const suiClient = new SuiGrpcClient({
       network: config.network,
-      baseUrl: config.suiGrpcUrl,
+      baseUrl: "/api/sui",
     })
     const chain = {
       packageId: config.packageId,

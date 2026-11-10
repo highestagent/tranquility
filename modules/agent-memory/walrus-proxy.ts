@@ -109,6 +109,17 @@ export async function proxyToWalrus(
       body,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
+    if (route === "config" && upstream.ok) {
+      const config = await upstream.json()
+      if (config.network !== "mainnet")
+        return new Response(null, { status: 502 })
+      delete config.suiRpcUrl
+      return Response.json({
+        ...config,
+        suiTransport: "grpc",
+        suiGrpcUrl: "/api/sui",
+      })
+    }
     return new Response(upstream.body, {
       status: upstream.status,
       headers: pick(upstream.headers, RESPONSE_HEADERS),

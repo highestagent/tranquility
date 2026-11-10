@@ -11,6 +11,16 @@ export type MemoryVerification =
 
 let client: SuiGrpcClient | undefined
 
+export function getTatumClient() {
+  return (client ??= new SuiGrpcClient({
+    network: "mainnet",
+    transport: new GrpcTransport({
+      host: "sui-mainnet-grpc.gateway.tatum.io:443",
+      channelCredentials: ChannelCredentials.createSsl(),
+    }),
+  }))
+}
+
 /** Resolve the signed-in wallet's account via Walrus and verify it on Sui. */
 export async function verifyWalrusAccount(
   walletAddress: string,
@@ -46,14 +56,7 @@ export async function verifyWalrusAccount(
     throw new Error("Invalid Walrus mainnet account metadata")
   }
 
-  client ??= new SuiGrpcClient({
-    network: "mainnet",
-    transport: new GrpcTransport({
-      host: "sui-mainnet-grpc.gateway.tatum.io:443",
-      channelCredentials: ChannelCredentials.createSsl(),
-    }),
-  })
-  const { response } = await client.ledgerService.getObject(
+  const { response } = await getTatumClient().ledgerService.getObject(
     {
       objectId: accountId,
       readMask: { paths: ["object_id", "object_type", "json"] },
