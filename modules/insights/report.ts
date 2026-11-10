@@ -8,6 +8,7 @@ import {
 
 import { getAssessment } from "@/modules/assessments"
 import {
+  GRADE_WORDS,
   listInvestigationSummaries,
   OUTCOME_LABELS,
   verdictOutcome,
@@ -16,13 +17,17 @@ import {
   measurements,
   responses,
   sessions,
-  type EvidenceGrade,
+  type Discovery,
 } from "@/modules/memory"
 import { getQuestion } from "@/modules/questionnaire"
 
 import { localDate } from "@/lib/utils"
 
-import { byImportance, loadDiscoveryViews } from "./discovery-data"
+import {
+  byImportance,
+  latestFindings,
+  loadDiscoveryViews,
+} from "./discovery-data"
 
 const PAGE = { width: 595.28, height: 841.89 }
 const MARGIN = 56
@@ -30,14 +35,6 @@ const WIDTH = PAGE.width - MARGIN * 2
 const INK = rgb(0.1, 0.12, 0.13)
 const MUTED = rgb(0.42, 0.45, 0.47)
 const RULE = rgb(0.85, 0.86, 0.87)
-
-const GRADE: Record<EvidenceGrade, string> = {
-  insufficient: "too little data",
-  weak: "weak evidence",
-  moderate: "moderate evidence",
-  strong: "strong evidence",
-  contradictory: "contradictory evidence",
-}
 
 function day(at: number) {
   return new Date(at).toLocaleDateString([], {
@@ -55,6 +52,15 @@ function metricLabel(metric: { assessmentId: string; metricId: string }) {
   const assessment = getAssessment(metric.assessmentId)
   const name = assessment?.metrics.find(({ id }) => id === metric.metricId)
   return `${assessment?.shortName ?? metric.assessmentId} ${name?.label.toLowerCase() ?? metric.metricId}`
+}
+
+function describeChecks(checks: readonly Discovery[]) {
+  return checks
+    .map(
+      (check) =>
+        `${day(check.createdAt)}, ${OUTCOME_LABELS[verdictOutcome(check)]} (${GRADE_WORDS[check.grade]})`
+    )
+    .join("; ")
 }
 
 /** Lays text out top to bottom, starting a new page when one fills. */
@@ -174,14 +180,14 @@ class Writer {
 
 /** Everything this browser holds about the research, as a PDF. */
 export async function buildReport() {
-  const [findings, investigations, visits, runs, answers] = await Promise.all([
+  const [checks, investigations, visits, runs, answers] = await Promise.all([
     loadDiscoveryViews(),
     listInvestigationSummaries(),
     sessions.list(),
     measurements.list(),
     responses.list(),
   ])
-  findings.sort(byImportance)
+  const findings = latestFindings(checks).sort(byImportance)
   visits.sort((a, b) => b.startedAt - a.startedAt)
 
   const doc = await PDFDocument.create()
@@ -204,7 +210,9 @@ export async function buildReport() {
   write.text(
     `${visits.length} sessions, ${runs.filter((run) => run.valid).length} valid game results, ` +
       `${answers.filter((answer) => answer.value !== null).length} answers, ` +
-      `${findings.length} findings, and ${investigations.length} investigations.`
+      `${findings.length} findings` +
+      (checks.length > findings.length ? ` from ${checks.length} checks` : "") +
+      `, and ${investigations.length} investigations.`
   )
   write.gap(4)
   write.text(
@@ -218,19 +226,25 @@ export async function buildReport() {
       color: MUTED,
     })
   }
-  for (const { discovery, hypothesis } of findings) {
+  for (const { discovery, hypothesis, earlier } of findings) {
     write.gap(6)
     write.text(discovery.observed, { size: 11, bold: true })
     if (hypothesis) {
       write.text(`Hypothesis: ${hypothesis.statement}`, { color: MUTED })
     }
     write.text(
-      `${OUTCOME_LABELS[verdictOutcome(discovery)]} (${GRADE[discovery.grade]}), ${day(discovery.createdAt)}.`
+      `${OUTCOME_LABELS[verdictOutcome(discovery)]} (${GRADE_WORDS[discovery.grade]}), ${day(discovery.createdAt)}.`
     )
     write.text(discovery.evidence, { indent: 10 })
     write.text(discovery.reliability, { indent: 10 })
     write.text(`Still uncertain: ${discovery.uncertainty}`, { indent: 10 })
     write.text(`Next: ${discovery.nextStep}`, { indent: 10 })
+    if (earlier.length > 0) {
+      write.text(`Earlier checks: ${describeChecks(earlier)}.`, {
+        indent: 10,
+        color: MUTED,
+      })
+    }
   }
 
   write.heading("Investigations")

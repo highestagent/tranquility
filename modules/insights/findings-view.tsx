@@ -17,7 +17,11 @@ import {
 
 import { DiscoveryCard } from "./discovery-card"
 import { ReportButton } from "./report-button"
-import { byImportance, loadDiscoveryViews } from "./discovery-data"
+import {
+  byImportance,
+  latestFindings,
+  loadDiscoveryViews,
+} from "./discovery-data"
 import { ThreadCard } from "./thread-card"
 
 async function loadFindings() {
@@ -25,7 +29,10 @@ async function loadFindings() {
     listInvestigationSummaries(),
     loadDiscoveryViews(),
   ])
-  return { threads, discoveries: discoveries.sort(byImportance) }
+  return {
+    threads,
+    discoveries: latestFindings(discoveries).sort(byImportance),
+  }
 }
 
 export function FindingsView() {
