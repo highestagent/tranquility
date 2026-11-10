@@ -9,8 +9,6 @@ import {
   type MemoryReference,
 } from "./records"
 
-import type { MemoryVerification } from "./tatum"
-
 const PROXY_PATH = "/api/walrus"
 const MAX_QUERY_LENGTH = 300
 
@@ -98,10 +96,6 @@ async function epochRequest(action: "info" | "forget") {
   return epoch
 }
 
-export function verifyMemoryAccount() {
-  return memoryRequest<MemoryVerification>("verify")
-}
-
 /** Loaded on demand, since the Sui libraries are too heavy for every page. */
 async function openClient(current: MemoryAccount): Promise<MemWal> {
   const [{ MemWal }, { connectMemoryAccount }, { toSuiWallet }] =
@@ -114,7 +108,12 @@ async function openClient(current: MemoryAccount): Promise<MemWal> {
   const wallet = toSuiWallet(await current.getWallet())
   if (current.userId !== getMemoryUserId()) throw new NotSignedInError()
   const { accountId, key } = await connectMemoryAccount(wallet, serverUrl)
-  return MemWal.create({ key, accountId, serverUrl })
+  const client = await MemWal.create({ key, accountId, serverUrl })
+  if (current.userId === getMemoryUserId()) {
+    // Verification is independent of memory sync and runs once per connection.
+    void memoryRequest("verify").catch(() => undefined)
+  }
+  return client
 }
 
 async function getClient() {

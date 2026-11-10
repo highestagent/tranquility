@@ -75,10 +75,10 @@ up:
 3. That key is derived from a wallet signature, so it's the same on every device.
    It stays in memory and is never stored or exported.
 
-With a Tatum key configured, open **You → Agent memory → Verify account on
-Sui**. Tranquility looks up the signed-in wallet’s Walrus Memory account and uses
-Tatum’s Sui mainnet gRPC `GetObject` to confirm the account is active and belongs to
-that wallet. Verification runs on demand, separately from memory sync.
+With a Tatum key configured, Tranquility verifies the signed-in wallet’s
+Walrus Memory account in the background when memory connects. Tatum’s Sui
+mainnet gRPC `GetObject` checks that the account is active and belongs to
+the wallet. Memory sync proceeds independently.
 [Tatum Sui gRPC documentation](https://docs.tatum.io/reference/sui-grpc)
 
 MemWal receives agent notes, and the hosted relayer reads their text while storing
