@@ -207,7 +207,7 @@ describe("proxyToWalrus", () => {
   it("rejects oversized bodies and rate limits per client", async () => {
     const d = deps()
     const big = await proxyToWalrus(
-      post("api/recall", {}, "x".repeat(70_000)),
+      post("api/recall", {}, "x".repeat(300_000)),
       ["api", "recall"],
       d
     )

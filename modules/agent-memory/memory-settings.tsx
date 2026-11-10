@@ -51,10 +51,12 @@ export function MemorySettings() {
     }
   }, [authenticated, refresh])
 
-  if (!account.available || !authenticated || !state) return null
+  if (!account.available || !authenticated) return null
 
-  const status =
-    state.failing || saved === "failed"
+  // Shown at once with "Checking…", so the cards below don't move when it loads.
+  const status = !state
+    ? "Checking…"
+    : state.failing || saved === "failed"
       ? "Can't connect right now. It'll keep trying"
       : state.pending.length > 0
         ? "Saving…"
@@ -110,8 +112,8 @@ function Disclosure({ onForgot }: { onForgot: () => void }) {
             Your investigations, findings, corrections, and what you ask it to
             remember sync to Walrus Memory on mainnet, so the agent can pick up
             on any device you sign in to. The service can read these notes while
-            storing and searching them. Answers and game results stay in this
-            browser.
+            storing and searching them. Answers and game results are backed up
+            too, encrypted first so only your wallet can read them.
           </p>
           {confirming ? (
             <div className="flex flex-col gap-2">

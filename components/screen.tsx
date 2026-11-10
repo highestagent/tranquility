@@ -79,6 +79,7 @@ export function ConversationCanvas({
   children,
   controls,
   why,
+  whyLabel = "Why I’m asking",
 }: {
   message: React.ReactNode
   stage?: string
@@ -86,6 +87,7 @@ export function ConversationCanvas({
   children?: React.ReactNode
   controls?: React.ReactNode
   why?: string
+  whyLabel?: string
 }) {
   return (
     <section
@@ -108,7 +110,7 @@ export function ConversationCanvas({
       {why ? (
         <Collapsible className="mt-6 text-sm text-muted-foreground">
           <CollapsibleTrigger className="cursor-pointer rounded text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-            Why I’m asking
+            {whyLabel}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <p className="mt-3 leading-relaxed">{why}</p>

@@ -16,6 +16,7 @@ import { sha256 } from "@noble/hashes/sha2.js"
 import type { AccountWallet } from "./api"
 
 const DELEGATE_KEY_TAG = "tranquility/memory-delegate-key/v1"
+const BACKUP_KEY_TAG = "tranquility/backup-key/v1"
 
 export interface SuiWallet {
   address: string
@@ -84,5 +85,15 @@ export function signTransaction(wallet: SuiWallet, transaction: Uint8Array) {
  */
 export async function deriveDelegateSeed(wallet: SuiWallet) {
   const tag = new TextEncoder().encode(DELEGATE_KEY_TAG)
+  return sha256(await wallet.signRaw(sha256(tag)))
+}
+
+/**
+ * The key backups are encrypted with, derived the same way as the delegate
+ * seed but from a different tag, so the two can't be related. Every device the
+ * person signs in on derives the same key, and it's never stored or sent.
+ */
+export async function deriveBackupSeed(wallet: SuiWallet) {
+  const tag = new TextEncoder().encode(BACKUP_KEY_TAG)
   return sha256(await wallet.signRaw(sha256(tag)))
 }

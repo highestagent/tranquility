@@ -8,6 +8,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
+  ArrowLeftRight,
   Check,
   ChevronDown,
   CircleHelp,
@@ -19,7 +20,12 @@ import {
 import { ScatterPlot } from "@/components/charts/scatter-plot"
 import { cn } from "@/lib/utils"
 import { formatMetric, formatTick, getAssessment } from "@/modules/assessments"
-import type { Analysis, Discovery } from "@/modules/memory"
+import {
+  OUTCOME_LABELS,
+  verdictOutcome,
+  type Outcome,
+} from "@/modules/investigation/verdict"
+import type { Analysis } from "@/modules/memory"
 import { getDomain, getQuestion } from "@/modules/questionnaire"
 
 import type { DiscoveryView } from "./discovery-data"
@@ -35,13 +41,11 @@ function helpsFrom(metric: Analysis["metric"], effect: number | null) {
   return effect > 0 === definition.higherIsBetter
 }
 
-const VERDICTS: Record<
-  Discovery["verdict"],
-  { label: string; Icon: typeof Check; solid: boolean }
-> = {
-  supported: { label: "Supported", Icon: Check, solid: true },
-  refuted: { label: "No link", Icon: Minus, solid: false },
-  inconclusive: { label: "Unclear", Icon: CircleHelp, solid: false },
+const OUTCOMES: Record<Outcome, { Icon: typeof Check; solid: boolean }> = {
+  supported: { Icon: Check, solid: true },
+  opposite: { Icon: ArrowLeftRight, solid: false },
+  "no-link": { Icon: Minus, solid: false },
+  unclear: { Icon: CircleHelp, solid: false },
 }
 
 /** Which habit and ability this is about, and what the evidence decided. */
@@ -51,7 +55,8 @@ export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
   const assessment = hypothesis
     ? getAssessment(hypothesis.metric.assessmentId)
     : undefined
-  const verdict = VERDICTS[discovery.verdict]
+  const outcome = verdictOutcome(discovery)
+  const verdict = OUTCOMES[outcome]
   const helps =
     hypothesis && analysis
       ? helpsFrom(hypothesis.metric, analysis.effect)
@@ -79,7 +84,7 @@ export function DiscoveryEyebrow({ view }: { view: DiscoveryView }) {
         )}
       >
         <verdict.Icon aria-hidden className="size-3.5" />
-        {verdict.label}
+        {OUTCOME_LABELS[outcome]}
       </Badge>
     </div>
   )

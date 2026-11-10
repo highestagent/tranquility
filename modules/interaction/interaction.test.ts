@@ -1,16 +1,27 @@
 import "fake-indexeddb/auto"
 import { deleteDB } from "idb"
-import { beforeEach, expect, it } from "vitest"
+import { beforeEach, expect, it, vi } from "vitest"
 import {
   closeDb,
+  discoveries,
   kv,
   measurements,
   responses,
   analyses,
 } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
-import { setPendingTask, getPendingTask } from "@/modules/agent/pending-task"
-import { commitTask, getContinuation } from "@/modules/session/checkpoint"
+import {
+  expireStaleTask,
+  getPendingTask,
+  isStale,
+  setPendingTask,
+} from "@/modules/agent/pending-task"
+import {
+  commitTask,
+  getContinuation,
+  unansweredContinuation,
+} from "@/modules/session/checkpoint"
+import { getSeenDiscoveriesAt } from "@/modules/session/wake"
 import { correctAnswer } from "@/modules/journal/corrections"
 import {
   nextMeasurementAt,
@@ -76,7 +87,7 @@ it("commits one answer and a resumable continuation atomically, ignoring duplica
   await commitTask(task, "Continue", "Quiet")
   await commitTask(task, "Duplicate", "Busy")
   expect(await getPendingTask()).toBeNull()
-  expect(await getContinuation()).toBe("Continue")
+  expect((await getContinuation())?.text).toBe("Continue")
   expect(await kv.get("contextAnswers")).toEqual([
     expect.objectContaining({ id: task.id, value: "Quiet" }),
   ])
@@ -91,6 +102,15 @@ it("rejects an invalid answer without releasing the pending interaction", async 
   await expect(commitTask(task, "Continue", "not boolean")).rejects.toThrow()
   expect((await getPendingTask())?.id).toBe(task.id)
   expect(await getContinuation()).toBeUndefined()
+})
+it("carries on a question cut off while a task was showing, but not the turn that made the task", () => {
+  const question = { text: "Is my search steadier after sleep?", at: 20 }
+  expect(unansweredContinuation(question, { createdAt: 10 })).toBe(question)
+  expect(unansweredContinuation(question, null)).toBe(question)
+  expect(
+    unansweredContinuation({ text: "Continue", at: 5 }, { createdAt: 10 })
+  ).toBeNull()
+  expect(unansweredContinuation(undefined, null)).toBeNull()
 })
 it("corrects context and recalculates while preserving measured outcomes and observation time", async () => {
   await responses.put({
@@ -169,4 +189,57 @@ it("shows a past finding only by a reference memory returned", async () => {
     },
   ])
   await expect(show("blob-1")).resolves.toEqual({ status: "awaiting-user" })
+})
+
+it("lets a pending task go once its session is over or the day has turned", async () => {
+  const HOUR = 60 * 60 * 1000
+  const evening = new Date(2026, 10, 10, 22, 30).getTime()
+  expect(isStale({ createdAt: evening }, evening + HOUR)).toBe(false)
+  expect(isStale({ createdAt: evening }, evening + 3 * HOUR)).toBe(true)
+  // Past midnight, "last night" means another night.
+  expect(isStale({ createdAt: evening }, evening + 2 * HOUR)).toBe(true)
+  expect(isStale({ createdAt: 0 }, evening)).toBe(true)
+
+  vi.useFakeTimers({ toFake: ["Date"] })
+  try {
+    const noon = new Date(2026, 10, 10, 12).getTime()
+    vi.setSystemTime(noon)
+    await setPendingTask({
+      kind: "questions",
+      reason: "Log core context",
+      questionIds: ["sleep.hours"],
+    })
+    expect(await expireStaleTask(noon + HOUR)).toBe(false)
+    expect(await getPendingTask(noon + HOUR)).not.toBeNull()
+    expect(await getPendingTask(noon + 4 * HOUR)).toBeNull()
+    expect(await getPendingTask(noon)).toBeNull()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it("doesn't record continuing past a finding as an answer, and counts it as seen", async () => {
+  await discoveries.put({
+    id: "d1",
+    investigationId: "i1",
+    hypothesisId: "h1",
+    analysisIds: ["a1"],
+    grade: "moderate",
+    verdict: "supported",
+    observed: "You react faster after more sleep.",
+    evidence: "12 comparable sessions.",
+    reliability: "Moderate evidence.",
+    uncertainty: "Stress could also play a part.",
+    nextStep: "Check stress.",
+    createdAt: 5_000,
+  })
+  const task = await setPendingTask({
+    kind: "interaction",
+    reason: "Show the new finding",
+    message: "Here's what the evidence suggests.",
+    interaction: { type: "EvidenceCard", props: { discoveryId: "d1" } },
+  })
+  await commitTask(task, "Continue", true)
+  expect(await kv.get("contextAnswers")).toBeUndefined()
+  expect(await getSeenDiscoveriesAt()).toBe(5_000)
 })

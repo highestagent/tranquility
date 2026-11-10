@@ -11,8 +11,12 @@ import {
 } from "react"
 
 import { onMemoryChange } from "@/modules/agent-memory/sync"
-import { kv } from "@/modules/memory"
-import { commitTask, getContinuation, CONTINUATION_KEY } from "./checkpoint"
+import {
+  commitTask,
+  getContinuation,
+  setContinuation,
+  unansweredContinuation,
+} from "./checkpoint"
 import type { Answer } from "@/modules/interaction/catalog"
 import type { Measurement } from "@/modules/memory"
 
@@ -31,7 +35,18 @@ export type Phase =
   | "asking"
   | "playing"
   | "interaction"
+  | "invited"
   | "resting"
+
+/** Reopening the app this soon carries on with a task instead of greeting first. */
+const RESUME_WITHIN_MS = 30 * 60 * 1000
+
+/**
+ * Whether the person has acted in this visit. Until they have, the agent's
+ * first task waits behind a greeting rather than opening on its own. Kept for
+ * the whole visit, so moving between pages doesn't reset it.
+ */
+let engagedThisVisit = false
 
 function describeError(error: unknown) {
   const text = error instanceof Error ? error.message : ""
@@ -61,6 +76,11 @@ export function useAgentSession() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [starting, setStarting] = useState<string | null>(null)
+  const [engaged, setEngaged] = useState(engagedThisVisit)
+  const engage = useCallback(() => {
+    engagedThisVisit = true
+    setEngaged(true)
+  }, [])
 
   const activity = useMemo(() => deriveActivity(messages), [messages])
   const busy = status === "submitted" || status === "streaming"
@@ -99,7 +119,7 @@ export function useAgentSession() {
 
   function sendContinuation(line: string, text: string) {
     return runTurn(line, async () => {
-      await kv.set(CONTINUATION_KEY, text)
+      await setContinuation(text)
       await sendMessage({ text })
     })
   }
@@ -108,20 +128,36 @@ export function useAgentSession() {
     try {
       const restored = await loadSnapshot()
       setSnapshot(restored)
-      const continuation = await getContinuation()
-      if (continuation && !busy && !restored.pending) {
-        void sendContinuation("Picking up where we left off…", continuation)
+      // Reloaded in the middle of something, so carry straight on.
+      if (
+        restored.pending &&
+        Date.now() - restored.pending.createdAt < RESUME_WITHIN_MS
+      ) {
+        engage()
+      }
+      const continuation = unansweredContinuation(
+        await getContinuation(),
+        restored.pending
+      )
+      if (continuation && !busy) {
+        // Only the person's own question can be newer than a showing task.
+        if (restored.pending) engage()
+        void sendContinuation(
+          "Picking up where we left off…",
+          continuation.text
+        )
         return
       }
       if (
         !busy &&
         !restored.pending &&
         restored.unseen.length === 0 &&
-        shouldWake({
-          rest: restored.rest,
-          latestDataAt: restored.latestDataAt,
-          now: Date.now(),
-        })
+        (restored.taskExpired ||
+          shouldWake({
+            rest: restored.rest,
+            latestDataAt: restored.latestDataAt,
+            now: Date.now(),
+          }))
       ) {
         void sendContinuation("Waking up…", auto.SESSION_START)
       }
@@ -154,6 +190,7 @@ export function useAgentSession() {
   async function finishTask(text: string, value?: Answer) {
     if (!snapshot?.pending || finishing.current) return
     finishing.current = true
+    engage()
     try {
       await commitTask(snapshot.pending, text, value)
       setSnapshot((old) => (old ? { ...old, pending: null } : old))
@@ -173,6 +210,7 @@ export function useAgentSession() {
   else if (starting || busy) phase = "thinking"
   else if (error) phase = "error"
   else if (snapshot.unseen.length > 0) phase = "reveal"
+  else if (pending && !engaged) phase = "invited"
   else if (pending?.kind === "questions") phase = "asking"
   else if (pending?.kind === "assessment") phase = "playing"
   else if (pending?.kind === "interaction") phase = "interaction"
@@ -186,19 +224,31 @@ export function useAgentSession() {
     /** Shown until the agent's own words arrive. */
     startingLine: starting ?? "One moment…",
     spoken: activity.spoken ?? snapshot?.rest?.spoken ?? null,
+    /**
+     * What the greeting says. Only this visit's words: a task ends the agent's
+     * turn without any, and the last visit's parting line would contradict it.
+     */
+    greeting:
+      activity.spoken ??
+      (snapshot?.rest ? "Welcome back." : "Here’s a good first step."),
     errorText: error ? describeError(error) : null,
     retry: () => void runTurn("Trying again…", () => regenerate()),
     reload: () => void refresh(),
     stop: () => void stop(),
-    keepGoing: () =>
-      void sendContinuation("Picking up the thread…", auto.CONTINUE),
+    keepGoing: () => {
+      engage()
+      void sendContinuation("Picking up the thread…", auto.CONTINUE)
+    },
+    /** Opens the task the greeting offered. */
+    start: engage,
     ask: async (text: string) => {
+      engage()
       await stop()
       await activeTurn.current?.catch(() => undefined)
       await runTurn(
         "Thinking about that…",
         async () => {
-          await kv.set(CONTINUATION_KEY, text)
+          await setContinuation(text)
           await sendMessage({ text })
         },
         true

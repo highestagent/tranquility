@@ -6,9 +6,11 @@ import { StorageError } from "@/components/status-message"
 import { Button } from "@/components/ui/button"
 import { AssessmentRunner } from "@/modules/assessments/runner/assessment-runner"
 import { QuestionFlow } from "@/modules/questionnaire/question-flow"
+import { isDisplayOnly } from "@/modules/interaction/catalog"
 import { InteractionRenderer } from "@/modules/interaction/renderer"
 import { Composer } from "./composer"
 import { ResumeNote } from "./resume-note"
+import { TaskInvitation } from "./task-invitation"
 import { useAgentSession } from "./use-agent-session"
 
 export function HomeLoading() {
@@ -42,6 +44,23 @@ export function AgentHome() {
       )}
     </Sheet>
   )
+  // The visit's first task waits to be opened, so a return starts with a hello.
+  if (phase === "invited" && pending)
+    return (
+      <ConversationCanvas
+        stage="Ready when you are"
+        message={session.greeting}
+        controls={
+          <>
+            <Button onClick={session.start}>Start</Button>
+            {ask}
+          </>
+        }
+      >
+        {snapshot.resume ? <ResumeNote resume={snapshot.resume} /> : null}
+        <TaskInvitation task={pending} />
+      </ConversationCanvas>
+    )
   if (
     phase === "playing" &&
     pending?.kind === "assessment" &&
@@ -69,20 +88,25 @@ export function AgentHome() {
         <div className="mx-auto w-full max-w-lg pb-6">{ask}</div>
       </>
     )
-  if (phase === "interaction" && pending?.kind === "interaction")
+  if (phase === "interaction" && pending?.kind === "interaction") {
+    // Something to look at, not a question, so there's nothing to skip.
+    const showing = isDisplayOnly(pending.interaction)
     return (
       <ConversationCanvas
         message={pending.message}
         why={pending.reason}
+        whyLabel={showing ? "Why I’m showing this" : undefined}
         controls={
           <>
             {ask}
-            <Button
-              variant="ghost"
-              onClick={() => session.finishInteraction(null)}
-            >
-              Skip
-            </Button>
+            {showing ? null : (
+              <Button
+                variant="ghost"
+                onClick={() => session.finishInteraction(null)}
+              >
+                Skip
+              </Button>
+            )}
           </>
         }
       >
@@ -91,15 +115,14 @@ export function AgentHome() {
           interaction={pending.interaction}
           onAnswer={session.finishInteraction}
         />
-        {["EvidenceCard", "PastFindingCard", "ChartView"].includes(
-          pending.interaction.type
-        ) ? (
+        {showing ? (
           <Button onClick={() => session.finishInteraction(true)}>
             Continue
           </Button>
         ) : null}
       </ConversationCanvas>
     )
+  }
   if (phase === "playing" && pending?.kind === "assessment")
     return (
       <ConversationCanvas
@@ -133,6 +156,8 @@ export function AgentHome() {
       <ConversationCanvas
         stage="An observation"
         message="Here’s what the evidence suggests."
+        why="I show each new finding once, as soon as it’s recorded, so none slips past. Details has the numbers behind it."
+        whyLabel="Why I’m showing this"
         controls={
           <>
             <Button onClick={() => void session.dismissDiscovery()}>

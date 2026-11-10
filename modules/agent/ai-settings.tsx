@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Cloud } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { LoadingMessage, StorageError } from "@/components/status-message"
+import { StorageError } from "@/components/status-message"
 
 import { AiDisclosure } from "./ai-consent-card"
 import { isCloudAiEnabled, setAiConsent } from "./consent"
@@ -36,7 +36,6 @@ export function AiSettings() {
   }
 
   if (failed) return <StorageError />
-  if (granted === null) return <LoadingMessage />
 
   return (
     <Card className="gap-3 rounded-3xl p-4 pl-5">
@@ -47,8 +46,10 @@ export function AiSettings() {
         <h2 id="cloud-ai" className="flex-1 text-sm font-medium">
           Cloud AI
         </h2>
+        {/* Rendered before the setting is read, so the page doesn't move. */}
         <Switch
-          checked={granted}
+          checked={granted ?? false}
+          disabled={granted === null}
           aria-labelledby="cloud-ai"
           onCheckedChange={(checked) => void change(checked)}
         />

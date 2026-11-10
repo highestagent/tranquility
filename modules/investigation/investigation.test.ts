@@ -1,7 +1,7 @@
 import "fake-indexeddb/auto"
 
 import { deleteDB } from "idb"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { analyses, closeDb, hypotheses, type Analysis } from "@/modules/memory"
 import { DB_NAME } from "@/modules/memory/db"
@@ -14,7 +14,7 @@ import {
   startTesting,
 } from "./service"
 import { getInvestigationState } from "./state"
-import { decideVerdict } from "./verdict"
+import { decideVerdict, verdictOutcome } from "./verdict"
 
 const METRIC = { assessmentId: "go-no-go", metricId: "medianRt" }
 
@@ -119,6 +119,21 @@ describe("decideVerdict", () => {
     expect(decideVerdict("negative", { ...ruledOut, n: 10 })).toBe(
       "inconclusive"
     )
+  })
+
+  it("tells a clear result the other way apart from no link", () => {
+    expect(verdictOutcome({ verdict: "refuted", grade: "strong" })).toBe(
+      "opposite"
+    )
+    expect(verdictOutcome({ verdict: "refuted", grade: "weak" })).toBe(
+      "no-link"
+    )
+    expect(verdictOutcome({ verdict: "supported", grade: "moderate" })).toBe(
+      "supported"
+    )
+    expect(
+      verdictOutcome({ verdict: "inconclusive", grade: "contradictory" })
+    ).toBe("unclear")
   })
 
   it("stays inconclusive on insufficient or contradictory evidence", () => {
@@ -339,5 +354,35 @@ describe("getInvestigationState", () => {
     expect(state.open[0]?.id).toBe(investigation.id)
     expect(state.open[0]?.hypotheses[0]?.id).toBe(hypothesis.id)
     expect(state.open[0]?.evidence[0]).toMatchObject({ have: 0, need: 8 })
+  })
+
+  it("puts first the investigation whose hypotheses moved last", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      vi.setSystemTime(1_000)
+      const { investigation, hypothesis } = await setup()
+      vi.setSystemTime(2_000)
+      const other = await createInvestigation({
+        title: "Mood and search",
+        question: "Does mood affect my visual search?",
+        origin: "user",
+        objectives: [],
+        evidenceRequirements: [],
+      })
+      vi.setSystemTime(3_000)
+      await analyses.put(analysis())
+      await evaluateHypothesis({
+        hypothesisId: hypothesis.id,
+        analysisIds: ["a1"],
+        ...narrative,
+      })
+      const state = await getInvestigationState()
+      expect(state.open.map(({ id }) => id)).toEqual([
+        investigation.id,
+        other.id,
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

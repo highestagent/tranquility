@@ -49,10 +49,17 @@ background, so it can pick up where it left off on any device:
   device stops presenting those findings.
 - Preferences people ask it to remember in chat are kept apart from research.
   Asking it to change or forget one works the same way.
+- Everything else (answers, game results, sessions, analyses, and the agent's
+  log) is backed up as an encrypted snapshot. It's compressed and encrypted in
+  the browser with a key derived from a wallet signature, so the relayer and
+  Walrus only see ciphertext, and every device derives the same key. A device
+  with no answers or game results restores each device's latest snapshot before
+  the agent's first turn, adding only what it doesn't have, so evidence from
+  all of a person's devices pools together.
 
 The relayer allows each account 500 points an hour, and an upload costs 10, so
 routine changes go up at most every five minutes, carrying every plan revision
-since. Corrections and preferences go at once, and leaving the page or the agent
+since, and a changed backup at most every half hour (five minutes on leaving). Corrections and preferences go at once, and leaving the page or the agent
 resting sends whatever is waiting. While the page is hidden, nothing syncs on a
 timer.
 
@@ -82,9 +89,10 @@ the wallet. Memory sync proceeds independently.
 [Tatum Sui gRPC documentation](https://docs.tatum.io/reference/sui-grpc)
 
 MemWal receives agent notes, and the hosted relayer reads their text while storing
-and searching it. Raw answers, game records, and journals live in the account’s
-browser storage, so evidence collected on one device isn't pooled with another's.
-The first sign-in claims previously unowned local history. "Forget" moves a person
+and searching it, except for backups, which are encrypted before they're sent.
+The first sign-in claims previously unowned local history. Deleting everything
+from a browser also signs out, since a signed-in device with nothing on it
+restores the backup straight away. "Forget" moves a person
 to a new namespace, and old encrypted copies remain until they expire. Walrus
 Memory's [Security Delete API](https://docs.wal.app/walrus-memory/guides/delete-memories-programmatically)
 only deletes blobs it tracked under its earlier version, and a signed-in check on

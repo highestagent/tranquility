@@ -16,6 +16,7 @@ import {
   hypotheses,
   investigations,
   kv,
+  measurements,
   responses,
   type Discovery,
 } from "@/modules/memory"
@@ -40,7 +41,17 @@ import {
 } from "./sync"
 
 /** One Walrus Memory account, shared by every device in a test. */
-function fakeWalrus(statuses: Record<string, string> = {}) {
+function newWalletKey() {
+  return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, [
+    "encrypt",
+    "decrypt",
+  ])
+}
+
+function fakeWalrus(
+  statuses: Record<string, string> = {},
+  walletKey: Promise<CryptoKey> = newWalletKey()
+) {
   let epoch = 0
   let next = 0
   const rows: { namespace: string; blobId: string; text: string }[] = []
@@ -64,6 +75,11 @@ function fakeWalrus(statuses: Record<string, string> = {}) {
           if (!row) throw new Error("missing")
           return row.text
         },
+        readAll: async (namespace, limit) =>
+          rows
+            .filter((row) => row.namespace === namespace)
+            .slice(0, limit)
+            .map(({ blobId, text }) => ({ blobId, text, distance: 0.5 })),
         search: async (_query, limit) =>
           rows
             .filter(
@@ -94,6 +110,8 @@ function fakeWalrus(statuses: Record<string, string> = {}) {
       })),
     })),
     forget: vi.fn(async () => ++epoch),
+    // Every device derives the same key from the same wallet.
+    backupKey: vi.fn(() => walletKey),
   } satisfies MemoryApi
   return { api, rows }
 }
@@ -210,13 +228,13 @@ describe("runMemorySync", () => {
 
   it("sends a long backlog in batches the proxy accepts", async () => {
     const { api } = fakeWalrus()
-    for (let i = 0; i < 13; i++) await discoveries.put(finding({ id: `d${i}` }))
+    for (let i = 0; i < 23; i++) await discoveries.put(finding({ id: `d${i}` }))
     await settle(api)
     const sizes = api.remember.mock.calls.map(([facts]) => facts.length)
-    expect(sizes).toEqual([10, 3])
+    expect(sizes).toEqual([20, 3])
     for (const [facts] of api.remember.mock.calls) {
       const chars = facts.reduce((sum, { text }) => sum + text.length, 0)
-      expect(chars).toBeLessThanOrEqual(40_000)
+      expect(chars).toBeLessThanOrEqual(160_000)
     }
   })
 
@@ -713,7 +731,7 @@ describe("staying within the relayer's hourly budget", () => {
 
   it("drains a long backlog without waiting between batches", async () => {
     const { api } = fakeWalrus()
-    for (let i = 0; i < 13; i++) await discoveries.put(finding({ id: `d${i}` }))
+    for (let i = 0; i < 23; i++) await discoveries.put(finding({ id: `d${i}` }))
     await at(MINUTE, () => settleWithout(api))
     expect(api.remember).toHaveBeenCalledTimes(2)
   })
@@ -726,3 +744,163 @@ async function settleWithout(api: MemoryApi) {
   }
   throw new Error("Sync never settled")
 }
+
+describe("encrypted backups", () => {
+  const MINUTE = 60_000
+
+  /** Answers, a game result, and context, plus this device's own state. */
+  async function recordActivity(id: string, note = "") {
+    await responses.put({
+      id: `answer-${id}`,
+      sessionId: `session-${id}`,
+      questionId: "sleep.hours",
+      bankVersion: 1,
+      value: 7,
+      answeredAt: 1,
+    })
+    await measurements.put({
+      id: `run-${id}`,
+      sessionId: `session-${id}`,
+      assessmentId: "go-no-go",
+      protocolVersion: 1,
+      seed: 1,
+      startedAt: 1,
+      completedAt: 2,
+      inputType: "pointer",
+      valid: true,
+      trials: [{ note }],
+      metrics: { medianRt: 420 },
+    })
+    await kv.set("contextAnswers", [{ id, sessionId: `session-${id}` }])
+    await kv.set("agentRest", { at: 1, spoken: "Resting" })
+  }
+
+  function backupRows<T extends { namespace: string }>(rows: T[]) {
+    return rows.filter(({ namespace }) => namespace.includes(":backup:"))
+  }
+
+  it("backs up answers and game results encrypted, and a new device restores them", async () => {
+    const { api, rows } = fakeWalrus()
+    await recordActivity("a")
+    await settle(api)
+    const stored = backupRows(rows)
+    expect(stored.length).toBeGreaterThan(0)
+    for (const { text } of stored) {
+      expect(text).not.toContain("sleep.hours")
+      expect(text).not.toContain("go-no-go")
+    }
+
+    await onDevice("phone")
+    const restored = vi.fn()
+    await runMemorySync(api, "u1", { flush: true, onRestored: restored })
+    expect(restored).toHaveBeenCalled()
+    expect((await responses.list()).map(({ id }) => id)).toEqual(["answer-a"])
+    expect((await measurements.list()).map(({ id }) => id)).toEqual(["run-a"])
+    expect(await kv.get("contextAnswers")).toEqual([
+      { id: "a", sessionId: "session-a" },
+    ])
+    // The laptop's rest timer is the laptop's own.
+    expect(await kv.get("agentRest")).toBeUndefined()
+  })
+
+  it("takes on every device's latest backup", async () => {
+    const { api } = fakeWalrus()
+    await recordActivity("laptop")
+    await settle(api)
+    await onDevice("phone")
+    await recordActivity("phone")
+    await settle(api)
+
+    await closeDb()
+    await deleteDB(DB_NAME)
+    await onDevice("laptop")
+    await settle(api)
+    expect((await responses.list()).map(({ id }) => id).sort()).toEqual([
+      "answer-laptop",
+      "answer-phone",
+    ])
+  })
+
+  it("leaves a device with its own answers and results alone", async () => {
+    const { api } = fakeWalrus()
+    await recordActivity("laptop")
+    await settle(api)
+    await onDevice("phone")
+    await recordActivity("phone")
+    await settle(api)
+    expect((await responses.list()).map(({ id }) => id)).toEqual([
+      "answer-phone",
+    ])
+  })
+
+  it("restores nothing from a backup missing a chunk", async () => {
+    const { api, rows } = fakeWalrus()
+    // Random text doesn't compress, so this backup needs several chunks.
+    const noise = Array.from(crypto.getRandomValues(new Uint8Array(12_000)))
+      .map((byte) => byte.toString(16))
+      .join("")
+    await recordActivity("a", noise)
+    await settle(api)
+    const chunks = backupRows(rows)
+    expect(chunks.length).toBeGreaterThan(1)
+    rows.splice(rows.indexOf(chunks[1]!), 1)
+
+    await onDevice("phone")
+    await settle(api)
+    expect(await responses.list()).toEqual([])
+  })
+
+  it("can't be read with another wallet's key", async () => {
+    const { api } = fakeWalrus()
+    await recordActivity("a")
+    await settle(api)
+
+    await onDevice("phone")
+    api.backupKey.mockReturnValue(newWalletKey())
+    const restored = vi.fn()
+    await runMemorySync(api, "u1", { onRestored: restored })
+    expect(restored).not.toHaveBeenCalled()
+    expect(await responses.list()).toEqual([])
+  })
+
+  it("backs up only what changed, at most every half hour or five minutes on leaving", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const { api, rows } = fakeWalrus()
+      const snapshots = () =>
+        new Set(
+          backupRows(rows).map(({ namespace }) => namespace.split(":")[3])
+        ).size
+      vi.setSystemTime(MINUTE)
+      await recordActivity("a")
+      await settleWithout(api)
+      expect(snapshots()).toBe(1)
+
+      await recordActivity("b")
+      vi.setSystemTime(2 * MINUTE)
+      await settleWithout(api)
+      await settle(api)
+      expect(snapshots()).toBe(1)
+
+      vi.setSystemTime(7 * MINUTE)
+      await settle(api)
+      expect(snapshots()).toBe(2)
+
+      vi.setSystemTime(60 * MINUTE)
+      await settleWithout(api)
+      expect(snapshots()).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("doesn't back up again right after a forget", async () => {
+    const { api, rows } = fakeWalrus()
+    await recordActivity("a")
+    await settle(api)
+    const before = backupRows(rows).length
+    await api.forget()
+    await settle(api)
+    expect(backupRows(rows).length).toBe(before)
+  })
+})

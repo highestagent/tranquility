@@ -60,6 +60,12 @@ export async function updateInvestigation(
   return investigations.put({ ...existing, ...changes, updatedAt: Date.now() })
 }
 
+/** Work on a hypothesis moves its investigation on, so the latest one is the one being worked. */
+async function touchInvestigation(id: string, at: number) {
+  const existing = await investigations.get(id)
+  if (existing) await investigations.put({ ...existing, updatedAt: at })
+}
+
 export async function addHypothesis(input: {
   investigationId: string
   statement: string
@@ -82,7 +88,7 @@ export async function addHypothesis(input: {
   )
   if (existing) return existing
   const now = Date.now()
-  return hypotheses.put({
+  const hypothesis = await hypotheses.put({
     ...input,
     id: newId(),
     status: "proposed",
@@ -90,6 +96,8 @@ export async function addHypothesis(input: {
     updatedAt: now,
     history: [{ at: now, status: "proposed", note: input.rationale }],
   })
+  await touchInvestigation(input.investigationId, now)
+  return hypothesis
 }
 
 async function transition(
@@ -103,12 +111,14 @@ async function transition(
     throw new Error("A rejected hypothesis can't change. Create a new one.")
   }
   const at = Date.now()
-  return hypotheses.put({
+  const hypothesis = await hypotheses.put({
     ...existing,
     status,
     updatedAt: at,
     history: [...existing.history, { at, status, note }],
   })
+  await touchInvestigation(existing.investigationId, at)
+  return hypothesis
 }
 
 /** Verdict statuses are only reachable through `evaluateHypothesis`. */

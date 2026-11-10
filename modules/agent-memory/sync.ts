@@ -6,6 +6,9 @@ import {
   hypotheses,
   investigations,
   kv,
+  measurements,
+  mergeAll,
+  responses,
   type Hypothesis,
 } from "@/modules/memory"
 import { getDb } from "@/modules/memory/db"
@@ -27,6 +30,7 @@ import {
 import {
   handoffRecord,
   HANDOFFS_KEY,
+  latestBackups,
   memoryPrefix,
   preferenceRecord,
   PREFERENCES_KEY,
@@ -41,13 +45,25 @@ import {
   type HandoffReference,
   type MemoryReference,
 } from "./records"
+import {
+  CHUNKS_PER_PART,
+  collectBackupData,
+  fingerprint,
+  getDeviceId,
+  hasRawData,
+  joinBackup,
+  openBackup,
+  sealBackup,
+  toBackupFacts,
+} from "./backup"
 import { getPreferenceRevisions } from "./preferences"
 import { dropRecalledNotes } from "./recalled"
 import { getLocalWithdrawals } from "./withdrawals"
 
-const BATCH_SIZE = 10
+/** The relayer takes up to 20 memories in one bulk request, for the same cost as one. */
+const BATCH_SIZE = 20
 /** The proxy accepts 64 KB per request, and JSON escaping adds some. */
-const BATCH_CHARS = 40_000
+const BATCH_CHARS = 160_000
 const READ_CONCURRENCY = 4
 /**
  * The relayer allows each account 500 points an hour: 10 per upload and 1 for
@@ -66,6 +82,18 @@ export const ROUTINE_UPLOAD_GAP_MS = 5 * 60_000
 /** Focusing the window doesn't start another pass if one just ran. */
 const OPPORTUNISTIC_GAP_MS = 30_000
 const MAX_BACKOFF_MS = 10 * 60_000
+/** A changed backup goes up at most this often while the app is in use... */
+const BACKUP_GAP_MS = 30 * 60_000
+/** ...or this often when the person leaves, so another device gets the latest. */
+const BACKUP_LEAVE_GAP_MS = 5 * 60_000
+const BACKUP_OUTBOX_KEY = "agentMemory:backupOutbox"
+
+/** A sealed backup on its way up. It can take several passes. */
+interface BackupOutbox {
+  createdAt: number
+  fingerprint: string
+  facts: Fact[]
+}
 
 export interface MemoryState {
   /** Who these memories belong to. */
@@ -80,6 +108,9 @@ export interface MemoryState {
   lastUploadAt?: number
   /** More is waiting from the last upload's backlog, so it goes without a gap. */
   backlog?: boolean
+  /** When the last complete backup was made, and of what. */
+  lastBackupAt?: number
+  backupFingerprint?: string
   /** The last attempt failed, so what's shown may be out of date. */
   failing?: boolean
 }
@@ -343,11 +374,91 @@ async function clearAccountCaches() {
   await kv.remove(HANDOFFS_KEY)
   await kv.remove(RECALLED_KEY)
   await kv.remove(PREFERENCES_KEY)
+  await kv.remove(BACKUP_OUTBOX_KEY)
+}
+
+/**
+ * On a device with no answers or game results yet, takes on each device's
+ * latest backup, newest first. It only adds what's missing, so nothing here is
+ * overwritten.
+ */
+async function restoreBackups(workspace: MemoryWorkspace, api: MemoryApi) {
+  const [answerCount, runCount] = await Promise.all([
+    responses.list().then((rows) => rows.length),
+    measurements.list().then((rows) => rows.length),
+  ])
+  const snapshots = latestBackups(workspace.catalog)
+  if (answerCount + runCount > 0 || snapshots.length === 0) {
+    return { changed: false, complete: true }
+  }
+  const key = await api.backupKey()
+  let added = 0
+  let failed = false
+  for (const snapshot of snapshots) {
+    try {
+      const texts: string[] = []
+      let total = 0
+      for (const { namespace, chunks } of snapshot.part.values()) {
+        const hits = await workspace.readAll(namespace, CHUNKS_PER_PART)
+        texts.push(...hits.map(({ text }) => text))
+        total += chunks
+      }
+      const payload = await openBackup(joinBackup(texts, total), key)
+      added += await mergeAll(payload.data)
+    } catch (error) {
+      console.warn("A backup couldn't be restored:", error)
+      failed = true
+    }
+  }
+  return { changed: added > 0, complete: !failed }
+}
+
+async function getOutbox() {
+  return (await kv.get<BackupOutbox>(BACKUP_OUTBOX_KEY)) ?? null
+}
+
+/** Seals a backup if the data changed since the last one and it's time. */
+async function prepareBackup(
+  api: MemoryApi,
+  state: MemoryState,
+  now: number,
+  leaving: boolean
+): Promise<BackupOutbox | null> {
+  const gap = leaving ? BACKUP_LEAVE_GAP_MS : BACKUP_GAP_MS
+  if (state.lastBackupAt !== undefined && now - state.lastBackupAt < gap) {
+    return null
+  }
+  const data = await collectBackupData()
+  // A fresh or emptied device mustn't become any device's latest backup.
+  if (!hasRawData(data)) return null
+  const print = fingerprint(data)
+  if (print === state.backupFingerprint) return null
+  const device = await getDeviceId()
+  const sealed = await sealBackup(
+    { version: 1, createdAt: now, device, data },
+    await api.backupKey()
+  )
+  const outbox = {
+    createdAt: now,
+    fingerprint: print,
+    facts: toBackupFacts(device, now, sealed),
+  }
+  await kv.set(BACKUP_OUTBOX_KEY, outbox)
+  return outbox
+}
+
+/** After a forget, what's here now counts as backed up, like everything else. */
+async function markCurrentDataBackedUp(state: MemoryState) {
+  await kv.remove(BACKUP_OUTBOX_KEY)
+  const data = await collectBackupData()
+  state.backupFingerprint = hasRawData(data) ? fingerprint(data) : undefined
 }
 
 function isAlreadyStored(fact: Fact, workspace: MemoryWorkspace) {
   return (
     fact.namespace !== RESEARCH_NAMESPACE &&
+    // A backup part holds many chunks, so its name existing proves nothing.
+    !fact.namespace.startsWith("backup:") &&
     workspace.catalog.namespaces.has(
       `${memoryPrefix(workspace.epoch)}${fact.namespace}`
     )
@@ -411,6 +522,7 @@ export async function runMemorySync(
     state.remembered = distillFacts(await loadLocal()).map(({ id }) => id)
     state.pending = []
     state.lastSavedAt = undefined
+    await markCurrentDataBackedUp(state)
   }
   state.owner = owner
   state.epoch = epoch
@@ -420,12 +532,18 @@ export async function runMemorySync(
     workspace.catalog,
     await getLocalWithdrawals()
   )
+  // Backups first, so newer plans and withdrawals then apply on top of them.
+  const backups = await restoreBackups(workspace, api)
   const plans = await restoreHandoffs(workspace, isWithdrawn)
   const withdrawn = await applyWithdrawals(workspace)
   const preferences = await restorePreferences(workspace)
-  if (plans.changed || withdrawn || preferences.changed) options.onChanged?.()
+  if (backups.changed || plans.changed || withdrawn || preferences.changed) {
+    options.onChanged?.()
+  }
   // Only a full restore lets a new device's agent carry on as if it knew it all.
-  if (plans.complete && preferences.complete) options.onRestored?.()
+  if (backups.complete && plans.complete && preferences.complete) {
+    options.onRestored?.()
+  }
 
   let saved = false
   if (state.pending.length > 0) {
@@ -452,7 +570,18 @@ export async function runMemorySync(
     if (saved) options.onChanged?.()
   }
 
-  const facts = distillFacts(await loadLocal())
+  let outbox = await getOutbox()
+  const stored = new Set(state.remembered)
+  if (outbox?.facts.every(({ id }) => stored.has(id))) {
+    state.lastBackupAt = outbox.createdAt
+    state.backupFingerprint = outbox.fingerprint
+    await kv.remove(BACKUP_OUTBOX_KEY)
+    outbox = null
+    options.onChanged?.()
+  }
+  outbox ??= await prepareBackup(api, state, Date.now(), Boolean(options.flush))
+
+  const facts = [...distillFacts(await loadLocal()), ...(outbox?.facts ?? [])]
   const current = new Set(facts.map(({ id }) => id))
   const known = new Set([
     // What no longer exists locally can't be produced again, so it's dropped.
@@ -699,6 +828,7 @@ export function forgetMemories() {
       const epoch = await memoryApi.forget()
       await clearAccountCaches()
       const state = await getMemoryState()
+      await markCurrentDataBackedUp(state)
       await saveState({
         ...state,
         epoch,
@@ -711,4 +841,13 @@ export function forgetMemories() {
     forgetting = null
   })
   return forgetting
+}
+
+/** When everything here was last backed up, and whether a backup is on its way. */
+export async function getBackupStatus() {
+  const [state, outbox] = await Promise.all([getMemoryState(), getOutbox()])
+  return {
+    lastBackupAt: state.lastBackupAt ?? null,
+    uploading: outbox !== null,
+  }
 }

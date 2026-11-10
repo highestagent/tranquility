@@ -92,6 +92,15 @@ export const interactionSchema = z.discriminatedUnion("type", [
     .strict(),
 ])
 export type Interaction = z.infer<typeof interactionSchema>
+
+/** Interactions that show something rather than ask: there's no answer to record. */
+export function isDisplayOnly(interaction: Pick<Interaction, "type">) {
+  return (
+    interaction.type === "EvidenceCard" ||
+    interaction.type === "PastFindingCard" ||
+    interaction.type === "ChartView"
+  )
+}
 export type Answer = string | number | boolean | string[] | null
 export const catalog = defineCatalog(schema, {
   components: {

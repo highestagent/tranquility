@@ -31,3 +31,28 @@ export function decideVerdict(
 
   return "inconclusive"
 }
+
+/**
+ * What a verdict found. "Refuted" covers two different results: a clear
+ * effect the other way, or enough data to rule out a meaningful one.
+ */
+export type Outcome = "supported" | "opposite" | "no-link" | "unclear"
+
+export function verdictOutcome({
+  verdict,
+  grade,
+}: {
+  verdict: Verdict
+  grade: Analysis["grade"]
+}): Outcome {
+  if (verdict === "supported") return "supported"
+  if (verdict === "inconclusive") return "unclear"
+  return grade === "moderate" || grade === "strong" ? "opposite" : "no-link"
+}
+
+export const OUTCOME_LABELS: Record<Outcome, string> = {
+  supported: "Supported",
+  opposite: "Opposite of expected",
+  "no-link": "No link",
+  unclear: "Unclear",
+}

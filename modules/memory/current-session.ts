@@ -7,7 +7,7 @@ const KEY = "currentSessionId"
  * Answers and game results in the same session are compared with each other,
  * so a session must stay short enough to describe one state of mind.
  */
-const SESSION_WINDOW_MS = 3 * 60 * 60 * 1000
+export const SESSION_WINDOW_MS = 3 * 60 * 60 * 1000
 
 let lookup: Promise<Session> | null = null
 

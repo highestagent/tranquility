@@ -6,14 +6,9 @@ import { useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { useAsync } from "@/hooks/use-async"
 import { StrengthMeter } from "@/modules/insights/strength-meter"
+import { OUTCOME_LABELS, verdictOutcome } from "@/modules/investigation/verdict"
 
 import { getRecalledNote } from "./recalled"
-
-const VERDICTS = {
-  supported: "Supported",
-  refuted: "No link",
-  inconclusive: "Unclear",
-} as const
 
 /** Walrus blob IDs are long, so show enough to tell them apart. */
 function shortReference(reference: string) {
@@ -48,7 +43,7 @@ export function PastFindingCard({ reference }: { reference: string }) {
           </time>
         </span>
         <span className="rounded-full border px-2.5 py-0.5">
-          {VERDICTS[note.verdict]}
+          {OUTCOME_LABELS[verdictOutcome(note)]}
         </span>
       </div>
       <h2 className="voice-title text-balance">{note.observed}</h2>
